@@ -3,6 +3,14 @@ uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 authors = ["Avik Pal <avikpal@mit.edu>"]
 version = "0.1.0"
 
+[deps]
+DataLoaders = "2e981812-ef13-4a9c-bfa0-ab13047b12a9"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+FluxTraining = "7bf95e4d-ca32-48da-9824-f0dc5310474f"
+MLDataPattern = "9920b226-0b2a-5f5f-9153-9aa70a013f8b"
+NLsolve = "2774e3e8-f4cf-5e23-947b-6d7e65073b56"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
+
 [compat]
 julia = "1.6"
 
