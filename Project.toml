@@ -12,6 +12,7 @@ NLsolve = "2774e3e8-f4cf-5e23-947b-6d7e65073b56"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
+Flux = "0.12"
 julia = "1.6"
 
 [extras]
