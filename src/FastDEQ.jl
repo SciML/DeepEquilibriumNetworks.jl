@@ -8,12 +8,17 @@ using SteadyStateDiffEq
 using Zygote
 
 
+mutable struct DEQTrainingStats
+    nfe::Int
+end
+
 struct DeepEquilibriumNetwork{M,P,RE,A,K}
     model::M
     p::P
     re::RE
     args::A
     kwargs::K
+    stats::DEQTrainingStats
 end
 
 Flux.@functor DeepEquilibriumNetwork
@@ -21,27 +26,96 @@ Flux.@functor DeepEquilibriumNetwork
 function DeepEquilibriumNetwork(model, args...; p = nothing, kwargs...)
     _p, re = Flux.destructure(model)
     p = p === nothing ? _p : p
-    return DeepEquilibriumNetwork(model, p, re, args, kwargs)
+    return DeepEquilibriumNetwork(
+        model,
+        p,
+        re,
+        args,
+        kwargs,
+        DEQTrainingStats(0),
+    )
 end
 
 Flux.trainable(deq::DeepEquilibriumNetwork) = (deq.p,)
 
 function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
+    deq.stats.nfe += 1
     z = deq.re(p)(zero(x), x)
     # Solving the equation f(u) - u = du = 0
-    dudt(u, _p, t) = deq.re(_p)(u, x) .- u
+    function dudt(u, _p, t)
+        deq.stats.nfe += 1
+        return deq.re(_p)(u, x) .- u
+    end
     ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), one(T)), p))
-    return reshape(solve(ssprob, deq.args...; u0 = z, deq.kwargs...).u, :, size(x, ndims(x)))
+    return reshape(
+        solve(ssprob, deq.args...; u0 = z, deq.kwargs...).u,
+        :,
+        size(x, ndims(x)),
+    )
 end
 
 
-# using OrdinaryDiffEq, SteadyStateDiffEq, Flux, CUDA, Zygote, FastDEQ, NLsolve
-# x = rand(Float32, 1, 1) |> gpu
-# model = DeepEquilibriumNetwork(Parallel(+, Dense(1, 1), Dense(1, 1)), DynamicSS(Tsit5(); abstol = 1f-1, reltol = 1f-1))
-# model = DeepEquilibriumNetwork(Parallel(+, Dense(1, 1), Dense(1, 1)), SSRootfind(nlsolve = (f, u0, abstol) -> (res = NLsolve.nlsolve(f, u0; ftol = abstol); res.zero))) |> gpu
-# Zygote.gradient(() -> sum(model(x)), Flux.params(model)).grads
+struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,K}
+    model::M
+    shortcut::S
+    p::P
+    re1::RE1
+    re2::RE2
+    split_idx::Int
+    args::A
+    kwargs::K
+    stats::DEQTrainingStats
+end
+
+Flux.@functor SkipDeepEquilibriumNetwork
+
+function SkipDeepEquilibriumNetwork(
+    model,
+    shortcut,
+    args...;
+    p = nothing,
+    kwargs...,
+)
+    p1, re1 = Flux.destructure(model)
+    p2, re2 = Flux.destructure(shortcut)
+    p = p === nothing ? vcat(p1, p2) : p
+    return SkipDeepEquilibriumNetwork(
+        model,
+        shortcut,
+        p,
+        re1,
+        re2,
+        length(p1),
+        args,
+        kwargs,
+        DEQTrainingStats(0),
+    )
+end
+
+Flux.trainable(deq::SkipDeepEquilibriumNetwork) = (deq.p,)
+
+function (deq::SkipDeepEquilibriumNetwork)(
+    x::AbstractArray{T},
+    p = deq.p,
+) where {T}
+    p1, p2 = p[1:deq.split_idx], p[deq.split_idx+1:end]
+    z = deq.re2(p2)(x)
+    deq.stats.nfe += 1
+    # Solving the equation f(u) - u = du = 0
+    function dudt(u, _p, t)
+        deq.stats.nfe += 1
+        return deq.re1(_p)(u, x) .- u
+    end
+    ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), one(T)), p1))
+    return reshape(
+        solve(ssprob, deq.args...; u0 = z, deq.kwargs...).u,
+        :,
+        size(x, ndims(x)),
+    ),
+    z
+end
 
 
-export DeepEquilibriumNetwork
+export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
 
 end
