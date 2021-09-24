@@ -3,8 +3,10 @@ module FastDEQ
 using CUDA
 using DiffEqSensitivity
 using Flux
+using LinearAlgebra
 using OrdinaryDiffEq
 using SteadyStateDiffEq
+using UnPack
 using Zygote
 
 
@@ -47,11 +49,7 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
         return deq.re(_p)(u, x) .- u
     end
     ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), one(T)), p))
-    return reshape(
-        solve(ssprob, deq.args...; u0 = z, deq.kwargs...).u,
-        :,
-        size(x, ndims(x)),
-    )
+    return solve(ssprob, deq.args...; u0 = z, deq.kwargs...).u
 end
 
 
@@ -107,15 +105,14 @@ function (deq::SkipDeepEquilibriumNetwork)(
         return deq.re1(_p)(u, x) .- u
     end
     ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), one(T)), p1))
-    return reshape(
-        solve(ssprob, deq.args...; u0 = z, deq.kwargs...).u,
-        :,
-        size(x, ndims(x)),
-    ),
-    z
+    return solve(ssprob, deq.args...; u0 = z, deq.kwargs...).u, z
 end
 
 
+include("solvers.jl")
+
+
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
+export BroydenCache, broyden
 
 end
