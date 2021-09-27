@@ -11,7 +11,7 @@ using Zygote
 
 
 include("utils.jl")
-include("models.jl")
+include("layers.jl")
 include("solvers.jl")
 
 
