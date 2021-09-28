@@ -6,6 +6,7 @@ using CUDA,
     FastDEQ,
     Flux,
     OrdinaryDiffEq,
+    Statistics,
     SteadyStateDiffEq,
     Plots,
     Random,
@@ -67,6 +68,15 @@ function get_model(
     return model
 end
 
+## Utilities
+function register_nfe_counts(deq, buffer)
+    function callback()
+        push!(buffer, deq.stats.nfe)
+        deq.stats.nfe = 0
+    end
+    return callback
+end
+
 ## Training Function
 function train(config::Dict)
     ## Setup Logging & Experiment Configuration
@@ -95,7 +105,7 @@ function train(config::Dict)
 
     ## Model Setup
     model = get_model(
-        get_config(lg, "hdims"),
+        get_config(lg, "hidden_dims"),
         get_config(lg, "abstol"),
         get_config(lg, "reltol"),
         get_config(lg, "model_type"),
@@ -119,9 +129,6 @@ function train(config::Dict)
 
                 ### Store the NFE Count
                 cb()
-
-                ### Log the model parameters
-                log(lg, cpu; parameters = ps, gradients = gs, commit = false)
 
                 ### Log the losses
                 log(
@@ -163,19 +170,38 @@ function train(config::Dict)
     return model, nfe_counts, x_data, y_data
 end
 
+## Plotting
+function plot_nfe_counts(nfe_counts_1, nfe_counts_2)
+    p = plot(nfe_counts_1, label = "Vanilla DEQ")
+    plot!(p, nfe_counts_2, label = "Skip DEQ")
+    xlabel!(p, "Training Iteration")
+    ylabel!(p, "NFE Count")
+    title!(p, "NFE over Training Iterations of DEQ vs SkipDEQ")
+    return p
+end
 
 ## Run Experiment
-config = Dict("seed" => 1,
-              "learning_rate" => 0.001,
-              "abstol" => 1f-3,
-              "reltol" => 1f-3,
-              "epochs" => 1000,
-              "batch_size" => 64,
-              "data_size" => 512,
-              "hidden_dims" => 100,
-              "model_type" => "vanilla")
+nfe_count_dict = Dict("vanilla" => [], "skip" => [])
 
-model, nfe_counts, x_data, y_data = train(config)
+for seed in [1, 11, 111]
+    for model_type in ["vanilla", "skip"]
+        config = Dict("seed" => seed,
+                      "learning_rate" => 0.001,
+                      "abstol" => 1f-3,
+                      "reltol" => 1f-3,
+                      "epochs" => 500,
+                      "batch_size" => 64,
+                      "data_size" => 512,
+                      "hidden_dims" => 100,
+                      "model_type" => model_type)
 
+        model, nfe_counts, x_data, y_data = train(config)
 
+        push!(nfe_count_dict[model_type], nfe_counts)
+    end
+end
 
+plot_nfe_counts(
+    vec(mean(hcat(nfe_count_dict["vanilla"]...), dims = 2)),
+    vec(mean(hcat(nfe_count_dict["skip"]...), dims = 2)),
+)
