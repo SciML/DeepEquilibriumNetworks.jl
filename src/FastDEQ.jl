@@ -10,6 +10,11 @@ using UnPack
 using Zygote
 
 
+abstract type AbstractDeepEquilibriumModel end
+
+function construct_iterator end
+
+
 include("utils.jl")
 include("layers.jl")
 include("solvers.jl")

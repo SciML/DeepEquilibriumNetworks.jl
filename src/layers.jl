@@ -1,8 +1,10 @@
+Flux.trainable(deq::AbstractDeepEquilibriumNetwork) = (deq.p,)
+
 mutable struct DEQTrainingStats
     nfe::Int
 end
 
-struct DeepEquilibriumNetwork{M,P,RE,A,K}
+struct DeepEquilibriumNetwork{M,P,RE,A,K} <: AbstractDeepEquilibriumModel
     model::M
     p::P
     re::RE
@@ -26,8 +28,6 @@ function DeepEquilibriumNetwork(model, args...; p = nothing, kwargs...)
     )
 end
 
-Flux.trainable(deq::DeepEquilibriumNetwork) = (deq.p,)
-
 function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
     deq.stats.nfe += 1
     z = deq.re(p)(zero(x), x)
@@ -41,7 +41,21 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
 end
 
 
-struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,K}
+function construct_iterator(deq::DeepEquilibriumNetwork, x, p = deq.p)
+    executions = 1
+    model = deq.re(p)
+    previous_value = nothing
+    function iterator()
+        z = model(executions == 1 ? zero(x) : previous_value, x)
+        executions += 1
+        previous_value = z
+        return z
+    end
+    return iterator
+end
+
+
+struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,K} <: AbstractDeepEquilibriumModel
     model::M
     shortcut::S
     p::P
@@ -78,8 +92,6 @@ function SkipDeepEquilibriumNetwork(
     )
 end
 
-Flux.trainable(deq::SkipDeepEquilibriumNetwork) = (deq.p,)
-
 function (deq::SkipDeepEquilibriumNetwork)(
     x::AbstractArray{T},
     p = deq.p,
@@ -94,4 +106,23 @@ function (deq::SkipDeepEquilibriumNetwork)(
     end
     ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), one(T)), p1))
     return solve(ssprob, deq.args...; u0 = z, deq.kwargs...).u, z
+end
+
+function construct_iterator(deq::SkipDeepEquilibriumNetwork, x, p = deq.p)
+    p1, p2 = p[1:deq.split_idx], p[deq.split_idx+1:end]
+    executions = 1
+    model = deq.re1(p1)
+    shortcut = deq.re2(p2)
+    previous_value = nothing
+    function iterator()
+        if executions == 1
+            z = shortcut(x)
+        else
+            z = model(previous_value, x)
+        end
+        executions += 1
+        previous_value = z
+        return z
+    end
+    return iterator
 end
