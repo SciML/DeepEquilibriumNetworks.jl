@@ -10,7 +10,7 @@ using UnPack
 using Zygote
 
 
-abstract type AbstractDeepEquilibriumModel end
+abstract type AbstractDeepEquilibriumNetwork end
 
 function construct_iterator end
 

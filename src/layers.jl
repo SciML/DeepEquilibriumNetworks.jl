@@ -4,7 +4,7 @@ mutable struct DEQTrainingStats
     nfe::Int
 end
 
-struct DeepEquilibriumNetwork{M,P,RE,A,K} <: AbstractDeepEquilibriumModel
+struct DeepEquilibriumNetwork{M,P,RE,A,K} <: AbstractDeepEquilibriumNetwork
     model::M
     p::P
     re::RE
@@ -55,7 +55,7 @@ function construct_iterator(deq::DeepEquilibriumNetwork, x, p = deq.p)
 end
 
 
-struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,K} <: AbstractDeepEquilibriumModel
+struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,K} <: AbstractDeepEquilibriumNetwork
     model::M
     shortcut::S
     p::P
