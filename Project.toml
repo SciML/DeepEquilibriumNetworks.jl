@@ -26,6 +26,7 @@ Wandb = "ad70616a-06c9-5745-b1f1-6a5f42545108"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
+MLDatasets = "0.5"
 julia = "1.6"
 
 [extras]
