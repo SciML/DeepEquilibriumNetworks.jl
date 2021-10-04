@@ -16,7 +16,7 @@ end
 Flux.@functor DeepEquilibriumNetwork
 
 function DeepEquilibriumNetwork(model, args...; p = nothing, kwargs...)
-    _p, re = Flux.destructure(model)
+    _p, re = parameter_desctructure(model)
     p = p === nothing ? _p : p
     return DeepEquilibriumNetwork(
         model,
@@ -37,7 +37,10 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
         return deq.re(_p)(u, x) .- u
     end
     ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), one(T)), p))
-    return solve(ssprob, deq.args...; u0 = z, deq.kwargs...).u
+    return solve(ssprob, deq.args...; u0 = z,
+                 sensealg = SteadyStateAdjoint(autodiff = false,
+                                               autojacvec = ZygoteVJP()),
+                 deq.kwargs...).u
 end
 
 
@@ -76,8 +79,8 @@ function SkipDeepEquilibriumNetwork(
     p = nothing,
     kwargs...,
 )
-    p1, re1 = Flux.destructure(model)
-    p2, re2 = Flux.destructure(shortcut)
+    p1, re1 = parameter_desctructure(model)
+    p2, re2 = parameter_desctructure(shortcut)
     p = p === nothing ? vcat(p1, p2) : p
     return SkipDeepEquilibriumNetwork(
         model,
@@ -105,7 +108,10 @@ function (deq::SkipDeepEquilibriumNetwork)(
         return deq.re1(_p)(u, x) .- u
     end
     ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), one(T)), p1))
-    return solve(ssprob, deq.args...; u0 = z, deq.kwargs...).u, z
+    return solve(ssprob, deq.args...; u0 = z,
+                 sensealg = SteadyStateAdjoint(autodiff = false,
+                                               autojacvec = ZygoteVJP()),
+                 deq.kwargs...).u, z
 end
 
 function construct_iterator(deq::SkipDeepEquilibriumNetwork, x, p = deq.p)
