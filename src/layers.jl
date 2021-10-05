@@ -16,7 +16,7 @@ end
 Flux.@functor DeepEquilibriumNetwork
 
 function DeepEquilibriumNetwork(model, args...; p = nothing, kwargs...)
-    _p, re = parameter_desctructure(model)
+    _p, re = Flux.destructure(model)
     p = p === nothing ? _p : p
     return DeepEquilibriumNetwork(
         model,
@@ -79,8 +79,8 @@ function SkipDeepEquilibriumNetwork(
     p = nothing,
     kwargs...,
 )
-    p1, re1 = parameter_desctructure(model)
-    p2, re2 = parameter_desctructure(shortcut)
+    p1, re1 = Flux.destructure(model)
+    p2, re2 = Flux.destructure(shortcut)
     p = p === nothing ? vcat(p1, p2) : p
     return SkipDeepEquilibriumNetwork(
         model,
