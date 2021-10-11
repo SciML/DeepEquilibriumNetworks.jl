@@ -1,6 +1,7 @@
 module FastDEQ
 
 using CUDA
+using DiffEqBase
 using DiffEqSensitivity
 using Flux
 using Functors
@@ -25,7 +26,7 @@ include("solvers/linsolve.jl")
 
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
 export BroydenCache, broyden
-export LinSolveKrylovJL
+export LinSolveKrylovJL, LinearScaledJacVecOperator
 export parameter_destructure
 
 end
