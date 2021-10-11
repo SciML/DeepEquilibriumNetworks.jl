@@ -16,7 +16,7 @@ using Test
 
     linsolve = LinSolveKrylovJL()
     res = zero(vec(x))
-    linsolve(res, A, b)
+    @test mul!(zero(b), A, vec(linsolve(zero(x), A, b))) ≈ b
 
 
     # Testing LinSolve with DiffEqSensitivity
