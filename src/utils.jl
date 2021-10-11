@@ -63,4 +63,3 @@ Zygote.@adjoint function _parameter_restructure(m, xs)
     end
     return m̄, _parameter_restructure_pullback
 end
-  

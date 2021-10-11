@@ -1,3 +1,4 @@
+# Broyden
 struct BroydenCache{J,F,X}
     Jinv::J
     fx::F
@@ -39,7 +40,7 @@ function broyden(
     max_resets = 3
     resets = 0
 
-    for _ = 1:max_iter
+    for i = 1:max_iter
         x_old .= x
         fx_old .= fx
 

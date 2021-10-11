@@ -5,6 +5,7 @@ using DiffEqSensitivity
 using Flux
 using Functors
 using LinearAlgebra
+using LinearSolve
 using OrdinaryDiffEq
 using SteadyStateDiffEq
 using UnPack
@@ -18,11 +19,13 @@ function construct_iterator end
 
 include("utils.jl")
 include("layers.jl")
-include("solvers.jl")
+include("solvers/broyden.jl")
+include("solvers/linsolve.jl")
 
 
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
 export BroydenCache, broyden
+export LinSolveKrylovJL
 export parameter_destructure
 
 end
