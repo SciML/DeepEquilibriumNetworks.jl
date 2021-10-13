@@ -13,8 +13,4 @@ To be ported to NonLinearSolve.jl
 
 ## Linear Solvers (GPU Compatible)
 
-To be ported to LinearSolve.jl
-
-## Next Steps
-
-- [ ] Rework the DEQ Backwards Pass since it uses a lot of memory (explicitly stores the Jacobian)
+* `LinSolveKrylovJL`: Wraps `KrylovJL` from LinearSolve.jl to have a compatible API for DiffEqSensitivity

@@ -19,14 +19,14 @@ function construct_iterator end
 
 
 include("utils.jl")
-include("layers.jl")
 include("solvers/broyden.jl")
 include("solvers/linsolve.jl")
+include("layers.jl")
 
 
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
 export BroydenCache, broyden
-export LinSolveKrylovJL, LinearScaledJacVecOperator
+export LinSolveKrylovJL, LinearScaledJacVecOperator, VecJacOperator
 export parameter_destructure
 
 end

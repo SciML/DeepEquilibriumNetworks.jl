@@ -155,9 +155,9 @@ function train(config::Dict)
                 ),
             )
         catch ex
-            if ex isa StopException
+            if ex isa Flux.Optimise.StopException
                 break
-            elseif ex isa SkipException
+            elseif ex isa Flux.Optimise.SkipException
                 continue
             else
                 rethrow(ex)
