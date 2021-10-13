@@ -30,6 +30,6 @@ using Test
     ps = Flux.params(model)
     gs = Flux.gradient(() -> sum(model(x)), ps)
     for _p in ps
-        @test isfinite(gs[_p])
+        @test all(isfinite.(gs[_p]))
     end
 end
