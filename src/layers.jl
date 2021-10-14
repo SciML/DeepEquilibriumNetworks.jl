@@ -73,7 +73,7 @@ function construct_iterator(deq::DeepEquilibriumNetwork, x, p = deq.p)
 end
 
 
-struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,S,K} <:
+struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,Se,K} <:
        AbstractDeepEquilibriumNetwork
     model::M
     shortcut::S
@@ -83,7 +83,7 @@ struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,S,K} <:
     split_idx::Int
     args::A
     kwargs::K
-    sensealg::S
+    sensealg::Se
     stats::DEQTrainingStats
 end
 
