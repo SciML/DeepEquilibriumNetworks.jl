@@ -282,7 +282,7 @@ for seed in [1, 11, 111]
                       "batch_size" => 512,
                       "model_type" => model_type)
 
-        model, nfe_counts, x_data, y_data = train(config)
+        model, nfe_counts = train(config)
 
         push!(nfe_count_dict[model_type], nfe_counts)
     end
