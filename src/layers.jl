@@ -23,7 +23,7 @@ function DeepEquilibriumNetwork(
     sensealg = SteadyStateAdjoint(
         autodiff = false,
         autojacvec = ZygoteVJP(),
-        linsolve = LinSolveKrylovJL(rtol = T(0.1), atol = T(0.1)),
+        linsolve = LinSolveKrylovJL(rtol = 0.1, atol = 0.1),
     ),
     kwargs...,
 )
@@ -97,7 +97,7 @@ function SkipDeepEquilibriumNetwork(
     sensealg = SteadyStateAdjoint(
         autodiff = false,
         autojacvec = ZygoteVJP(),
-        linsolve = LinSolveKrylovJL(rtol = T(0.1), atol = T(0.1)),
+        linsolve = LinSolveKrylovJL(rtol = 0.1, atol = 0.1),
     ),
     kwargs...,
 )
