@@ -40,7 +40,7 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
     return solve(ssprob, deq.args...; u0 = z,
                  sensealg = SteadyStateAdjoint(autodiff = false,
                                                autojacvec = ZygoteVJP(),
-                                               linsolve = LinSolveKrylovJL()),
+                                               linsolve = LinSolveKrylovJL(rtol = 1f-1, atol = 1f-1)),
                  deq.kwargs...).u
 end
 
@@ -112,7 +112,7 @@ function (deq::SkipDeepEquilibriumNetwork)(
     return solve(ssprob, deq.args...; u0 = z,
                  sensealg = SteadyStateAdjoint(autodiff = false,
                                                autojacvec = ZygoteVJP(),
-                                               linsolve = LinSolveKrylovJL()),
+                                               linsolve = LinSolveKrylovJL(rtol = 1f-1, atol = 1f-1)),
                  deq.kwargs...).u, z
 end
 
