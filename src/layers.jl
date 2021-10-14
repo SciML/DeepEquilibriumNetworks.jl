@@ -4,18 +4,29 @@ mutable struct DEQTrainingStats
     nfe::Int
 end
 
-struct DeepEquilibriumNetwork{M,P,RE,A,K} <: AbstractDeepEquilibriumNetwork
+struct DeepEquilibriumNetwork{M,P,RE,A,S,K} <: AbstractDeepEquilibriumNetwork
     model::M
     p::P
     re::RE
     args::A
     kwargs::K
+    sensealg::S
     stats::DEQTrainingStats
 end
 
 Flux.@functor DeepEquilibriumNetwork
 
-function DeepEquilibriumNetwork(model, args...; p = nothing, kwargs...)
+function DeepEquilibriumNetwork(
+    model,
+    args...;
+    p = nothing,
+    sensealg = SteadyStateAdjoint(
+        autodiff = false,
+        autojacvec = ZygoteVJP(),
+        linsolve = LinSolveKrylovJL(rtol = T(0.1), atol = T(0.1)),
+    ),
+    kwargs...,
+)
     _p, re = Flux.destructure(model)
     p = p === nothing ? _p : p
     return DeepEquilibriumNetwork(
@@ -24,6 +35,7 @@ function DeepEquilibriumNetwork(model, args...; p = nothing, kwargs...)
         re,
         args,
         kwargs,
+        sensealg,
         DEQTrainingStats(0),
     )
 end
@@ -41,11 +53,7 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
         ssprob,
         deq.args...;
         u0 = z,
-        sensealg = SteadyStateAdjoint(
-            autodiff = false,
-            autojacvec = ZygoteVJP(),
-            linsolve = LinSolveKrylovJL(rtol = T(0.1), atol = T(0.1)),
-        ),
+        sensealg = deq.sensealg,
         deq.kwargs...,
     ).u
 end
@@ -65,7 +73,7 @@ function construct_iterator(deq::DeepEquilibriumNetwork, x, p = deq.p)
 end
 
 
-struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,K} <:
+struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,S,K} <:
        AbstractDeepEquilibriumNetwork
     model::M
     shortcut::S
@@ -75,6 +83,7 @@ struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,K} <:
     split_idx::Int
     args::A
     kwargs::K
+    sensealg::S
     stats::DEQTrainingStats
 end
 
@@ -85,6 +94,11 @@ function SkipDeepEquilibriumNetwork(
     shortcut,
     args...;
     p = nothing,
+    sensealg = SteadyStateAdjoint(
+        autodiff = false,
+        autojacvec = ZygoteVJP(),
+        linsolve = LinSolveKrylovJL(rtol = T(0.1), atol = T(0.1)),
+    ),
     kwargs...,
 )
     p1, re1 = Flux.destructure(model)
@@ -99,6 +113,7 @@ function SkipDeepEquilibriumNetwork(
         length(p1),
         args,
         kwargs,
+        sensealg,
         DEQTrainingStats(0),
     )
 end
@@ -116,18 +131,16 @@ function (deq::SkipDeepEquilibriumNetwork)(
         return deq.re1(_p)(u, x) .- u
     end
     ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), one(T)), p1))
-    return solve(
-        ssprob,
-        deq.args...;
-        u0 = z,
-        sensealg = SteadyStateAdjoint(
-            autodiff = false,
-            autojacvec = ZygoteVJP(),
-            linsolve = LinSolveKrylovJL(rtol = T(0.1), atol = T(0.1)),
-        ),
-        deq.kwargs...,
-    ).u,
-    z
+    return (
+        solve(
+            ssprob,
+            deq.args...;
+            u0 = z,
+            sensealg = deq.sensealg,
+            deq.kwargs...,
+        ).u,
+        z,
+    )
 end
 
 function construct_iterator(deq::SkipDeepEquilibriumNetwork, x, p = deq.p)

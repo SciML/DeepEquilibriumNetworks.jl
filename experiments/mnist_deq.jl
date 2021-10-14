@@ -1,5 +1,5 @@
 using DataLoaders: DataLoader
-using MLDataPattern: splitobs
+using MLDataPattern: splitobs, shuffleobs
 using ProgressBars
 using Flux
 using FastDEQ
@@ -57,17 +57,15 @@ xs, ys = (
 )
 
 # split into training and validation sets
-traindata, valdata = splitobs((xs, ys))
+traindata, valdata = splitobs((xs, ys), at = 0.9)
 
 # create iterators
-trainiter = DataLoader(traindata, 256, buffered = false);
 valiter = DataLoader(valdata, 512, buffered = false);
 
 # Set device
 dev = gpu
 
 # Final Model
-## TODO: Change the abstol after training for a few iterations
 model =
     Chain(
         Conv((3, 3), 1 => 48, relu; bias = true, pad = 1),  # 28 x 28 x 48
@@ -75,7 +73,12 @@ model =
         DeepEquilibriumNetwork(
             ResNetLayer(48, 64) |> dev,
             DynamicSS(Tsit5(); abstol = 1.0f-1),
-            maxiters = 20
+            maxiters = 40,
+            sensealg = SteadyStateAdjoint(
+                autodiff = false,
+                autojacvec = ZygoteVJP(),
+                linsolve = LinSolveKrylovJL(rtol = T(0.001), atol = T(0.001)),
+            ),
         ),
         BatchNorm(48, affine = true),
         MeanPool((8, 8)),  # 3 x 3 x 48
@@ -112,6 +115,7 @@ ps = Flux.params(model)
 for epoch = 1:100
     epoch_loss = 0
     epoch_count = 0
+    trainiter = DataLoader(shuffleobs(traindata), 512, buffered = false);
     iter = ProgressBar(trainiter)
     for (x, y) in iter
         x = x |> dev
