@@ -8,6 +8,7 @@ using Functors
 using LinearAlgebra
 using LinearSolve
 using OrdinaryDiffEq
+using Statistics
 using SteadyStateDiffEq
 using UnPack
 using Zygote
@@ -22,9 +23,14 @@ include("utils.jl")
 include("solvers/broyden.jl")
 include("solvers/linsolve.jl")
 include("layers.jl")
+include("models.jl")
+include("losses.jl")
 
 
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
+export DEQChain
+export get_and_clear_nfe!
+export SupervisedLossContainer
 export BroydenCache, broyden
 export LinSolveKrylovJL, LinearScaledJacVecOperator, VecJacOperator
 export parameter_destructure

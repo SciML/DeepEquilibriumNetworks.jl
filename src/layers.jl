@@ -58,6 +58,11 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
     ).u
 end
 
+function get_and_clear_nfe!(model::DeepEquilibriumNetwork)
+    nfe = model.stats.nfe
+    model.stats.nfe = 0
+    return nfe
+end
 
 function construct_iterator(deq::DeepEquilibriumNetwork, x, p = deq.p)
     executions = 1
@@ -116,6 +121,12 @@ function SkipDeepEquilibriumNetwork(
         sensealg,
         DEQTrainingStats(0),
     )
+end
+
+function get_and_clear_nfe!(model::SkipDeepEquilibriumNetwork)
+    nfe = model.stats.nfe
+    model.stats.nfe = 0
+    return nfe
 end
 
 function (deq::SkipDeepEquilibriumNetwork)(
