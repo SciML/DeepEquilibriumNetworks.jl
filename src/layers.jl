@@ -37,11 +37,17 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
         return deq.re(_p)(u, x) .- u
     end
     ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), one(T)), p))
-    return solve(ssprob, deq.args...; u0 = z,
-                 sensealg = SteadyStateAdjoint(autodiff = false,
-                                               autojacvec = ZygoteVJP(),
-                                               linsolve = LinSolveKrylovJL(rtol = 1f-1, atol = 1f-1)),
-                 deq.kwargs...).u
+    return solve(
+        ssprob,
+        deq.args...;
+        u0 = z,
+        sensealg = SteadyStateAdjoint(
+            autodiff = false,
+            autojacvec = ZygoteVJP(),
+            linsolve = LinSolveKrylovJL(rtol = T(0.1), atol = T(0.1)),
+        ),
+        deq.kwargs...,
+    ).u
 end
 
 
@@ -59,7 +65,8 @@ function construct_iterator(deq::DeepEquilibriumNetwork, x, p = deq.p)
 end
 
 
-struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,K} <: AbstractDeepEquilibriumNetwork
+struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,K} <:
+       AbstractDeepEquilibriumNetwork
     model::M
     shortcut::S
     p::P
@@ -109,11 +116,18 @@ function (deq::SkipDeepEquilibriumNetwork)(
         return deq.re1(_p)(u, x) .- u
     end
     ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), one(T)), p1))
-    return solve(ssprob, deq.args...; u0 = z,
-                 sensealg = SteadyStateAdjoint(autodiff = false,
-                                               autojacvec = ZygoteVJP(),
-                                               linsolve = LinSolveKrylovJL(rtol = 1f-1, atol = 1f-1)),
-                 deq.kwargs...).u, z
+    return solve(
+        ssprob,
+        deq.args...;
+        u0 = z,
+        sensealg = SteadyStateAdjoint(
+            autodiff = false,
+            autojacvec = ZygoteVJP(),
+            linsolve = LinSolveKrylovJL(rtol = T(0.1), atol = T(0.1)),
+        ),
+        deq.kwargs...,
+    ).u,
+    z
 end
 
 function construct_iterator(deq::SkipDeepEquilibriumNetwork, x, p = deq.p)
