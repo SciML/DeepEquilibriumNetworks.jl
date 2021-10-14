@@ -5,6 +5,7 @@ using Flux
 using FastDEQ
 using OrdinaryDiffEq
 using SteadyStateDiffEq
+using DiffEqSensitivity
 
 # Resnet Layer
 struct ResNetLayer{C1,C2,N1,N2,N3}
@@ -77,7 +78,7 @@ model =
             sensealg = SteadyStateAdjoint(
                 autodiff = false,
                 autojacvec = ZygoteVJP(),
-                linsolve = LinSolveKrylovJL(rtol = T(0.001), atol = T(0.001)),
+                linsolve = LinSolveKrylovJL(rtol = 1f-3, atol = 1f-3),
             ),
         ),
         BatchNorm(48, affine = true),
