@@ -136,9 +136,9 @@ version = "1.11.6"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "74e8234fb738c45e2af55fdbcd9bfbe00c2446fa"
+git-tree-sha1 = "2f294fae04aa5069a67964a3366e151e09ea7c09"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.8.0"
+version = "1.9.0"
 
 [[deps.CloseOpenIntervals]]
 deps = ["ArrayInterface", "Static"]
@@ -300,11 +300,11 @@ version = "4.32.0"
 
 [[deps.DiffEqSensitivity]]
 deps = ["Adapt", "ArrayInterface", "Cassette", "ChainRulesCore", "DiffEqBase", "DiffEqCallbacks", "DiffEqNoiseProcess", "DiffEqOperators", "DiffRules", "Distributions", "Enzyme", "FFTW", "FiniteDiff", "ForwardDiff", "GlobalSensitivity", "LinearAlgebra", "OrdinaryDiffEq", "Parameters", "QuadGK", "QuasiMonteCarlo", "Random", "RandomNumbers", "RecursiveArrayTools", "Reexport", "Requires", "ReverseDiff", "SharedArrays", "Statistics", "StochasticDiffEq", "Tracker", "Zygote", "ZygoteRules"]
-git-tree-sha1 = "0609dadeb44414dc0b768d0c3c34a56c12289b29"
+git-tree-sha1 = "68718289742209f65b05937889b933b9389fa85f"
 repo-rev = "ap/ssadjoint"
 repo-url = "https://github.com/avik-pal/DiffEqSensitivity.jl"
 uuid = "41bf760c-e81c-5289-8e54-58b1f1f8abe2"
-version = "6.58.1"
+version = "6.60.1"
 
 [[deps.DiffResults]]
 deps = ["StaticArrays"]
@@ -330,9 +330,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
 deps = ["ChainRulesCore", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns"]
-git-tree-sha1 = "e13d3977b559f013b3729a029119162f84e93f5b"
+git-tree-sha1 = "9809cf6871ca006d5a4669136c09e77ba08bf51a"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.19"
+version = "0.25.20"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
@@ -370,11 +370,9 @@ version = "1.1.0"
 
 [[deps.Enzyme]]
 deps = ["Adapt", "CEnum", "Enzyme_jll", "GPUCompiler", "LLVM", "Libdl", "ObjectFile"]
-git-tree-sha1 = "d4f2ffab25c09e96d12abe719272abd96920a105"
-repo-rev = "ap/fastdeq"
-repo-url = "https://github.com/avik-pal/Enzyme.jl"
+git-tree-sha1 = "b1beaca0a3d99bf62fb9ea18d287d3ee29dc9782"
 uuid = "7da242da-08ed-463a-9acd-ee780be4f1d9"
-version = "0.6.5"
+version = "0.7.2"
 
 [[deps.Enzyme_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -471,10 +469,10 @@ uuid = "59287772-0a20-5a39-b81b-1366585eb4c0"
 version = "0.4.2"
 
 [[deps.ForwardDiff]]
-deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "NaNMath", "Printf", "Random", "SpecialFunctions", "StaticArrays"]
-git-tree-sha1 = "c4203b60d37059462af370c4f3108fb5d155ff13"
+deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions", "StaticArrays"]
+git-tree-sha1 = "63777916efbcb0ab6173d09a658fb7f2783de485"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
-version = "0.10.20"
+version = "0.10.21"
 
 [[deps.FreeType2_jll]]
 deps = ["Artifacts", "Bzip2_jll", "JLLWrappers", "Libdl", "Pkg", "Zlib_jll"]
@@ -1784,9 +1782,9 @@ version = "1.5.0+0"
 
 [[deps.Zygote]]
 deps = ["AbstractFFTs", "ChainRules", "ChainRulesCore", "DiffRules", "Distributed", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics", "ZygoteRules"]
-git-tree-sha1 = "2c18495c33331497f147b21e7c65c3246cdb59cc"
+git-tree-sha1 = "a88cafd339a0099e030286a3a6d0b3c32d373dcf"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
-version = "0.6.23"
+version = "0.6.28"
 
 [[deps.ZygoteRules]]
 deps = ["MacroTools"]
