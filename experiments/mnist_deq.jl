@@ -131,8 +131,7 @@ end
 
 function loss_and_accuracy(model, dataloader)
     matches, total_loss, total_datasize, total_nfe = 0, 0, 0, 0
-    iter = ProgressBar(dataloader)
-    for (x, y) in iter
+    for (x, y) in dataloader
         x = x |> gpu
         y = y |> gpu
 
@@ -221,8 +220,8 @@ function train(config::Dict)
                 epoch_loss += loss * size(x, ndims(x))
             end
             ### Log the epoch loss
-            epoch_loss /= size(x_data, ndims(x_data))
-            epoch_nfe /= size(x_data, ndims(x_data))
+            epoch_loss /= size(traindata[1], ndims(traindata[1]))
+            epoch_nfe /= size(traindata[1], ndims(traindata[1]))
             log(
                 lg,
                 Dict(
