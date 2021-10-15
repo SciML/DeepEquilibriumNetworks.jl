@@ -176,8 +176,8 @@ function train(config::Dict)
     ## Model Setup
     model = get_model(
         get_config(lg, "maxiters"),
-        get_config(lg, "abstol"),
-        get_config(lg, "reltol"),
+        Float32(get_config(lg, "abstol")),
+        Float32(get_config(lg, "reltol")),
         get_config(lg, "model_type"),
     )
 
@@ -277,7 +277,7 @@ for seed in [1, 11, 111]
                       "learning_rate" => 0.001,
                       "abstol" => 1f-2,
                       "reltol" => 1f-2,
-                      "maxiters" => 10,
+                      "maxiters" => 40,
                       "epochs" => 10,
                       "batch_size" => 512,
                       "model_type" => model_type)
