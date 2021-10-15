@@ -278,7 +278,7 @@ for seed in [1, 11, 111]
                       "abstol" => 1f-2,
                       "reltol" => 1f-2,
                       "maxiters" => 40,
-                      "epochs" => 10,
+                      "epochs" => 5,
                       "batch_size" => 512,
                       "model_type" => model_type)
 
