@@ -28,9 +28,10 @@ Flux.@functor ResNetLayer
 
 function ResNetLayer(
     n_channels::Int,
-    n_inner_channels::Int,
+    n_inner_channels::Int;
     kernel_size::Tuple{Int,Int} = (3, 3),
     num_groups::Int = 8,
+    affine::Bool = false
 )
     conv1 = Conv(
         kernel_size,
@@ -47,15 +48,19 @@ function ResNetLayer(
         bias = false,
         init = (dims...) -> randn(Float32, dims...) .* 0.01f0,
     )
-    norm1 = GroupNorm(n_inner_channels, num_groups, affine = false)
-    norm2 = GroupNorm(n_channels, num_groups, affine = false)
-    norm3 = GroupNorm(n_channels, num_groups, affine = false)
+    norm1 = GroupNorm(n_inner_channels, num_groups, affine = affine)
+    norm2 = GroupNorm(n_channels, num_groups, affine = affine)
+    norm3 = GroupNorm(n_channels, num_groups, affine = affine)
 
     return ResNetLayer(conv1, conv2, norm1, norm2, norm3)
 end
 
 (rl::ResNetLayer)(z, x) =
     rl.norm3(relu.(z .+ rl.norm2(x .+ rl.conv2(rl.norm1(rl.conv1(z))))))
+
+(rl::ResNetLayer)(x) =
+    rl.norm3(relu.(rl.norm2(rl.conv2(rl.norm1(rl.conv1(x))))))
+
 
 function get_model(
     maxiters::Int,
@@ -73,7 +78,7 @@ function get_model(
                     DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                     maxiters = maxiters,
                     sensealg = SteadyStateAdjoint(
-                        autodiff = false,
+                        autodiff = true,
                         autojacvec = ZygoteVJP(),
                         linsolve = LinSolveKrylovJL(
                             rtol = reltol,
@@ -94,15 +99,11 @@ function get_model(
                 BatchNorm(48, affine = true),
                 SkipDeepEquilibriumNetwork(
                     ResNetLayer(48, 64) |> gpu,
-                    Chain(
-                        Conv((3, 3), 48 => 64, relu; bias = true, pad = 1),
-                        GroupNorm(64, 8, affine = false),
-                        Conv((3, 3), 64 => 48, relu; bias = true, pad = 1)
-                    ) |> gpu,
+                    ResNetLayer(48, 64; affine = true) |> gpu,
                     DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                     maxiters = maxiters,
                     sensealg = SteadyStateAdjoint(
-                        autodiff = false,
+                        autodiff = true,
                         autojacvec = ZygoteVJP(),
                         linsolve = LinSolveKrylovJL(
                             rtol = reltol,
@@ -136,8 +137,9 @@ function loss_and_accuracy(model, dataloader)
         y = y |> gpu
 
         ŷ = model(x)
+        ŷ = ŷ isa Tuple ? ŷ[1] : ŷ  # Handle SkipDEQ
         total_nfe += get_and_clear_nfe!(model) * size(x, ndims(x))
-        total_loss += lossfn(ŷ, y) * size(x, ndims(x))
+        total_loss += Flux.Losses.logitcrossentropy(ŷ, y) * size(x, ndims(x))
         matches += sum(argmax.(eachcol(ŷ)) .== Flux.onecold(y |> cpu))
         total_datasize += size(x, ndims(x))
     end
@@ -180,7 +182,7 @@ function train(config::Dict)
         get_config(lg, "model_type"),
     )
 
-    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1f-2)
+    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0)
 
     nfe_counts = Int64[]
     cb = register_nfe_counts(model, nfe_counts)
@@ -274,10 +276,10 @@ for seed in [1, 11, 111]
     for model_type in ["vanilla", "skip"]
         config = Dict("seed" => seed,
                       "learning_rate" => 0.001,
-                      "abstol" => 1f-2,
-                      "reltol" => 1f-2,
-                      "maxiters" => 40,
-                      "epochs" => 5,
+                      "abstol" => 1f-3,
+                      "reltol" => 1f-3,
+                      "maxiters" => 100,
+                      "epochs" => 15,
                       "batch_size" => 512,
                       "model_type" => model_type)
 
