@@ -93,6 +93,12 @@ end
 
 Flux.@functor SkipDeepEquilibriumNetwork
 
+function Flux.trainable(deq::SkipDeepEquilibriumNetwork)
+    p = deq.p
+    p1, p2 = p[1:deq.split_idx], p[deq.split_idx+1:end]
+    return (p1, p2)
+end
+
 function SkipDeepEquilibriumNetwork(
     model,
     shortcut,
@@ -138,7 +144,7 @@ function (deq::SkipDeepEquilibriumNetwork)(
     # Solving the equation f(u) - u = du = 0
     function dudt(u, _p, t)
         deq.stats.nfe += 1
-        return deq.re1(_p)(u, z) .- u
+        return deq.re1(_p)(u, x) .- u
     end
     ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), one(T)), p1))
     return (

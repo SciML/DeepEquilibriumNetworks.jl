@@ -30,7 +30,7 @@ include("losses.jl")
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
 export DEQChain
 export get_and_clear_nfe!
-export SupervisedLossContainer
+export SupervisedLossContainer, ScheduledSupervisedLossContainer
 export BroydenCache, broyden
 export LinSolveKrylovJL, LinearScaledJacVecOperator, VecJacOperator
 export parameter_destructure

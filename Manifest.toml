@@ -680,9 +680,9 @@ version = "2.1.0+0"
 
 [[deps.JuliaFormatter]]
 deps = ["CSTParser", "CommonMark", "DataStructures", "Pkg", "Tokenize"]
-git-tree-sha1 = "b311f3a9cdd578cc9deb642d5ace00f441c88a75"
+git-tree-sha1 = "8dec1ff9e68fe535c58209129ddb12887290b333"
 uuid = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
-version = "0.17.2"
+version = "0.18.0"
 
 [[deps.Juno]]
 deps = ["Base64", "Logging", "Media", "Profile"]
@@ -963,9 +963,9 @@ uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[deps.ModelingToolkit]]
 deps = ["AbstractTrees", "ArrayInterface", "ConstructionBase", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DiffEqJump", "DiffRules", "Distributed", "Distributions", "DocStringExtensions", "DomainSets", "IfElse", "InteractiveUtils", "JuliaFormatter", "LabelledArrays", "Latexify", "Libdl", "LightGraphs", "LinearAlgebra", "MacroTools", "NaNMath", "NonlinearSolve", "RecursiveArrayTools", "Reexport", "Requires", "RuntimeGeneratedFunctions", "SafeTestsets", "SciMLBase", "Serialization", "Setfield", "SparseArrays", "SpecialFunctions", "StaticArrays", "SymbolicUtils", "Symbolics", "UnPack", "Unitful"]
-git-tree-sha1 = "c29d3ff2c34796412fe38b761c9126b7824fc8ca"
+git-tree-sha1 = "14245fbde592a2dc25283f09c3606952721dafb4"
 uuid = "961ee093-0014-501f-94e3-6117800e7a78"
-version = "6.6.0"
+version = "6.7.0"
 
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
@@ -1477,9 +1477,9 @@ version = "0.16.0"
 
 [[deps.Symbolics]]
 deps = ["ConstructionBase", "DiffRules", "Distributions", "DocStringExtensions", "DomainSets", "IfElse", "Latexify", "Libdl", "LinearAlgebra", "MacroTools", "NaNMath", "RecipesBase", "Reexport", "Requires", "RuntimeGeneratedFunctions", "SciMLBase", "Setfield", "SparseArrays", "SpecialFunctions", "StaticArrays", "SymbolicUtils", "TreeViews"]
-git-tree-sha1 = "81949400fbb670cb5e91a8f60b9afb74bf0d5eb5"
+git-tree-sha1 = "fc0776e6098e469af0b380f092e090f74a72f560"
 uuid = "0c5d862f-8b57-4792-8d23-62f2024744c7"
-version = "3.4.3"
+version = "3.5.0"
 
 [[deps.TOML]]
 deps = ["Dates"]
