@@ -23,7 +23,7 @@ function DeepEquilibriumNetwork(
     sensealg = SteadyStateAdjoint(
         autodiff = false,
         autojacvec = ZygoteVJP(),
-        linsolve = LinSolveKrylovJL(rtol = 0.1, atol = 0.1),
+        linsolve = LinSolveKrylovJL(rtol = 0.1f0, atol = 0.1f0),
     ),
     kwargs...,
 )
@@ -41,9 +41,8 @@ function DeepEquilibriumNetwork(
 end
 
 function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
-    deq.stats.nfe += 1
-    z = deq.re(p)(zero(x), x)
     # Solving the equation f(u) - u = du = 0
+    z = zero(x)
     function dudt(u, _p, t)
         deq.stats.nfe += 1
         return deq.re(_p)(u, x) .- u
@@ -102,7 +101,7 @@ function SkipDeepEquilibriumNetwork(
     sensealg = SteadyStateAdjoint(
         autodiff = false,
         autojacvec = ZygoteVJP(),
-        linsolve = LinSolveKrylovJL(rtol = 0.1, atol = 0.1),
+        linsolve = LinSolveKrylovJL(rtol = 0.1f0, atol = 0.1f0),
     ),
     kwargs...,
 )
@@ -139,7 +138,7 @@ function (deq::SkipDeepEquilibriumNetwork)(
     # Solving the equation f(u) - u = du = 0
     function dudt(u, _p, t)
         deq.stats.nfe += 1
-        return deq.re1(_p)(u, x) .- u
+        return deq.re1(_p)(u, z) .- u
     end
     ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), one(T)), p1))
     return (

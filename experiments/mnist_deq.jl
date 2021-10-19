@@ -99,7 +99,7 @@ function get_model(
                 BatchNorm(48, affine = true),
                 SkipDeepEquilibriumNetwork(
                     ResNetLayer(48, 64) |> gpu,
-                    ResNetLayer(48, 64; affine = true) |> gpu,
+                    ResNetLayer(48, 64) |> gpu,
                     DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                     maxiters = maxiters,
                     sensealg = SteadyStateAdjoint(
@@ -182,7 +182,7 @@ function train(config::Dict)
         get_config(lg, "model_type"),
     )
 
-    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0)
+    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f-2)
 
     nfe_counts = Int64[]
     cb = register_nfe_counts(model, nfe_counts)
@@ -276,9 +276,9 @@ for seed in [1, 11, 111]
     for model_type in ["vanilla", "skip"]
         config = Dict("seed" => seed,
                       "learning_rate" => 0.001,
-                      "abstol" => 1f-3,
-                      "reltol" => 1f-3,
-                      "maxiters" => 100,
+                      "abstol" => 1f-1,
+                      "reltol" => 1f-1,
+                      "maxiters" => 40,
                       "epochs" => 15,
                       "batch_size" => 512,
                       "model_type" => model_type)

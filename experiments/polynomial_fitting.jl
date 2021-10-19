@@ -3,6 +3,7 @@
 ## Load Packages
 using CUDA,
     Dates,
+    DiffEqSensitivity,
     FastDEQ,
     Flux,
     OrdinaryDiffEq,
@@ -28,13 +29,6 @@ Flux.@functor BranchAndMerge
     bam.final(tanh.(bam.branch_1(x) .+ bam.branch_2(y)))
 
 ## Model and Loss Function
-loss_function(x, y, model::DeepEquilibriumNetwork) = mean(abs2, model(x) .- y)
-
-function loss_function(x, y, model::SkipDeepEquilibriumNetwork; λ = 1f-2)
-    ŷ, s = model(x)
-    return mean(abs2, ŷ .- y) + λ * mean(abs2, ŷ .- s)
-end
-
 function get_model(
     hdims::Int,
     abstol::T,
@@ -43,24 +37,44 @@ function get_model(
 ) where {T}
     if model_type == "vanilla"
         model =
-            DeepEquilibriumNetwork(
-                BranchAndMerge(
-                    Dense(1, hdims),
-                    Dense(1, hdims),
-                    Dense(hdims, 1),
+            DEQChain(
+                Dense(1, hdims, tanh),
+                DeepEquilibriumNetwork(
+                    BranchAndMerge(
+                        Dense(hdims, hdims * 2),
+                        Dense(hdims, hdims * 2),
+                        Dense(hdims * 2, hdims),
+                    ),
+                    DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                    sensealg = SteadyStateAdjoint(
+                        autodiff = true,
+                        autojacvec = ZygoteVJP(),
+                        linsolve = LinSolveKrylovJL(),
+                    ),
+                    maxiters = 50,
                 ),
-                DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                Dense(hdims, 1)
             ) |> gpu
     elseif model_type == "skip"
         model =
-            SkipDeepEquilibriumNetwork(
-                BranchAndMerge(
-                    Dense(1, hdims),
-                    Dense(1, hdims),
-                    Dense(hdims, 1),
+            DEQChain(
+                Dense(1, hdims, tanh),
+                SkipDeepEquilibriumNetwork(
+                    BranchAndMerge(
+                        Dense(hdims, hdims * 2),
+                        Dense(hdims, hdims * 2),
+                        Dense(hdims * 2, hdims),
+                    ),
+                    Chain(Dense(hdims, hdims * 5, tanh), Dense(hdims * 5, hdims)),
+                    DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                    sensealg = SteadyStateAdjoint(
+                        autodiff = true,
+                        autojacvec = ZygoteVJP(),
+                        linsolve = LinSolveKrylovJL(),
+                    ),
+                    maxiters = 50,
                 ),
-                Chain(Dense(1, hdims ÷ 4, relu), Dense(hdims ÷ 4, 1)),
-                DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                Dense(hdims, 1)
             ) |> gpu
     else
         throw(ArgumentError("$model_type must be either `vanilla` or `skip`"))
@@ -70,10 +84,7 @@ end
 
 ## Utilities
 function register_nfe_counts(deq, buffer)
-    function callback()
-        push!(buffer, deq.stats.nfe)
-        deq.stats.nfe = 0
-    end
+    callback() = push!(buffer, get_and_clear_nfe!(deq))
     return callback
 end
 
@@ -111,6 +122,8 @@ function train(config::Dict)
         get_config(lg, "model_type"),
     )
 
+    loss_function = SupervisedLossContainer((ŷ, y) -> mean(abs2, ŷ .- y), 1.0f0)
+
     nfe_counts = Int64[]
     cb = register_nfe_counts(model, nfe_counts)
 
@@ -123,14 +136,19 @@ function train(config::Dict)
             epoch_loss = 0.0f0
             epoch_nfe = 0
             for (x, y) in zip(x_data_partition, y_data_partition)
-                loss, back = Zygote.pullback(() -> loss_function(x, y, model), ps)
+                # TODO: Plot the actual loss
+                loss, back = Zygote.pullback(() -> loss_function(model, x, y), ps)
                 gs = back(one(loss))
                 Flux.Optimise.update!(opt, ps, gs)
 
-                ### Store the NFE Count
-                cb()
+                ### Clear the NFE Count
+                get_and_clear_nfe!(model)
 
                 ### Log the losses
+                ŷ = model(x)
+                loss = loss_function.loss_function(ŷ isa Tuple ? ŷ[1] : ŷ, y)
+                cb()
+
                 log(
                     lg,
                     Dict(
@@ -186,13 +204,13 @@ nfe_count_dict = Dict("vanilla" => [], "skip" => [])
 for seed in [1, 11, 111]
     for model_type in ["vanilla", "skip"]
         config = Dict("seed" => seed,
-                      "learning_rate" => 0.001,
+                      "learning_rate" => 1f-3,
                       "abstol" => 1f-3,
                       "reltol" => 1f-3,
                       "epochs" => 500,
-                      "batch_size" => 64,
+                      "batch_size" => 256,
                       "data_size" => 512,
-                      "hidden_dims" => 100,
+                      "hidden_dims" => 4,
                       "model_type" => model_type)
 
         model, nfe_counts, x_data, y_data = train(config)
