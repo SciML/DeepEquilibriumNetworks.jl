@@ -227,7 +227,7 @@ for seed in [1, 11, 111]
     end
 end
 
-# plot_nfe_counts(
-#     vec(mean(hcat(nfe_count_dict["vanilla"]...), dims = 2)),
-#     vec(mean(hcat(nfe_count_dict["skip"]...), dims = 2)),
-# )
+plot_nfe_counts(
+    vec(mean(hcat(nfe_count_dict["vanilla"]...), dims = 2)),
+    vec(mean(hcat(nfe_count_dict["skip"]...), dims = 2)),
+)
