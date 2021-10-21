@@ -24,7 +24,7 @@ using Test
     )
     model = DeepEquilibriumNetwork(
         Parallel(+, Dense(2, 2), Dense(2, 2)) |> gpu,
-        DynamicSS(Tsit5(); abstol = 1f-1, reltol = 1f-1),
+        DynamicSS(Tsit5(); abstol = 0.1, reltol = 0.1),
     )
     x = rand(2, 1) |> gpu
     ps = Flux.params(model)

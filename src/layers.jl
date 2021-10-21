@@ -47,14 +47,15 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
         deq.stats.nfe += 1
         return deq.re(_p)(u, x) .- u
     end
-    ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), one(T)), p))
-    return solve(
+    ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), T(Inf)), p))
+    sol = solve(
         ssprob,
         deq.args...;
         u0 = z,
         sensealg = deq.sensealg,
         deq.kwargs...,
-    ).u
+    )
+    return sol.u
 end
 
 function get_and_clear_nfe!(model::DeepEquilibriumNetwork)
@@ -146,17 +147,15 @@ function (deq::SkipDeepEquilibriumNetwork)(
         deq.stats.nfe += 1
         return deq.re1(_p)(u, x) .- u
     end
-    ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), one(T)), p1))
-    return (
-        solve(
-            ssprob,
-            deq.args...;
-            u0 = z,
-            sensealg = deq.sensealg,
-            deq.kwargs...,
-        ).u,
-        z,
+    ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), T(Inf)), p1))
+    sol = solve(
+        ssprob,
+        deq.args...;
+        u0 = z,
+        sensealg = deq.sensealg,
+        deq.kwargs...,
     )
+    return sol.u, z
 end
 
 function construct_iterator(deq::SkipDeepEquilibriumNetwork, x, p = deq.p)
