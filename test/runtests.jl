@@ -22,13 +22,18 @@ using Test
         autojacvec = ZygoteVJP(),
         linsolve = LinSolveKrylovJL(),
     )
-    model = DeepEquilibriumNetwork(
-        Parallel(+, Dense(2, 2), Dense(2, 2)) |> gpu,
-        DynamicSS(Tsit5(); abstol = 0.1, reltol = 0.1),
-    )
+    model = Chain(
+        Dense(2, 2),
+        DeepEquilibriumNetwork(
+            Parallel(+, Dense(2, 2), Dense(2, 2)) |> gpu,
+            DynamicSS(Tsit5(); abstol = 0.1, reltol = 0.1),
+        )
+    ) |> gpu
     x = rand(2, 1) |> gpu
+    y = rand(2, 1) |> gpu
     ps = Flux.params(model)
-    gs = Flux.gradient(() -> sum(model(x)), ps)
+    gs = Flux.gradient(() -> sum(model(x) .- y), ps)
+    gs.grads
     for _p in ps
         @test all(isfinite.(gs[_p]))
     end

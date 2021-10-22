@@ -43,18 +43,17 @@ end
 function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
     # Solving the equation f(u) - u = du = 0
     z = zero(x)
+    param_length = length(p)
+
     function dudt(u, _p, t)
         deq.stats.nfe += 1
-        return deq.re(_p)(u, x) .- u
+        model_params = _p[1:param_length]
+        x_input = reshape(_p[param_length+1:end], size(x))
+        return deq.re(model_params)(u, x_input) .- u
     end
-    ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), T(Inf)), p))
-    sol = solve(
-        ssprob,
-        deq.args...;
-        u0 = z,
-        sensealg = deq.sensealg,
-        deq.kwargs...,
-    )
+
+    ssprob = SteadyStateProblem(dudt, z, vcat(p, vec(x)))
+    sol = solve(ssprob, deq.args...; u0 = z, sensealg = deq.sensealg, deq.kwargs...)
     return sol.u
 end
 
@@ -142,19 +141,18 @@ function (deq::SkipDeepEquilibriumNetwork)(
     p1, p2 = p[1:deq.split_idx], p[deq.split_idx+1:end]
     z = deq.re2(p2)(x)
     deq.stats.nfe += 1
+    param_length = length(p1)
+
     # Solving the equation f(u) - u = du = 0
     function dudt(u, _p, t)
         deq.stats.nfe += 1
-        return deq.re1(_p)(u, x) .- u
+        model_params = _p[1:param_length]
+        x_input = reshape(_p[param_length+1:end], size(x))
+        return deq.re1(model_params)(u, x_input) .- u
     end
-    ssprob = SteadyStateProblem(ODEProblem(dudt, z, (zero(T), T(Inf)), p1))
-    sol = solve(
-        ssprob,
-        deq.args...;
-        u0 = z,
-        sensealg = deq.sensealg,
-        deq.kwargs...,
-    )
+
+    ssprob = SteadyStateProblem(dudt, z, vcat(p1, vec(x)))
+    sol = solve(ssprob, deq.args...; u0 = z, sensealg = deq.sensealg, deq.kwargs...)
     return sol.u, z
 end
 
