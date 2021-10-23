@@ -4,11 +4,14 @@ using DiffEqSensitivity
 using Flux
 using LinearAlgebra
 using OrdinaryDiffEq
+using Random
 using SteadyStateDiffEq
 using Test
 
 @testset "FastDEQ.jl" begin
     # JVP with LinSolve
+    Random.seed!(0)
+
     mat = rand(5, 5) |> gpu
     x = rand(5, 1) |> gpu
     A = VecJacOperator((u, p, t) -> mat * u, x; autodiff = true)
@@ -17,6 +20,8 @@ using Test
     @test A * vec(linsolve(zero(x), A, b)) ≈ b
 
     # Testing LinSolve with DiffEqSensitivity
+    Random.seed!(0)
+
     model = Chain(
         Dense(2, 2),
         DeepEquilibriumNetwork(
@@ -33,7 +38,6 @@ using Test
     y = rand(Float32, 2, 1) |> gpu
     ps = Flux.params(model)
     gs = Flux.gradient(() -> sum(model(x) .- y), ps)
-    gs.grads
     for _p in ps
         @test all(isfinite.(gs[_p]))
     end
