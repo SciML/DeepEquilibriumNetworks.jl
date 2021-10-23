@@ -17,20 +17,20 @@ using Test
     @test A * vec(linsolve(zero(x), A, b)) ≈ b
 
     # Testing LinSolve with DiffEqSensitivity
-    sensealg = SteadyStateAdjoint(
-        autodiff = false,
-        autojacvec = ZygoteVJP(),
-        linsolve = LinSolveKrylovJL(),
-    )
     model = Chain(
         Dense(2, 2),
         DeepEquilibriumNetwork(
             Parallel(+, Dense(2, 2), Dense(2, 2)) |> gpu,
-            DynamicSS(Tsit5(); abstol = 0.1, reltol = 0.1),
+            DynamicSS(Tsit5(); abstol = 0.1f0, reltol = 0.1f0),
+            sensealg = SteadyStateAdjoint(
+                autodiff = false,
+                autojacvec = ZygoteVJP(),
+                linsolve = LinSolveKrylovJL(atol = 0.1f0, rtol = 0.1f0)),
+            )
         )
     ) |> gpu
-    x = rand(2, 1) |> gpu
-    y = rand(2, 1) |> gpu
+    x = rand(Float32, 2, 1) |> gpu
+    y = rand(Float32, 2, 1) |> gpu
     ps = Flux.params(model)
     gs = Flux.gradient(() -> sum(model(x) .- y), ps)
     gs.grads
