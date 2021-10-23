@@ -25,7 +25,7 @@ using Test
             sensealg = SteadyStateAdjoint(
                 autodiff = false,
                 autojacvec = ZygoteVJP(),
-                linsolve = LinSolveKrylovJL(atol = 0.1f0, rtol = 0.1f0)),
+                linsolve = LinSolveKrylovJL(atol = 0.1f0, rtol = 0.1f0),
             )
         )
     ) |> gpu
