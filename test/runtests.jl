@@ -41,4 +41,31 @@ using Test
     for _p in ps
         @test all(isfinite.(gs[_p]))
     end
+
+    # Testing SkipDEQ
+    Random.seed!(0)
+
+    model = Chain(
+        Dense(2, 2),
+        SkipDeepEquilibriumNetwork(
+            Parallel(+, Dense(2, 2), Dense(2, 2)) |> gpu,
+            Dense(2, 2) |> gpu,
+            DynamicSS(Tsit5(); abstol = 0.1f0, reltol = 0.1f0),
+            sensealg = SteadyStateAdjoint(
+                autodiff = false,
+                autojacvec = ZygoteVJP(),
+                linsolve = LinSolveKrylovJL(atol = 0.1f0, rtol = 0.1f0),
+            )
+        )
+    ) |> gpu
+    x = rand(Float32, 2, 1) |> gpu
+    y = rand(Float32, 2, 1) |> gpu
+    ps = Flux.params(model)
+    gs = Flux.gradient(() -> begin
+        ŷ, z = model(x)
+        sum(abs2, ŷ .- y) + sum(abs2, ŷ .- z)
+    end, ps)
+    for _p in ps
+        @test all(isfinite.(gs[_p]))
+    end
 end
