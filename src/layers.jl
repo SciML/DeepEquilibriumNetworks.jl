@@ -1,5 +1,11 @@
 Flux.trainable(deq::AbstractDeepEquilibriumNetwork) = (deq.p,)
 
+function get_and_clear_nfe!(model::AbstractDeepEquilibriumNetwork)
+    nfe = model.stats.nfe
+    model.stats.nfe = 0
+    return nfe
+end
+
 mutable struct DEQTrainingStats
     nfe::Int
 end
@@ -50,30 +56,16 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
     end
 
     ssprob = SteadyStateProblem(dudt, z, p)
-    sol = solve(ssprob, deq.args...; u0 = z, sensealg = deq.sensealg, deq.kwargs...)
+    sol = solve(
+        ssprob,
+        deq.args...;
+        u0 = z,
+        sensealg = deq.sensealg,
+        deq.kwargs...,
+    )
     deq.stats.nfe += 1
-    return deq.re(p)(sol.u, x) :: typeof(x)
+    return deq.re(p)(sol.u, x)::typeof(x)
 end
-
-function get_and_clear_nfe!(model::DeepEquilibriumNetwork)
-    nfe = model.stats.nfe
-    model.stats.nfe = 0
-    return nfe
-end
-
-function construct_iterator(deq::DeepEquilibriumNetwork, x, p = deq.p)
-    executions = 1
-    model = deq.re(p)
-    previous_value = nothing
-    function iterator()
-        z = model(executions == 1 ? zero(x) : previous_value, x)
-        executions += 1
-        previous_value = z
-        return z
-    end
-    return iterator
-end
-
 
 struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,Se,K} <:
        AbstractDeepEquilibriumNetwork
@@ -120,18 +112,12 @@ function SkipDeepEquilibriumNetwork(
     )
 end
 
-function get_and_clear_nfe!(model::SkipDeepEquilibriumNetwork)
-    nfe = model.stats.nfe
-    model.stats.nfe = 0
-    return nfe
-end
-
 function (deq::SkipDeepEquilibriumNetwork)(
     x::AbstractArray{T},
     p = deq.p,
 ) where {T}
     p1, p2 = p[1:deq.split_idx], p[deq.split_idx+1:end]
-    z = deq.re2(p2)(x) :: typeof(x)
+    z = deq.re2(p2)(x)::typeof(x)
     deq.stats.nfe += 1
 
     # Solving the equation f(u) - u = du = 0
@@ -141,27 +127,14 @@ function (deq::SkipDeepEquilibriumNetwork)(
     end
 
     ssprob = SteadyStateProblem(dudt, z, p1)
-    u = solve(ssprob, deq.args...; u0 = z, sensealg = deq.sensealg, deq.kwargs...).u :: typeof(x)
-    res = deq.re1(p1)(u, x) :: typeof(x)
+    u = solve(
+        ssprob,
+        deq.args...;
+        u0 = z,
+        sensealg = deq.sensealg,
+        deq.kwargs...,
+    ).u::typeof(x)
+    res = deq.re1(p1)(u, x)::typeof(x)
     deq.stats.nfe += 1
     return res, z
-end
-
-function construct_iterator(deq::SkipDeepEquilibriumNetwork, x, p = deq.p)
-    p1, p2 = p[1:deq.split_idx], p[deq.split_idx+1:end]
-    executions = 1
-    model = deq.re1(p1)
-    shortcut = deq.re2(p2)
-    previous_value = nothing
-    function iterator()
-        if executions == 1
-            z = shortcut(x)
-        else
-            z = model(previous_value, x)
-        end
-        executions += 1
-        previous_value = z
-        return z
-    end
-    return iterator
 end

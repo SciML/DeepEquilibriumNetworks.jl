@@ -64,3 +64,32 @@ function get_and_clear_nfe!(model::DEQChain)
     model.deq.stats.nfe = 0
     return nfe
 end
+
+
+struct MultiScaleDeepEquilibriumNetwork{nScales,S,D}
+    deqs::D
+
+    function MultiScaleDeepEquilibriumNetwork(layers...)
+        nScales = length(layers)
+        has_sdeq = false
+        for l in layers
+            has_sdeq = l isa SkipDeepEquilibriumNetwork
+            has_sdeq && break
+        end
+        return new{nScales,has_sdeq,typeof(layers)}(layers)
+    end
+end
+
+Flux.@functor MultiScaleDeepEquilibriumNetwork
+
+function (mdeq::MultiScaleDeepEquilibriumNetwork{nScales,has_sdeq})(
+    x::NTuple{nScales,T},
+) where {nScales,has_sdeq,T}
+    iT = has_sdeq ? Tuple{T, T} : T
+    res = Vector{iT}(undef, nScales)
+    Threads.@threads for i = 1:nScales
+        result = mdeq.deqs[i](x[i])
+        res[i] = has_sdeq ? (result isa Tuple ? result : (result, result)) : result
+    end
+    return tuple(res...) :: NTuple{nScales,iT}
+end
