@@ -211,7 +211,7 @@ for seed in [1, 11, 111]
     for model_type in ["skip", "vanilla"]
         config = Dict(
             "seed" => seed,
-            "learning_rate" => 1f-3,
+            "learning_rate" => 1f-4,
             "abstol" => 1f-3,
             "reltol" => 1f-3,
             "epochs" => 250,
