@@ -14,6 +14,8 @@ using CUDA,
 using DataLoaders: DataLoader
 using MLDataPattern: splitobs, shuffleobs
 
+CUDA.allowscalar(false)
+
 ## Models
 # Resnet Layer
 struct ResNetLayer{C1,C2,N1,N2,N3}
@@ -260,18 +262,32 @@ function train(config::Dict)
 
     ## Dataset
     batch_size = get_config(lg, "batch_size")
-    xs, ys = (
+    eval_batch_size = get_config(lg, "eval_batch_size")
+    xs_train, ys_train = (
         # convert each image into h*w*1 array of floats 
-        [Float32.(reshape(img, 28, 28, 1)) for img in Flux.Data.MNIST.images()],
+        [
+            Float32.(reshape(img, 28, 28, 1)) for
+            img in Flux.Data.MNIST.images(:train)
+        ],
         # one-hot encode the labels
-        [Float32.(Flux.onehot(y, 0:9)) for y in Flux.Data.MNIST.labels()],
+        [Float32.(Flux.onehot(y, 0:9)) for y in Flux.Data.MNIST.labels(:train)],
+    )
+    xs_test, ys_test = (
+        # convert each image into h*w*1 array of floats 
+        [
+            Float32.(reshape(img, 28, 28, 1)) for
+            img in Flux.Data.MNIST.images(:test)
+        ],
+        # one-hot encode the labels
+        [Float32.(Flux.onehot(y, 0:9)) for y in Flux.Data.MNIST.labels(:test)],
     )
 
-    # split into training and validation sets
-    traindata, valdata = splitobs((xs, ys), at = 0.9)
-
-    # create iterators
-    valiter = DataLoader(valdata, batch_size, buffered = false)
+    traindata = (xs_train, ys_train)
+    testiter = DataLoader(
+        shuffleobs((xs_test, ys_test)),
+        eval_batch_size,
+        buffered = false,
+    )
 
     ## Model Setup
     model = get_model(
@@ -282,20 +298,17 @@ function train(config::Dict)
     )
 
     loss_function =
-        SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f-2)
+        SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0)
 
     nfe_counts = Vector{Int64}[]
     cb = register_nfe_counts(model, nfe_counts)
 
     ## Training Loop
     ps = Flux.params(model)
-    ### TODO: Might need LR Scheduler to get good results
     opt = ADAM(get_config(lg, "learning_rate"))
     step = 1
     for epoch = 1:get_config(lg, "epochs")
         try
-            epoch_loss = 0.0f0
-            epoch_nfe = Float64[0, 0, 0]
             trainiter =
                 DataLoader(shuffleobs(traindata), batch_size, buffered = false)
             for (x, y) in trainiter
@@ -322,31 +335,36 @@ function train(config::Dict)
                     ),
                 )
                 step += 1
-                epoch_nfe .+= nfe_counts[end] * size(x, ndims(x))
-                epoch_loss += loss * size(x, ndims(x))
             end
-            ### Log the epoch loss
-            epoch_loss /= size(traindata[1], ndims(traindata[1]))
-            epoch_nfe ./= size(traindata[1], ndims(traindata[1]))
+
+            ### Training Loss/Accuracy
+            train_loss, train_acc, train_nfe = loss_and_accuracy(
+                model,
+                DataLoader(traindata, eval_batch_size, buffered = false),
+            )
             log(
                 lg,
                 Dict(
-                    "Training/Epoch/Loss" => epoch_loss,
-                    "Training/Epoch/NFE" => epoch_nfe,
                     "Training/Epoch/Count" => epoch,
+                    "Training/Epoch/Loss" => train_loss,
+                    "Training/Epoch/NFE1" => train_nfe[1],
+                    "Training/Epoch/NFE2" => train_nfe[2],
+                    "Training/Epoch/NFE3" => train_nfe[3],
+                    "Training/Epoch/Accuracy" => train_acc,
                 ),
             )
 
-            ### Validation Loss/Accuracy
-            val_loss, val_acc, val_nfe = loss_and_accuracy(model, valiter)
+            ### Testing Loss/Accuracy
+            test_loss, test_acc, test_nfe = loss_and_accuracy(model, testiter)
             log(
                 lg,
                 Dict(
-                    "Validation/Epoch/Loss" => val_loss,
-                    "Validation/Epoch/NFE1" => val_nfe[1],
-                    "Validation/Epoch/NFE2" => val_nfe[2],
-                    "Validation/Epoch/NFE3" => val_nfe[3],
-                    "Validation/Epoch/Accuracy" => val_acc,
+                    "Testing/Epoch/Count" => epoch,
+                    "Testing/Epoch/Loss" => test_loss,
+                    "Testing/Epoch/NFE1" => test_nfe[1],
+                    "Testing/Epoch/NFE2" => test_nfe[2],
+                    "Testing/Epoch/NFE3" => test_nfe[3],
+                    "Testing/Epoch/Accuracy" => test_acc,
                 ),
             )
         catch ex
@@ -379,15 +397,16 @@ end
 nfe_count_dict = Dict("vanilla" => [], "skip" => [])
 
 for seed in [1, 11, 111]
-    for model_type in ["vanilla", "skip"]
+    for model_type in ["skip", "vanilla"]
         config = Dict(
             "seed" => seed,
             "learning_rate" => 0.001,
             "abstol" => 1f-1,
             "reltol" => 1f-1,
-            "maxiters" => 100,
+            "maxiters" => 40,
             "epochs" => 25,
             "batch_size" => 512,
+            "eval_batch_size" => 2048,
             "model_type" => model_type,
         )
 
