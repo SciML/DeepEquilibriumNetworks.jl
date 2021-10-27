@@ -9,6 +9,7 @@ using Flux
 using Functors
 using LinearAlgebra
 using LinearSolve
+using MultiScaleArrays
 using OrdinaryDiffEq
 using SciMLBase
 using Statistics
