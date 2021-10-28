@@ -138,3 +138,63 @@ function (deq::SkipDeepEquilibriumNetwork)(
     deq.stats.nfe += 1
     return res, z
 end
+
+
+struct MultiScaleDeepEquilibriumNetwork{M1,M2,RE1,RE2,P,A,K,S} <: AbstractDeepEquilibriumNetwork
+    main_layers::M1
+    mapping_layers::M2
+    main_layers_re::RE1
+    mapping_layers_re::RE2
+    p::P
+    ordered_split_idxs::Vector{Int}
+    args::A
+    kwargs::K
+    sensealg::S
+    stats::DEQTrainingStats
+end
+
+function MultiScaleDeepEquilibriumNetwork(
+    main_layers::Tuple,
+    mapping_layers::Tuple,
+    args...;
+    p = nothing,
+    sensealg = SteadyStateAdjoint(
+        autodiff = false,
+        autojacvec = ZygoteVJP(),
+        linsolve = LinSolveKrylovJL(rtol = 0.1f0, atol = 0.1f0),
+    ),
+    kwargs...,
+)
+    main_layers_res = []
+    mapping_layers_res = []
+    ordered_split_idxs = []
+    c = 0
+    ps = []
+    for layer in main_layers
+        _p, _re = Flux.destructure(layer)
+        push!(main_layers_res, _re)
+        push!(ps, _p)
+        c += length(_p)
+        push!(ordered_split_idxs, c)
+    end
+    for layers in mapping_layers
+        for layer in layers
+            _p, _re = Flux.destructure(layer)
+            push!(mapping_layers_res, _re)
+            push!(ps, _p)
+            c += length(_p)
+            push!(ordered_split_idxs, c)
+        end
+    end
+    p = p === nothing ? vcat(ps...) : p
+    return MultiScaleDeepEquilibriumNetwork(
+        main_layers_res,
+        mapping_layers_res,
+        p,
+        ordered_split_idxs,
+        args,
+        kwargs,
+        sensealg,
+        DEQTrainingStats(0),
+    )
+end

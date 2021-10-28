@@ -63,3 +63,17 @@ Zygote.@adjoint function _parameter_restructure(m, xs)
     end
     return m̄, _parameter_restructure_pullback
 end
+
+
+struct SingleResolutionFeatures{B} <: AbstractMultiScaleArrayLeaf{B}
+    values::Vector{B}
+end
+
+struct MultiResolutionFeatures{T<:AbstractMultiScaleArray,B<:Number} <:
+       AbstractMultiScaleArrayHead{B}
+    nodes::Vector{T}
+    values::Vector{B}
+    end_idxs::Vector{Int}
+end
+
+Base.vec(v::MultiResolutionFeatures) = v[:]

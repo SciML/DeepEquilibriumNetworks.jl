@@ -29,6 +29,7 @@ include("solvers/linsolve.jl")
 include("layers.jl")
 include("models.jl")
 include("losses.jl")
+include("zygote.jl")
 
 
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
@@ -39,5 +40,6 @@ export SupervisedLossContainer
 export BroydenCache, broyden
 export LinSolveKrylovJL, LinearScaledJacVecOperator, VecJacOperator
 export parameter_destructure
+export SingleResolutionFeatures, MultiResolutionFeatures
 
 end
