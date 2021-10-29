@@ -140,7 +140,10 @@ function (deq::SkipDeepEquilibriumNetwork)(
 end
 
 
-struct MultiScaleDeepEquilibriumNetwork{M1,M2,RE1,RE2,P,A,K,S} <: AbstractDeepEquilibriumNetwork
+## FIXME: Zygote being dumb keeps complaining about mutating arrays for general implementation
+##        of MDEQs. Since we will use depth 4 MDEQs, I will only implement those.
+struct MultiScaleDeepEquilibriumNetwork{M1,M2,RE1,RE2,P,A,K,S} <:
+       AbstractDeepEquilibriumNetwork
     main_layers::M1
     mapping_layers::M2
     main_layers_re::RE1
@@ -153,10 +156,12 @@ struct MultiScaleDeepEquilibriumNetwork{M1,M2,RE1,RE2,P,A,K,S} <: AbstractDeepEq
     stats::DEQTrainingStats
 end
 
+Flux.@functor MultiScaleDeepEquilibriumNetwork
+
 function MultiScaleDeepEquilibriumNetwork(
     main_layers::Tuple,
     mapping_layers::Tuple,
-    args...;
+    solver;
     p = nothing,
     sensealg = SteadyStateAdjoint(
         autodiff = false,
@@ -167,7 +172,7 @@ function MultiScaleDeepEquilibriumNetwork(
 )
     main_layers_res = []
     mapping_layers_res = []
-    ordered_split_idxs = []
+    ordered_split_idxs = [0]
     c = 0
     ps = []
     for layer in main_layers
@@ -178,23 +183,113 @@ function MultiScaleDeepEquilibriumNetwork(
         push!(ordered_split_idxs, c)
     end
     for layers in mapping_layers
+        layer_list = []
         for layer in layers
             _p, _re = Flux.destructure(layer)
-            push!(mapping_layers_res, _re)
+            push!(layer_list, _re)
             push!(ps, _p)
             c += length(_p)
             push!(ordered_split_idxs, c)
         end
+        push!(mapping_layers_res, tuple(layer_list...))
     end
     p = p === nothing ? vcat(ps...) : p
     return MultiScaleDeepEquilibriumNetwork(
-        main_layers_res,
-        mapping_layers_res,
+        main_layers,
+        mapping_layers,
+        tuple(main_layers_res...),
+        tuple(mapping_layers_res...),
         p,
         ordered_split_idxs,
-        args,
+        (solver,),
         kwargs,
         sensealg,
         DEQTrainingStats(0),
     )
+end
+
+function (mdeq::MultiScaleDeepEquilibriumNetwork)(
+    x::AbstractArray{T,N},
+    p = mdeq.p,
+) where {T,N}
+    initial_conditions =
+        Zygote.@ignore Vector{SingleResolutionFeatures{typeof(vec(x)),T}}(
+            undef,
+            length(mdeq.main_layers),
+        )
+    sizes =
+        Zygote.@ignore Vector{NTuple{N,Int64}}(undef, length(mdeq.main_layers))
+    _z = zero(x)
+    Zygote.@ignore for i = 1:length(initial_conditions)
+        _x = mdeq.mapping_layers[1][i](_z)
+        sizes[i] = size(_x)
+        initial_conditions[i] = SingleResolutionFeatures(vec(_x))
+    end
+    u0 = Zygote.@ignore construct(MultiResolutionFeatures, initial_conditions)
+
+    function dudt(u, _p, t)
+        mdeq.stats.nfe += 1
+
+        u_prevs =
+            [reshape(u.nodes[i].values, sizes[i]) for i = 1:length(u.nodes)]
+
+        counter = 1
+
+        function apply_main_layer(i)
+            layer = mdeq.main_layers_re[i](
+                _p[mdeq.ordered_split_idxs[i]+1:mdeq.ordered_split_idxs[i+1]],
+            )
+            counter += 1
+            return i == 1 ? layer(u_prevs[i], x) : layer(u_prevs[i])
+        end
+
+        buffer = map(apply_main_layer, 1:length(mdeq.main_layers))
+
+        function apply_mapping_layer(i)
+            layer = mdeq.mapping_layers_re[i](
+                _p[mdeq.ordered_split_idxs[i]+1:mdeq.ordered_split_idxs[i+1]],
+            )
+            counter += 1
+            return i == 1 ? layer(buffer, x) : layer(buffer)
+        end
+
+        idxs = permutedims(
+            CartesianIndices((1:length(mdeq.main_layers), 1:length(mdeq.main_layers))),
+            (2, 1)
+        )
+
+        function apply_mapping_layer(idx::CartesianIndex)
+            i, j = idx.I
+            layer = mdeq.mapping_layers_re[i][j](
+                _p[mdeq.ordered_split_idxs[counter]+1:mdeq.ordered_split_idxs[counter+1]],
+            )
+            counter += 1
+            return layer(buffer[i])
+        end
+
+        res = map(apply_mapping_layer, idxs)
+
+        accum = sum.(eachrow(res))
+
+        return construct(
+            MultiResolutionFeatures,
+            SingleResolutionFeatures.(vec.(accum)),
+        )
+    end
+
+    ssprob = SteadyStateProblem(dudt, u0, p)
+    sol =
+        dudt(
+            solve(
+                ssprob,
+                mdeq.args...;
+                u0 = u0,
+                sensealg = mdeq.sensealg,
+                mdeq.kwargs...,
+            ).u,
+            p,
+            0,
+        ).nodes
+
+    return [reshape(sol[i].values, sizes[i]) for i = 1:length(sol)]
 end

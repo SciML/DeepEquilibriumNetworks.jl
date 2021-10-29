@@ -1,9 +1,19 @@
+Zygote.@adjoint function SingleResolutionFeatures(values)
+    srf = SingleResolutionFeatures(values)
+    function srf_sensitivity(Δ)
+        return (Δ.values,)
+    end
+    return srf, srf_sensitivity
+end
+
 Zygote.@adjoint function Zygote.literal_getproperty(
     srf::SingleResolutionFeatures,
     ::Val{:values},
 )
-    return getproperty(srf, :values),
-    Δ -> (SingleResolutionFeatures(Δ), nothing)
+    return (
+        getproperty(srf, :values),
+        Δ -> (SingleResolutionFeatures(Δ), nothing)
+    )
 end
 
 Zygote.@adjoint function Zygote.literal_getproperty(

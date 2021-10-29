@@ -16,7 +16,6 @@ To be ported to NonLinearSolve.jl
 
 * `LinSolveKrylovJL`: Wraps `KrylovJL` from LinearSolve.jl to have a compatible API for DiffEqSensitivity
 
-
 ## Experiments
 
 1. [polynomial_fitting.jl](experiments/polynomial_fitting.jl) -- Comparing the Performance of SkipDEQ and DEQ when fitting on `y = x^2`
