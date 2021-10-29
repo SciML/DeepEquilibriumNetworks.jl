@@ -318,7 +318,7 @@ function (mdeq::MultiScaleDeepEquilibriumNetworkS4)(
             sensealg = mdeq.sensealg,
             mdeq.kwargs...,
         ).u
-    sol = dudt_(res, p)
+    sol = dudt_(res, p)[1:4]
 
     return sol
 end
