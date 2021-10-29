@@ -60,4 +60,19 @@ struct MultiResolutionFeatures{T<:AbstractMultiScaleArray,B<:Number} <:
     end_idxs::Vector{Int}
 end
 
+Base.eltype(::Type{MultiResolutionFeatures}) = Float32
+
 Base.vec(v::MultiResolutionFeatures) = v[:]
+
+Base.getindex(v::MultiResolutionFeatures, ::Colon) =
+    vcat([x.values for x in v.nodes]...)
+
+Base.similar(
+    v::MultiResolutionFeatures{T1,T},
+    dims::Union{Integer,AbstractUnitRange},
+) where {T1,T<:Number} = similar(v.nodes[1].values, dims)
+
+Base.similar(
+    v::MultiResolutionFeatures{T1,T},
+    dims::Tuple,
+) where {T1,T<:Number} = similar(v.nodes[1].values, dims)

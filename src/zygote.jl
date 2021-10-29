@@ -88,7 +88,7 @@ Zygote.@adjoint function MultiScaleArrays.construct(
     construct_sensitivity(Δ::MultiResolutionFeatures) =
         (nothing, Δ.nodes, [nothing for _ in args]...)
 
-    function construct_sensitivity(Δ::Vector)
+    function construct_sensitivity(Δ::AbstractVector)
         s = Vector{SingleResolutionFeatures}(undef, length(nodes))
         start_idx = 1
         for i = 1:length(nodes)

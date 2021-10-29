@@ -33,7 +33,7 @@ include("zygote.jl")
 
 
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
-export MultiScaleDeepEquilibriumNetwork
+export MultiScaleDeepEquilibriumNetworkS4
 export DEQChain, MDEQChain
 export get_and_clear_nfe!
 export SupervisedLossContainer
