@@ -20,13 +20,14 @@ using Zygote
 
 abstract type AbstractDeepEquilibriumNetwork end
 
-function construct_iterator end
-
 
 include("utils.jl")
 include("solvers/broyden.jl")
 include("solvers/linsolve.jl")
-include("layers.jl")
+include("layers/deq.jl")
+include("layers/sdeq.jl")
+include("layers/mdeq.jl")
+include("layers/smdeq.jl")
 include("models.jl")
 include("losses.jl")
 include("zygote.jl")
@@ -38,8 +39,7 @@ export DEQChain, MDEQChain
 export get_and_clear_nfe!
 export SupervisedLossContainer
 export BroydenCache, broyden
-export LinSolveKrylovJL, LinearScaledJacVecOperator, VecJacOperator
-export parameter_destructure
+export LinSolveKrylovJL
 export SingleResolutionFeatures, MultiResolutionFeatures
 
 end
