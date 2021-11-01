@@ -100,21 +100,31 @@ function get_model(
         (identity, MeanPool((2, 2)), MeanPool((4, 4)), MeanPool((8, 8))) .|>
         gpu,
         (
-            Upsample(2, :bilinear),
+            ConvTranspose((4, 4), 16 => 16, stride = (2, 2), pad = SamePad()),
             identity,
             MeanPool((2, 2)),
             MeanPool((4, 4)),
         ) .|> gpu,
         (
-            Upsample(4, :bilinear),
-            Upsample(2, :bilinear),
+            Chain(
+                ConvTranspose((4, 4), 16 => 16, stride = (2, 2), pad = SamePad()),
+                ConvTranspose((4, 4), 16 => 16, stride = (2, 2), pad = SamePad()),
+            ),
+            ConvTranspose((4, 4), 16 => 16, stride = (2, 2), pad = SamePad()),
             identity,
             MeanPool((2, 2)),
         ) .|> gpu,
         (
-            Upsample(:bilinear, size = (28, 28)),
-            Upsample(:bilinear, size = (14, 14)),
-            Upsample(:bilinear, size = (7, 7)),
+            Chain(
+                ConvTranspose((3, 3), 16 => 16, stride = (2, 2), pad = 0),
+                ConvTranspose((4, 4), 16 => 16, stride = (2, 2), pad = SamePad()),
+                ConvTranspose((4, 4), 16 => 16, stride = (2, 2), pad = SamePad()),
+            ),
+            Chain(
+                ConvTranspose((3, 3), 16 => 16, stride = (2, 2), pad = 0),
+                ConvTranspose((4, 4), 16 => 16, stride = (2, 2), pad = SamePad()),
+            ),
+            ConvTranspose((3, 3), 16 => 16, stride = (2, 2), pad = 0),
             identity,
         ) .|> gpu,
     )
@@ -357,10 +367,10 @@ for seed in [1, 11, 111]
             "learning_rate" => 0.001,
             "abstol" => 1f-1,
             "reltol" => 1f-1,
-            "maxiters" => 40,
+            "maxiters" => 10,
             "epochs" => 25,
-            "batch_size" => 512,
-            "eval_batch_size" => 2048,
+            "batch_size" => 128,
+            "eval_batch_size" => 512,
             "model_type" => model_type,
         )
 

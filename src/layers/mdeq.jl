@@ -154,8 +154,6 @@ function (mdeq::MultiScaleDeepEquilibriumNetworkS4)(
     end
 
     function dudt(u, _p, t)
-        mdeq.stats.nfe += 1
-
         u_1, u_2, u_3, u_4, u_prevs_1, u_prevs_2, u_prevs_3, u_prevs_4 =
             dudt_(u, _p)
 
