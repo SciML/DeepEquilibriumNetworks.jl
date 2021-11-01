@@ -95,6 +95,8 @@ function (mdeq::MultiScaleDeepEquilibriumNetworkS4)(
     u0 = Zygote.@ignore construct(MultiResolutionFeatures, initial_conditions)
 
     function dudt_(u, _p)
+        mdeq.stats.nfe += 1
+
         # Yeah I know tiresome to write...
         p1 = _p[mdeq.ordered_split_idxs[1]+1:mdeq.ordered_split_idxs[2]]
         p2 = _p[mdeq.ordered_split_idxs[2]+1:mdeq.ordered_split_idxs[3]]

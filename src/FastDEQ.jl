@@ -20,6 +20,17 @@ using Zygote
 
 abstract type AbstractDeepEquilibriumNetwork end
 
+function Base.show(io::IO, l::AbstractDeepEquilibriumNetwork)
+    p, _ = Flux.destructure(l)
+    print(
+        io,
+        string(typeof(l).name.name),
+        "() ",
+        string(length(p)),
+        " Trainable Parameters",
+    )
+end
+
 
 include("utils.jl")
 include("solvers/broyden.jl")
@@ -34,7 +45,8 @@ include("zygote.jl")
 
 
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
-export MultiScaleDeepEquilibriumNetworkS4
+export MultiScaleDeepEquilibriumNetworkS4,
+    MultiScaleSkipDeepEquilibriumNetworkS4
 export DEQChain, MDEQChain
 export get_and_clear_nfe!
 export SupervisedLossContainer
