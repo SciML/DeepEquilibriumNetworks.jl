@@ -59,18 +59,11 @@ Flux.@functor DEQChain
 
 (deq::Union{DEQChain{Val(1)}, DEQChain{Val(3)}})(x) = deq.post_deq(deq.deq(deq.pre_deq(x)))
 
-function (deq::DEQChain{Val(2)})(x)
+function (deq::Union{DEQChain{Val(2)}, DEQChain{Val(4)}})(x)
     x1 = deq.pre_deq(x)
     z, ẑ = deq.deq(x1)
     x2 = deq.post_deq(z)
     return (x2, (z, ẑ))
-end
-
-function (deq::DEQChain{Val(4)})(x)
-    x1 = deq.pre_deq(x)
-    z, ẑ = deq.deq(x1)
-    x2 = deq.post_deq(z)
-    return (x2, tuple(zip(z, ẑ)...))
 end
 
 function get_and_clear_nfe!(model::DEQChain)

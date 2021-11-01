@@ -14,7 +14,8 @@ using CUDA,
 using DataLoaders: DataLoader
 using MLDataPattern: splitobs, shuffleobs
 
-CUDA.allowscalar(false)
+### Need to allow for gradient accumulation
+CUDA.allowscalar(true)
 
 ## Models
 # Resnet Layer
@@ -163,14 +164,13 @@ function get_model(
             ),
         MultiScaleCombinationLayer(
             (args...) -> foldl(+, args),
-            Conv((4, 4), 16 => 16, relu; bias = true, pad = 0, stride = 4),  # 7 x 7 x 16
-            Conv((4, 4), 16 => 16, relu; bias = true, pad = 1, stride = 2),  # 7 x 7 x 16
-            Conv((3, 3), 16 => 16, relu; bias = true, pad = 1),  # 7 x 7 x 16
-            Upsample(:bilinear, size = (7, 7)),  # 7 x 7 x 16
+            MeanPool((8, 8)),
+            MeanPool((4, 4)),
+            MeanPool((2, 2)),
+            identity,
         ) |> gpu,
-        BatchNorm(16, affine = true) |> gpu,
         Flux.flatten,
-        Dense(7 * 7 * 16, 10; bias = true) |> gpu,
+        Dense(3 * 3 * 16, 10; bias = true) |> gpu,
     )
     return model
 end
@@ -254,6 +254,11 @@ function train(config::Dict)
 
     loss_function =
         SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0)
+
+    ## Warmup
+    __x = rand(28, 28, 1, 1) |> gpu
+    __y = Flux.onehotbatch([1 for i in 1:1], 0:9) |> gpu
+    Flux.gradient(() -> loss_function(model, __x, __y), Flux.params(model))
 
     nfe_counts = []
     cb = register_nfe_counts(model, nfe_counts)

@@ -78,8 +78,18 @@ Base.zero(v::MultiResolutionFeatures) =
 DiffEqBase.NAN_CHECK(v::MultiResolutionFeatures) =
     any(x -> DiffEqBase.NAN_CHECK(x.values), v.nodes)
 
-Base.any(v::MultiResolutionFeatures) =
-    any(x -> any(x.values), v.nodes)
+Base.any(v::MultiResolutionFeatures) = any(x -> any(x.values), v.nodes)
 
-Base.all(v::MultiResolutionFeatures) =
-    all(x -> all(x.values), v.nodes)
+Base.all(v::MultiResolutionFeatures) = all(x -> all(x.values), v.nodes)
+
+Base.copy(v::MultiResolutionFeatures) = SciMLBase.recursivecopy(v)
+
+function Zygote._zero(v::MultiResolutionFeatures, T)
+    return construct(
+        MultiResolutionFeatures,
+        [
+            SingleResolutionFeatures(fill!(similar(x.values, T), T(0))) for
+            x in v.nodes
+        ],
+    )
+end
