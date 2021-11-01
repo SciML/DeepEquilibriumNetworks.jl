@@ -18,6 +18,6 @@ end
 function (lc::SupervisedLossContainer)(model::DEQChain{Val(4)}, x, y; kwargs...)
     ŷ, guess_pairs = model(x)
     l1 = lc.loss_function(ŷ, y)
-    l2 = map((z, ẑ) -> mean(abs2, ẑ .- z), guess_pairs)
+    l2 = map(z -> mean(abs2, z[2] .- z[1]), guess_pairs)
     return l1 + sum(lc.λ .* l2)
 end

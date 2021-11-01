@@ -64,79 +64,22 @@ end
     rl.norm3(relu.(rl.norm2(rl.conv2(rl.norm1(rl.conv1(x))))))
 
 
-struct MnistMDEQ{has_sdeq,L1,S1,S2,D1,D2,D3,PD1,PD2,PD3,CL,C}
+struct MultiScaleCombinationLayer{Op,L1,L2,L3,L4}
+    op::Op
     layer1::L1
-    scale_down1::S1
-    scale_down2::S2
-    deq1::D1
-    deq2::D2
-    deq3::D3
-    post_deq1::PD1
-    post_deq2::PD2
-    post_deq3::PD3
-    combination_layer::CL
-    classifier::C
+    layer2::L2
+    layer3::L3
+    layer4::L4
 end
 
-Flux.@functor MnistMDEQ
+Flux.@functor MultiScaleCombinationLayer
 
-MnistMDEQ(has_sdeq::Bool, layers...) =
-    MnistMDEQ{has_sdeq,typeof.(layers)...}(layers...)
-
-function MnistMDEQ(layers...)
-    has_sdeq = false
-    for l in layers
-        if l isa SkipDeepEquilibriumNetwork
-            has_sdeq = true
-            break
-        end
-    end
-    return MnistMDEQ{has_sdeq,typeof.(layers)...}(layers...)
-end
-
-function (mdeq::MnistMDEQ{false})(x)
-    x1 = mdeq.layer1(x)
-    x2 = mdeq.scale_down1(x1)
-    x3 = mdeq.scale_down2(x2)
-
-    deq_sol_1 = mdeq.deq1(x1)
-    deq_sol_2 = mdeq.deq2(x2)
-    deq_sol_3 = mdeq.deq3(x3)
-
-    post_deq_sol_1 = mdeq.post_deq1(deq_sol_1)
-    post_deq_sol_2 = mdeq.post_deq2(deq_sol_2)
-    post_deq_sol_3 = mdeq.post_deq3(deq_sol_3)
-
-    x4 = mdeq.combination_layer(
-        post_deq_sol_1,
-        post_deq_sol_2,
-        post_deq_sol_3,
-    )::typeof(x)
-    return mdeq.classifier(x4)
-end
-
-function (mdeq::MnistMDEQ{true})(x)
-    x1 = mdeq.layer1(x)
-    x2 = mdeq.scale_down1(x1)
-    x3 = mdeq.scale_down2(x2)
-
-    deq_sol_1, guess1 = mdeq.deq1(x1)::Tuple{typeof(x),typeof(x)}
-    deq_sol_2, guess2 = mdeq.deq2(x2)::Tuple{typeof(x),typeof(x)}
-    deq_sol_3, guess3 = mdeq.deq3(x3)::Tuple{typeof(x),typeof(x)}
-
-    post_deq_sol_1 = mdeq.post_deq1(deq_sol_1)::typeof(x)
-    post_deq_sol_2 = mdeq.post_deq2(deq_sol_2)::typeof(x)
-    post_deq_sol_3 = mdeq.post_deq3(deq_sol_3)::typeof(x)
-
-    x4 = mdeq.combination_layer(
-        post_deq_sol_1,
-        post_deq_sol_2,
-        post_deq_sol_3,
-    )::typeof(x)
-    return (
-        mdeq.classifier(x4),
-        ((deq_sol_1, guess1), (deq_sol_2, guess2), (deq_sol_3, guess3)),
-    )
+function (mscl::MultiScaleCombinationLayer)(x)
+    x1 = mscl.layer1(x[1])
+    x2 = mscl.layer2(x[2])
+    x3 = mscl.layer3(x[3])
+    x4 = mscl.layer4(x[4])
+    return mscl.op(x1, x2, x3, x4)
 end
 
 
@@ -146,79 +89,91 @@ function get_model(
     reltol::T,
     model_type::String,
 ) where {T}
-    model =
-        MnistMDEQ(
-            Chain(
-                Conv((3, 3), 1 => 16, relu; bias = true, pad = 1),  # 28 x 28 x 16
-                BatchNorm(16, affine = true),
-            ),
-            Chain(
-                Conv((4, 4), 16 => 16, relu; bias = true, pad = 1, stride = 2),  # 14 x 14 x 16,
-                BatchNorm(16, affine = true),
-            ),
-            Chain(
-                Conv((4, 4), 16 => 16, relu; bias = true, pad = 1, stride = 2),  # 7 x 7 x 16
-                BatchNorm(16, affine = true),
-            ),
-            [
-                model_type == "skip" ?
-                SkipDeepEquilibriumNetwork(
-                    ResNetLayer(16, 32) |> gpu,
-                    ResNetLayer(16, 32) |> gpu,
-                    DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
-                    maxiters = maxiters,
-                    sensealg = SteadyStateAdjoint(
-                        autodiff = true,
-                        autojacvec = ZygoteVJP(),
-                        linsolve = LinSolveKrylovJL(
-                            rtol = reltol,
-                            atol = abstol,
-                            itmax = maxiters,
-                        ),
-                    ),
-                    verbose = false,
-                ) :
-                DeepEquilibriumNetwork(
-                    ResNetLayer(16, 32) |> gpu,
-                    DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
-                    maxiters = maxiters,
-                    sensealg = SteadyStateAdjoint(
-                        autodiff = true,
-                        autojacvec = ZygoteVJP(),
-                        linsolve = LinSolveKrylovJL(
-                            rtol = reltol,
-                            atol = abstol,
-                            itmax = maxiters,
-                        ),
-                    ),
-                    verbose = false,
-                ) for _ = 1:3
-            ]...,
-            Chain(BatchNorm(16, affine = true), MaxPool((4, 4))),
-            Chain(BatchNorm(16, affine = true), MaxPool((2, 2))),
+    main_layers = (
+        ResNetLayer(16, 32) |> gpu,
+        ResNetLayer(16, 32) |> gpu,
+        ResNetLayer(16, 32) |> gpu,
+        ResNetLayer(16, 32) |> gpu,
+    )
+    mapping_layers = (
+        (identity, MeanPool((2, 2)), MeanPool((4, 4)), MeanPool((8, 8))) .|>
+        gpu,
+        (
+            Upsample(2, :bilinear),
+            identity,
+            MeanPool((2, 2)),
+            MeanPool((4, 4)),
+        ) .|> gpu,
+        (
+            Upsample(4, :bilinear),
+            Upsample(2, :bilinear),
+            identity,
+            MeanPool((2, 2)),
+        ) .|> gpu,
+        (
+            Upsample(:bilinear, size = (28, 28)),
+            Upsample(:bilinear, size = (14, 14)),
+            Upsample(:bilinear, size = (7, 7)),
+            identity,
+        ) .|> gpu,
+    )
+    model = DEQChain(
+        Chain(
+            Conv((3, 3), 1 => 16, relu; bias = true, pad = 1),  # 28 x 28 x 16
             BatchNorm(16, affine = true),
-            (x...) -> foldl(+, x),
-            Chain(Flux.flatten, Dense(7 * 7 * 16, 10)),
-        ) |> gpu
+        ) |> gpu,
+        model_type == "vanilla" ?
+            MultiScaleDeepEquilibriumNetworkS4(
+                main_layers,
+                mapping_layers,
+                DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                maxiters = maxiters,
+                sensealg = SteadyStateAdjoint(
+                    autodiff = true,
+                    autojacvec = ZygoteVJP(),
+                    linsolve = LinSolveKrylovJL(
+                        rtol = reltol,
+                        atol = abstol,
+                        itmax = maxiters,
+                    ),
+                ),
+                verbose = false,
+            ) :
+            MultiScaleSkipDeepEquilibriumNetworkS4(
+                main_layers,
+                mapping_layers,
+                (
+                    ResNetLayer(16, 32) |> gpu,
+                    Chain(MeanPool((2, 2)), ResNetLayer(16, 32)) |> gpu,
+                    Chain(MeanPool((4, 4)), ResNetLayer(16, 32)) |> gpu,
+                    Chain(MeanPool((8, 8)), ResNetLayer(16, 32)) |> gpu,
+                ),
+                DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                maxiters = maxiters,
+                sensealg = SteadyStateAdjoint(
+                    autodiff = true,
+                    autojacvec = ZygoteVJP(),
+                    linsolve = LinSolveKrylovJL(
+                        rtol = reltol,
+                        atol = abstol,
+                        itmax = maxiters,
+                    ),
+                ),
+                verbose = false,
+            ),
+        MultiScaleCombinationLayer(
+            (args...) -> foldl(+, args),
+            Conv((4, 4), 16 => 16, relu; bias = true, pad = 0, stride = 4),  # 7 x 7 x 16
+            Conv((4, 4), 16 => 16, relu; bias = true, pad = 1, stride = 2),  # 7 x 7 x 16
+            Conv((3, 3), 16 => 16, relu; bias = true, pad = 1),  # 7 x 7 x 16
+            Upsample(:bilinear, size = (7, 7)),  # 7 x 7 x 16
+        ) |> gpu,
+        BatchNorm(16, affine = true) |> gpu,
+        Flux.flatten,
+        Dense(7 * 7 * 16, 10; bias = true) |> gpu,
+    )
     return model
 end
-
-
-function (lc::SupervisedLossContainer)(model::MnistMDEQ{false}, x, y; kwargs...)
-    return lc.loss_function(model(x), y)
-end
-
-function (lc::SupervisedLossContainer)(model::MnistMDEQ{true}, x, y; kwargs...)
-    ŷ, ((ẑ1, z1), (ẑ2, z2), (ẑ3, z3)) = model(x)
-    l1 = lc.loss_function(ŷ, y)
-    l2 = mean(abs2, ẑ1 .- z1)
-    l3 = mean(abs2, ẑ2 .- z2)
-    l4 = mean(abs2, ẑ3 .- z3)
-    return l1 + lc.λ * l2 + lc.λ * l3 + lc.λ * l4
-end
-
-FastDEQ.get_and_clear_nfe!(model::MnistMDEQ) =
-    get_and_clear_nfe!.([model.deq1, model.deq2, model.deq3])
 
 
 ## Utilities
@@ -228,14 +183,14 @@ function register_nfe_counts(model, buffer)
 end
 
 function loss_and_accuracy(model, dataloader)
-    matches, total_loss, total_datasize, total_nfe = 0, 0, 0, [0, 0, 0]
+    matches, total_loss, total_datasize, total_nfe = 0, 0, 0, 0
     for (x, y) in dataloader
         x = x |> gpu
         y = y |> gpu
 
         ŷ = model(x)
         ŷ = ŷ isa Tuple ? ŷ[1] : ŷ  # Handle SkipDEQ
-        total_nfe .+= get_and_clear_nfe!(model) .* size(x, ndims(x))
+        total_nfe += get_and_clear_nfe!(model) * size(x, ndims(x))
         total_loss += Flux.Losses.logitcrossentropy(ŷ, y) * size(x, ndims(x))
         matches += sum(argmax.(eachcol(ŷ)) .== Flux.onecold(y |> cpu))
         total_datasize += size(x, ndims(x))
@@ -243,7 +198,7 @@ function loss_and_accuracy(model, dataloader)
     return (
         total_loss / total_datasize,
         matches / total_datasize,
-        total_nfe ./ total_datasize,
+        total_nfe / total_datasize,
     )
 end
 
@@ -300,7 +255,7 @@ function train(config::Dict)
     loss_function =
         SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0)
 
-    nfe_counts = Vector{Int64}[]
+    nfe_counts = []
     cb = register_nfe_counts(model, nfe_counts)
 
     ## Training Loop
@@ -328,9 +283,7 @@ function train(config::Dict)
                     lg,
                     Dict(
                         "Training/Step/Loss" => loss,
-                        "Training/Step/NFE1" => nfe_counts[end][1],
-                        "Training/Step/NFE2" => nfe_counts[end][2],
-                        "Training/Step/NFE3" => nfe_counts[end][3],
+                        "Training/Step/NFE" => nfe_counts[end],
                         "Training/Step/Count" => step,
                     ),
                 )
@@ -347,9 +300,7 @@ function train(config::Dict)
                 Dict(
                     "Training/Epoch/Count" => epoch,
                     "Training/Epoch/Loss" => train_loss,
-                    "Training/Epoch/NFE1" => train_nfe[1],
-                    "Training/Epoch/NFE2" => train_nfe[2],
-                    "Training/Epoch/NFE3" => train_nfe[3],
+                    "Training/Epoch/NFE" => train_nfe,
                     "Training/Epoch/Accuracy" => train_acc,
                 ),
             )
@@ -361,9 +312,7 @@ function train(config::Dict)
                 Dict(
                     "Testing/Epoch/Count" => epoch,
                     "Testing/Epoch/Loss" => test_loss,
-                    "Testing/Epoch/NFE1" => test_nfe[1],
-                    "Testing/Epoch/NFE2" => test_nfe[2],
-                    "Testing/Epoch/NFE3" => test_nfe[3],
+                    "Testing/Epoch/NFE" => test_nfe,
                     "Testing/Epoch/Accuracy" => test_acc,
                 ),
             )

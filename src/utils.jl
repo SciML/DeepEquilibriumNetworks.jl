@@ -58,3 +58,28 @@ Base.similar(
     v::MultiResolutionFeatures{T1,T},
     dims::Tuple,
 ) where {T1,T<:Number} = similar(v.nodes[1].values, dims)
+
+function SciMLBase.recursivecopy(a::MultiResolutionFeatures)
+    return construct(
+        MultiResolutionFeatures,
+        map(x -> SingleResolutionFeatures(copy(x.values)), a.nodes),
+    )
+end
+
+DiffEqBase.UNITLESS_ABS2(a::MultiResolutionFeatures) =
+    sum(x -> sum(abs2, x.values), a.nodes)::eltype(a)
+
+Base.zero(s::SingleResolutionFeatures) =
+    SingleResolutionFeatures(zero(s.values))
+
+Base.zero(v::MultiResolutionFeatures) =
+    construct(MultiResolutionFeatures, zero.(v.nodes))
+
+DiffEqBase.NAN_CHECK(v::MultiResolutionFeatures) =
+    any(x -> DiffEqBase.NAN_CHECK(x.values), v.nodes)
+
+Base.any(v::MultiResolutionFeatures) =
+    any(x -> any(x.values), v.nodes)
+
+Base.all(v::MultiResolutionFeatures) =
+    all(x -> all(x.values), v.nodes)
