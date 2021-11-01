@@ -1,4 +1,10 @@
-struct DEQChain{S,P1,D,P2}
+modeltype_to_val(::DeepEquilibriumNetwork) = Val(1)
+modeltype_to_val(::SkipDeepEquilibriumNetwork) = Val(2)
+modeltype_to_val(::MultiScaleDeepEquilibriumNetworkS4) = Val(3)
+modeltype_to_val(::MultiScaleSkipDeepEquilibriumNetworkS4) = Val(4)
+modeltype_to_val(m) = Val(-1)
+
+struct DEQChain{V,P1,D,P2}
     pre_deq::P1
     deq::D
     post_deq::P2
@@ -6,11 +12,11 @@ struct DEQChain{S,P1,D,P2}
     function DEQChain(layers...)
         if length(layers) == 3
             pre_deq, deq, post_deq = layers
-            is_sdeq =
-                deq isa SkipDeepEquilibriumNetwork ? true :
-                deq isa DeepEquilibriumNetwork ? false :
-                error("$(deq) Must be a DEQ or SkipDEQ")
-            return new{is_sdeq,typeof(pre_deq),typeof(deq),typeof(post_deq)}(
+            val = modeltype_to_val(deq)
+            val == Val(-1) && error(
+                "$deq must subtype AbstractDeepEquilibriumNetwork and define `modeltype_to_val`",
+            )
+            return new{val,typeof(pre_deq),typeof(deq),typeof(post_deq)}(
                 pre_deq,
                 deq,
                 post_deq,
@@ -20,10 +26,11 @@ struct DEQChain{S,P1,D,P2}
         post_deq = []
         deq = nothing
         encounter_deq = false
-        is_sdeq = false
+        global_val = Val(1)
         for l in layers
-            if l isa SkipDeepEquilibriumNetwork || l isa DeepEquilibriumNetwork
-                is_sdeq = l isa SkipDeepEquilibriumNetwork
+            val = modeltype_to_val(l)
+            if val != Val(-1)
+                global_val = val
                 encounter_deq &&
                     error("Can have only 1 DEQ Layer in the Chain!!!")
                 deq = l
@@ -40,7 +47,7 @@ struct DEQChain{S,P1,D,P2}
             error("No DEQ Layer in the Chain!!! Maybe you wanted to use Chain")
         pre_deq = length(pre_deq) == 0 ? identity : Chain(pre_deq...)
         post_deq = length(post_deq) == 0 ? identity : Chain(post_deq...)
-        return new{is_sdeq,typeof(pre_deq),typeof(deq),typeof(post_deq)}(
+        return new{global_val,typeof(pre_deq),typeof(deq),typeof(post_deq)}(
             pre_deq,
             deq,
             post_deq,
@@ -50,13 +57,20 @@ end
 
 Flux.@functor DEQChain
 
-(deq::DEQChain{false})(x) = deq.post_deq(deq.deq(deq.pre_deq(x)))
+(deq::Union{DEQChain{Val(1)}, DEQChain{Val(3)}})(x) = deq.post_deq(deq.deq(deq.pre_deq(x)))
 
-function (deq::DEQChain{true})(x)
+function (deq::DEQChain{Val(2)})(x)
     x1 = deq.pre_deq(x)
     z, ẑ = deq.deq(x1)
     x2 = deq.post_deq(z)
     return (x2, (z, ẑ))
+end
+
+function (deq::DEQChain{Val(4)})(x)
+    x1 = deq.pre_deq(x)
+    z, ẑ = deq.deq(x1)
+    x2 = deq.post_deq(z)
+    return (x2, tuple(zip(z, ẑ)...))
 end
 
 function get_and_clear_nfe!(model::DEQChain)
