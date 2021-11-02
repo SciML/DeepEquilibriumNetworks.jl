@@ -1,8 +1,6 @@
 module FastDEQ
 
-using AtomicGraphNets.Layers: compute_pool_params
 using ChainRulesCore
-using ChemistryFeaturization
 using CUDA
 using DataDeps
 using DataLoaders
