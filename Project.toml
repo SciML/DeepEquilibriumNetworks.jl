@@ -4,8 +4,10 @@ authors = ["Avik Pal <avikpal@mit.edu>"]
 version = "0.1.0"
 
 [deps]
+AtomicGraphNets = "ccdf130a-3c88-4595-a023-a7e7f78b9dd5"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+ChemistryFeaturization = "6c925690-434a-421d-aea7-51398c5b007a"
 DataLoaders = "2e981812-ef13-4a9c-bfa0-ab13047b12a9"
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
 DiffEqCallbacks = "459566f4-90b8-5000-8ac3-15dfb0a30def"

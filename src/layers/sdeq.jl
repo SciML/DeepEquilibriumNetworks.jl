@@ -69,3 +69,27 @@ function (deq::SkipDeepEquilibriumNetwork)(
     deq.stats.nfe += 1
     return res, z
 end
+
+function (deq::SkipDeepEquilibriumNetwork)(lapl::AbstractMatrix{T}, x::AbstractArray{T}, p = deq.p) where {T}
+    # Atomic Graph Nets
+    p1, p2 = p[1:deq.split_idx], p[deq.split_idx+1:end]
+    _, u0 = deq.re2(p2)(lapl, x)
+    deq.stats.nfe += 1
+
+    function dudt(u, _p, t)
+        deq.stats.nfe += 1
+        return deq.re1(_p)(lapl, u, x)[2] .- u
+    end
+
+    ssprob = SteadyStateProblem(dudt, u0, p1)
+    sol = solve(
+        ssprob,
+        deq.args...;
+        u0 = u0,
+        sensealg = deq.sensealg,
+        deq.kwargs...,
+    )
+    deq.stats.nfe += 1
+
+    return deq.re1(p1)(lapl, sol.u, x), u0
+end

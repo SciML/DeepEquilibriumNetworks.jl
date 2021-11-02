@@ -1,6 +1,8 @@
 module FastDEQ
 
+using AtomicGraphNets.Layers: compute_pool_params
 using ChainRulesCore
+using ChemistryFeaturization
 using CUDA
 using DiffEqBase
 using DiffEqCallbacks
@@ -13,6 +15,7 @@ using MultiScaleArrays
 using OrdinaryDiffEq
 # using RecursiveArrayTools: ArrayPartition
 using SciMLBase
+using SparseArrays
 using Statistics
 using SteadyStateDiffEq
 using UnPack
@@ -49,7 +52,11 @@ include("zygote.jl")
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
 export MultiScaleDeepEquilibriumNetworkS4,
     MultiScaleSkipDeepEquilibriumNetworkS4
-export DEQChain, MDEQChain
+export DEQChain
+
+export AGNConv, AGNMaxPool, AGNMeanPool
+export batch_graph_data
+
 export get_and_clear_nfe!
 export SupervisedLossContainer
 export BroydenCache, broyden
