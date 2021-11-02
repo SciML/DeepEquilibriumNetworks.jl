@@ -94,6 +94,14 @@ function (mdeq::MultiScaleDeepEquilibriumNetworkS4)(
     end
     u0 = Zygote.@ignore construct(MultiResolutionFeatures, initial_conditions)
 
+    # _z = zero(x)
+    # u0 = ArrayPartition(
+    #     mdeq.mapping_layers[1][1](_z),
+    #     mdeq.mapping_layers[1][2](_z),
+    #     mdeq.mapping_layers[1][3](_z),
+    #     mdeq.mapping_layers[1][4](_z),
+    # )
+
     function dudt_(u, _p)
         mdeq.stats.nfe += 1
 
@@ -123,6 +131,10 @@ function (mdeq::MultiScaleDeepEquilibriumNetworkS4)(
         u_prevs_2 = reshape(u.nodes[2].values, sizes[2])
         u_prevs_3 = reshape(u.nodes[3].values, sizes[3])
         u_prevs_4 = reshape(u.nodes[4].values, sizes[4])
+        # u_prevs_1 = u.x[1]
+        # u_prevs_2 = u.x[2]
+        # u_prevs_3 = u.x[3]
+        # u_prevs_4 = u.x[4]
 
         out_1 = mdeq.main_layers_re[1](p1)(u_prevs_1, x)
         out_2 = mdeq.main_layers_re[2](p2)(u_prevs_2)
@@ -166,6 +178,9 @@ function (mdeq::MultiScaleDeepEquilibriumNetworkS4)(
                 SingleResolutionFeatures(vec(u_4 .- u_prevs_4)),
             ],
         )
+        # return ArrayPartition(
+        #     u_1 .- u_prevs_1, u_2 .- u_prevs_2, u_3 .- u_prevs_3, u_4 .- u_prevs_4
+        # )
     end
 
     ssprob = SteadyStateProblem(dudt, u0, p)

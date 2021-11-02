@@ -45,7 +45,7 @@ function get_model(
                         Dense(hdims, hdims * 2),
                         Dense(hdims * 2, hdims),
                     ),
-                    DynamicSS(RK4(); abstol = abstol, reltol = reltol),
+                    DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                     sensealg = SteadyStateAdjoint(
                         autodiff = true,
                         autojacvec = ZygoteVJP(),

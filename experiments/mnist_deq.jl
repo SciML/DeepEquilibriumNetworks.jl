@@ -64,7 +64,7 @@ end
     rl.norm3(relu.(rl.norm2(rl.conv2(rl.norm1(rl.conv1(x))))))
 
 
-struct MnistMDEQ{has_sdeq,L1,S1,S2,D1,D2,D3,PD1,PD2,PD3,CL,C}
+struct MnistWidthStackedDEQ{has_sdeq,L1,S1,S2,D1,D2,D3,PD1,PD2,PD3,CL,C}
     layer1::L1
     scale_down1::S1
     scale_down2::S2
@@ -78,12 +78,12 @@ struct MnistMDEQ{has_sdeq,L1,S1,S2,D1,D2,D3,PD1,PD2,PD3,CL,C}
     classifier::C
 end
 
-Flux.@functor MnistMDEQ
+Flux.@functor MnistWidthStackedDEQ
 
-MnistMDEQ(has_sdeq::Bool, layers...) =
-    MnistMDEQ{has_sdeq,typeof.(layers)...}(layers...)
+MnistWidthStackedDEQ(has_sdeq::Bool, layers...) =
+    MnistWidthStackedDEQ{has_sdeq,typeof.(layers)...}(layers...)
 
-function MnistMDEQ(layers...)
+function MnistWidthStackedDEQ(layers...)
     has_sdeq = false
     for l in layers
         if l isa SkipDeepEquilibriumNetwork
@@ -91,10 +91,10 @@ function MnistMDEQ(layers...)
             break
         end
     end
-    return MnistMDEQ{has_sdeq,typeof.(layers)...}(layers...)
+    return MnistWidthStackedDEQ{has_sdeq,typeof.(layers)...}(layers...)
 end
 
-function (mdeq::MnistMDEQ{false})(x)
+function (mdeq::MnistWidthStackedDEQ{false})(x)
     x1 = mdeq.layer1(x)
     x2 = mdeq.scale_down1(x1)
     x3 = mdeq.scale_down2(x2)
@@ -115,7 +115,7 @@ function (mdeq::MnistMDEQ{false})(x)
     return mdeq.classifier(x4)
 end
 
-function (mdeq::MnistMDEQ{true})(x)
+function (mdeq::MnistWidthStackedDEQ{true})(x)
     x1 = mdeq.layer1(x)
     x2 = mdeq.scale_down1(x1)
     x3 = mdeq.scale_down2(x2)
@@ -147,7 +147,7 @@ function get_model(
     model_type::String,
 ) where {T}
     model =
-        MnistMDEQ(
+        MnistWidthStackedDEQ(
             Chain(
                 Conv((3, 3), 1 => 16, relu; bias = true, pad = 1),  # 28 x 28 x 16
                 BatchNorm(16, affine = true),
@@ -204,11 +204,11 @@ function get_model(
 end
 
 
-function (lc::SupervisedLossContainer)(model::MnistMDEQ{false}, x, y; kwargs...)
+function (lc::SupervisedLossContainer)(model::MnistWidthStackedDEQ{false}, x, y; kwargs...)
     return lc.loss_function(model(x), y)
 end
 
-function (lc::SupervisedLossContainer)(model::MnistMDEQ{true}, x, y; kwargs...)
+function (lc::SupervisedLossContainer)(model::MnistWidthStackedDEQ{true}, x, y; kwargs...)
     ŷ, ((ẑ1, z1), (ẑ2, z2), (ẑ3, z3)) = model(x)
     l1 = lc.loss_function(ŷ, y)
     l2 = mean(abs2, ẑ1 .- z1)
@@ -217,7 +217,7 @@ function (lc::SupervisedLossContainer)(model::MnistMDEQ{true}, x, y; kwargs...)
     return l1 + lc.λ * l2 + lc.λ * l3 + lc.λ * l4
 end
 
-FastDEQ.get_and_clear_nfe!(model::MnistMDEQ) =
+FastDEQ.get_and_clear_nfe!(model::MnistWidthStackedDEQ) =
     get_and_clear_nfe!.([model.deq1, model.deq2, model.deq3])
 
 

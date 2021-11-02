@@ -91,47 +91,47 @@ function get_model(
     model_type::String,
 ) where {T}
     main_layers = (
-        ResNetLayer(16, 32) |> gpu,
-        ResNetLayer(16, 32) |> gpu,
-        ResNetLayer(16, 32) |> gpu,
-        ResNetLayer(16, 32) |> gpu,
+        ResNetLayer(8, 16) |> gpu,
+        ResNetLayer(8, 16) |> gpu,
+        ResNetLayer(8, 16) |> gpu,
+        ResNetLayer(8, 16) |> gpu,
     )
     mapping_layers = (
         (identity, MeanPool((2, 2)), MeanPool((4, 4)), MeanPool((8, 8))) .|>
         gpu,
         (
-            ConvTranspose((4, 4), 16 => 16, stride = (2, 2), pad = SamePad()),
+            ConvTranspose((4, 4), 8 => 8, stride = (2, 2), pad = SamePad()),
             identity,
             MeanPool((2, 2)),
             MeanPool((4, 4)),
         ) .|> gpu,
         (
             Chain(
-                ConvTranspose((4, 4), 16 => 16, stride = (2, 2), pad = SamePad()),
-                ConvTranspose((4, 4), 16 => 16, stride = (2, 2), pad = SamePad()),
+                ConvTranspose((4, 4), 8 => 8, stride = (2, 2), pad = SamePad()),
+                ConvTranspose((4, 4), 8 => 8, stride = (2, 2), pad = SamePad()),
             ),
-            ConvTranspose((4, 4), 16 => 16, stride = (2, 2), pad = SamePad()),
+            ConvTranspose((4, 4), 8 => 8, stride = (2, 2), pad = SamePad()),
             identity,
             MeanPool((2, 2)),
         ) .|> gpu,
         (
             Chain(
-                ConvTranspose((3, 3), 16 => 16, stride = (2, 2), pad = 0),
-                ConvTranspose((4, 4), 16 => 16, stride = (2, 2), pad = SamePad()),
-                ConvTranspose((4, 4), 16 => 16, stride = (2, 2), pad = SamePad()),
+                ConvTranspose((3, 3), 8 => 8, stride = (2, 2), pad = 0),
+                ConvTranspose((4, 4), 8 => 8, stride = (2, 2), pad = SamePad()),
+                ConvTranspose((4, 4), 8 => 8, stride = (2, 2), pad = SamePad()),
             ),
             Chain(
-                ConvTranspose((3, 3), 16 => 16, stride = (2, 2), pad = 0),
-                ConvTranspose((4, 4), 16 => 16, stride = (2, 2), pad = SamePad()),
+                ConvTranspose((3, 3), 8 => 8, stride = (2, 2), pad = 0),
+                ConvTranspose((4, 4), 8 => 8, stride = (2, 2), pad = SamePad()),
             ),
-            ConvTranspose((3, 3), 16 => 16, stride = (2, 2), pad = 0),
+            ConvTranspose((3, 3), 8 => 8, stride = (2, 2), pad = 0),
             identity,
         ) .|> gpu,
     )
     model = DEQChain(
         Chain(
-            Conv((3, 3), 1 => 16, relu; bias = true, pad = 1),  # 28 x 28 x 16
-            BatchNorm(16, affine = true),
+            Conv((3, 3), 1 => 8, relu; bias = true, pad = 1),
+            BatchNorm(8, affine = true),
         ) |> gpu,
         model_type == "vanilla" ?
             MultiScaleDeepEquilibriumNetworkS4(
@@ -154,10 +154,10 @@ function get_model(
                 main_layers,
                 mapping_layers,
                 (
-                    ResNetLayer(16, 32) |> gpu,
-                    Chain(MeanPool((2, 2)), ResNetLayer(16, 32)) |> gpu,
-                    Chain(MeanPool((4, 4)), ResNetLayer(16, 32)) |> gpu,
-                    Chain(MeanPool((8, 8)), ResNetLayer(16, 32)) |> gpu,
+                    ResNetLayer(8, 16) |> gpu,
+                    Chain(MeanPool((2, 2)), ResNetLayer(8, 16)) |> gpu,
+                    Chain(MeanPool((4, 4)), ResNetLayer(8, 16)) |> gpu,
+                    Chain(MeanPool((8, 8)), ResNetLayer(8, 16)) |> gpu,
                 ),
                 DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                 maxiters = maxiters,
@@ -180,7 +180,7 @@ function get_model(
             identity,
         ) |> gpu,
         Flux.flatten,
-        Dense(3 * 3 * 16, 10; bias = true) |> gpu,
+        Dense(3 * 3 * 8, 10; bias = true) |> gpu,
     )
     return model
 end
@@ -365,11 +365,11 @@ for seed in [1, 11, 111]
         config = Dict(
             "seed" => seed,
             "learning_rate" => 0.001,
-            "abstol" => 1f-1,
-            "reltol" => 1f-1,
+            "abstol" => 1.0f0,
+            "reltol" => 0.1f0,
             "maxiters" => 10,
             "epochs" => 25,
-            "batch_size" => 128,
+            "batch_size" => 512,
             "eval_batch_size" => 512,
             "model_type" => model_type,
         )

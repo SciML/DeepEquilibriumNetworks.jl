@@ -11,6 +11,7 @@ using LinearAlgebra
 using LinearSolve
 using MultiScaleArrays
 using OrdinaryDiffEq
+# using RecursiveArrayTools: ArrayPartition
 using SciMLBase
 using Statistics
 using SteadyStateDiffEq
@@ -35,6 +36,7 @@ end
 include("utils.jl")
 include("solvers/broyden.jl")
 include("solvers/linsolve.jl")
+include("layers/agn.jl")
 include("layers/deq.jl")
 include("layers/sdeq.jl")
 include("layers/mdeq.jl")
