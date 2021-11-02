@@ -34,4 +34,4 @@ function (l::LinSolveKrylovJL)(
     return x
 end
 
-(l::LinSolveKrylovJL)(::Type{Val{:init}}, f, u0_prototype::AbstractVector) = l
+(l::LinSolveKrylovJL)(::Type{Val{:init}}, f, u0_prototype) = l

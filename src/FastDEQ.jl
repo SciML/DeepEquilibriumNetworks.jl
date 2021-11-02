@@ -4,6 +4,8 @@ using AtomicGraphNets.Layers: compute_pool_params
 using ChainRulesCore
 using ChemistryFeaturization
 using CUDA
+using DataDeps
+using DataLoaders
 using DiffEqBase
 using DiffEqCallbacks
 using DiffEqSensitivity
@@ -37,6 +39,7 @@ end
 
 
 include("utils.jl")
+include("dataloaders.jl")
 include("solvers/broyden.jl")
 include("solvers/linsolve.jl")
 include("layers/agn.jl")
