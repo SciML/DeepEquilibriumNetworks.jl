@@ -33,7 +33,7 @@ function ResNetLayer(
     n_channels::Int,
     n_inner_channels::Int;
     kernel_size::Tuple{Int,Int} = (3, 3),
-    num_groups::Int = 8,
+    num_groups::Int = 4,
     affine::Bool = false,
 )
     conv1 = Conv(
@@ -150,22 +150,22 @@ function get_model(
     model =
         CIFARWidthStackedDEQ(
             Chain(
-                Conv((3, 3), 3 => 16, relu; bias = true, pad = 1),
+                Conv((3, 3), 3 => 8, relu; bias = true, pad = 1),
+                BatchNorm(8, affine = true),
+            ),
+            Chain(
+                Conv((4, 4), 8 => 16, relu; bias = true, pad = 1, stride = 2),
                 BatchNorm(16, affine = true),
             ),
             Chain(
-                Conv((4, 4), 16 => 16, relu; bias = true, pad = 1, stride = 2),
-                BatchNorm(16, affine = true),
-            ),
-            Chain(
-                Conv((4, 4), 16 => 16, relu; bias = true, pad = 1, stride = 2),
-                BatchNorm(16, affine = true),
+                Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
+                BatchNorm(32, affine = true),
             ),
             [
                 model_type == "skip" ?
                 SkipDeepEquilibriumNetwork(
-                    ResNetLayer(16, 32) |> gpu,
-                    ResNetLayer(16, 32) |> gpu,
+                    ResNetLayer(2^(i + 2), 5 * (2^(i + 2))) |> gpu,
+                    ResNetLayer(2^(i + 2), 5 * (2^(i + 2))) |> gpu,
                     DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                     maxiters = maxiters,
                     sensealg = SteadyStateAdjoint(
@@ -180,7 +180,7 @@ function get_model(
                     verbose = false,
                 ) :
                 DeepEquilibriumNetwork(
-                    ResNetLayer(16, 32) |> gpu,
+                    ResNetLayer(2^(i + 2), 5 * (2^(i + 2))) |> gpu,
                     DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                     maxiters = maxiters,
                     sensealg = SteadyStateAdjoint(
@@ -193,23 +193,41 @@ function get_model(
                         ),
                     ),
                     verbose = false,
-                ) for _ = 1:3
+                ) for i = 1:3
             ]...,
-            Chain(BatchNorm(16, affine = true), MaxPool((4, 4))),
-            Chain(BatchNorm(16, affine = true), MaxPool((2, 2))),
-            BatchNorm(16, affine = true),
+            Chain(
+                BatchNorm(8, affine = true),
+                Conv((4, 4), 8 => 16, relu; bias = true, pad = 1, stride = 2),
+                BatchNorm(16, affine = true),
+                Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
+            ),
+            Chain(
+                BatchNorm(16, affine = true),
+                Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
+            ),
+            BatchNorm(32, affine = true),
             (x...) -> foldl(+, x),
-            Chain(Flux.flatten, Dense(8 * 8 * 16, 10)),
+            Chain(Flux.flatten, Dense(8 * 8 * 32, 10)),
         ) |> gpu
     return model
 end
 
 
-function (lc::SupervisedLossContainer)(model::CIFARWidthStackedDEQ{false}, x, y; kwargs...)
+function (lc::SupervisedLossContainer)(
+    model::CIFARWidthStackedDEQ{false},
+    x,
+    y;
+    kwargs...,
+)
     return lc.loss_function(model(x), y)
 end
 
-function (lc::SupervisedLossContainer)(model::CIFARWidthStackedDEQ{true}, x, y; kwargs...)
+function (lc::SupervisedLossContainer)(
+    model::CIFARWidthStackedDEQ{true},
+    x,
+    y;
+    kwargs...,
+)
     ŷ, ((ẑ1, z1), (ẑ2, z2), (ẑ3, z3)) = model(x)
     l1 = lc.loss_function(ŷ, y)
     l2 = mean(abs2, ẑ1 .- z1)
@@ -268,8 +286,10 @@ function train(config::Dict)
     _xs_train, _ys_train = CIFAR10.traindata(Float32)
     _xs_test, _ys_test = CIFAR10.testdata(Float32)
 
-    xs_train, ys_train = Flux.unbatch(_xs_train), Float32.(Flux.onehotbatch(_ys_train, 0:9))
-    xs_test, ys_test = Flux.unbatch(_xs_test), Float32.(Flux.onehotbatch(_ys_test, 0:9))
+    xs_train, ys_train =
+        Flux.unbatch(_xs_train), Float32.(Flux.onehotbatch(_ys_train, 0:9))
+    xs_test, ys_test =
+        Flux.unbatch(_xs_test), Float32.(Flux.onehotbatch(_ys_test, 0:9))
 
     traindata = (xs_train, ys_train)
     testiter = DataLoader(
@@ -393,7 +413,7 @@ for seed in [1, 11, 111]
             "abstol" => 1f-1,
             "reltol" => 1f-1,
             "maxiters" => 40,
-            "epochs" => 25,
+            "epochs" => 50,
             "batch_size" => 512,
             "eval_batch_size" => 2048,
             "model_type" => model_type,
