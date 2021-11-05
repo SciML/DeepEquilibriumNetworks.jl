@@ -4,15 +4,16 @@ using CUDA,
     DiffEqSensitivity,
     FastDEQ,
     Flux,
+    FluxMPI,
     OrdinaryDiffEq,
     Statistics,
     SteadyStateDiffEq,
     MLDatasets,
+    MPI,
     Plots,
     Random,
     Wandb,
     Zygote
-using DataLoaders: DataLoader
 using MLDataPattern: splitobs, shuffleobs
 
 CUDA.allowscalar(false)
@@ -208,8 +209,11 @@ function get_model(
             BatchNorm(32, affine = true),
             (x...) -> foldl(+, x),
             Chain(Flux.flatten, Dense(8 * 8 * 32, 10)),
-        ) |> gpu
-    return model
+        )
+    return DataParallelFluxModel(
+        model,
+        [i % length(CUDA.devices()) for i = 1:MPI.Comm_size(MPI.COMM_WORLD)]
+    )
 end
 
 
@@ -269,12 +273,15 @@ end
 
 ## Training Function
 function train(config::Dict)
+    comm = MPI.COMM_WORLD
+    rank = MPI.Comm_rank(comm)
+
     ## Setup Logging & Experiment Configuration
-    lg = WandbLogger(
+    lg = rank == 0 ? WandbLogger(
         project = "FastDEQ.jl",
         name = "fastdeqjl-supervised_cifar10_classication-$(now())",
         config = config,
-    )
+    ) : nothing
 
     ## Reproducibility
     Random.seed!(get_config(lg, "seed"))
@@ -292,10 +299,15 @@ function train(config::Dict)
         Flux.unbatch(_xs_test), Float32.(Flux.onehotbatch(_ys_test, 0:9))
 
     traindata = (xs_train, ys_train)
-    testiter = DataLoader(
-        shuffleobs((xs_test, ys_test)),
-        eval_batch_size,
-        buffered = false,
+    trainiter = DataParallelDataLoader(
+        traindata;
+        batchsize = batch_size,
+        shuffle = true,
+    )
+    testiter = DataParallelDataLoader(
+        (xs_test, ys_test);
+        batchsize = eval_batch_size,
+        shuffle = false,
     )
 
     ## Model Setup
@@ -318,8 +330,6 @@ function train(config::Dict)
     step = 1
     for epoch = 1:get_config(lg, "epochs")
         try
-            trainiter =
-                DataLoader(shuffleobs(traindata), batch_size, buffered = false)
             for (x, y) in trainiter
                 x = x |> gpu
                 y = y |> gpu
@@ -329,53 +339,59 @@ function train(config::Dict)
                 gs = back(one(loss))
                 Flux.Optimise.update!(opt, ps, gs)
 
-                ### Store the NFE Count
-                cb()
+                if rank == 0
+                    ### Store the NFE Count
+                    cb()
 
-                ### Log the losses
-                log(
-                    lg,
-                    Dict(
-                        "Training/Step/Loss" => loss,
-                        "Training/Step/NFE1" => nfe_counts[end][1],
-                        "Training/Step/NFE2" => nfe_counts[end][2],
-                        "Training/Step/NFE3" => nfe_counts[end][3],
-                        "Training/Step/Count" => step,
-                    ),
-                )
+                    ### Log the losses
+                    log(
+                        lg,
+                        Dict(
+                            "Training/Step/Loss" => loss,
+                            "Training/Step/NFE1" => nfe_counts[end][1],
+                            "Training/Step/NFE2" => nfe_counts[end][2],
+                            "Training/Step/NFE3" => nfe_counts[end][3],
+                            "Training/Step/Count" => step,
+                        ),
+                    )
+                end
                 step += 1
             end
 
-            ### Training Loss/Accuracy
-            train_loss, train_acc, train_nfe = loss_and_accuracy(
-                model,
-                DataLoader(traindata, eval_batch_size, buffered = false),
-            )
-            log(
-                lg,
-                Dict(
-                    "Training/Epoch/Count" => epoch,
-                    "Training/Epoch/Loss" => train_loss,
-                    "Training/Epoch/NFE1" => train_nfe[1],
-                    "Training/Epoch/NFE2" => train_nfe[2],
-                    "Training/Epoch/NFE3" => train_nfe[3],
-                    "Training/Epoch/Accuracy" => train_acc,
-                ),
-            )
+            if rank == 0
+                ### Training Loss/Accuracy
+                train_loss, train_acc, train_nfe = loss_and_accuracy(
+                    model,
+                    Flux.Data.DataLoader(traindata; batchsize = eval_batch_size),
+                )
+                log(
+                    lg,
+                    Dict(
+                        "Training/Epoch/Count" => epoch,
+                        "Training/Epoch/Loss" => train_loss,
+                        "Training/Epoch/NFE1" => train_nfe[1],
+                        "Training/Epoch/NFE2" => train_nfe[2],
+                        "Training/Epoch/NFE3" => train_nfe[3],
+                        "Training/Epoch/Accuracy" => train_acc,
+                    ),
+                )
 
-            ### Testing Loss/Accuracy
-            test_loss, test_acc, test_nfe = loss_and_accuracy(model, testiter)
-            log(
-                lg,
-                Dict(
-                    "Testing/Epoch/Count" => epoch,
-                    "Testing/Epoch/Loss" => test_loss,
-                    "Testing/Epoch/NFE1" => test_nfe[1],
-                    "Testing/Epoch/NFE2" => test_nfe[2],
-                    "Testing/Epoch/NFE3" => test_nfe[3],
-                    "Testing/Epoch/Accuracy" => test_acc,
-                ),
-            )
+                ### Testing Loss/Accuracy
+                test_loss, test_acc, test_nfe = loss_and_accuracy(model, testiter)
+                log(
+                    lg,
+                    Dict(
+                        "Testing/Epoch/Count" => epoch,
+                        "Testing/Epoch/Loss" => test_loss,
+                        "Testing/Epoch/NFE1" => test_nfe[1],
+                        "Testing/Epoch/NFE2" => test_nfe[2],
+                        "Testing/Epoch/NFE3" => test_nfe[3],
+                        "Testing/Epoch/Accuracy" => test_acc,
+                    ),
+                )
+            end
+
+            MPI.Barrier(comm)
         catch ex
             if ex isa Flux.Optimise.StopException
                 break
@@ -387,7 +403,7 @@ function train(config::Dict)
         end
     end
 
-    close(lg)
+    lg !== nothing && close(lg)
 
     return model, nfe_counts
 end
@@ -414,8 +430,8 @@ for seed in [1, 11, 111]
             "reltol" => 1f-1,
             "maxiters" => 40,
             "epochs" => 50,
-            "batch_size" => 512,
-            "eval_batch_size" => 2048,
+            "batch_size" => 128,
+            "eval_batch_size" => 512,
             "model_type" => model_type,
         )
 
