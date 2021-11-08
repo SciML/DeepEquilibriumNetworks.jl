@@ -17,7 +17,8 @@ using CUDA,
 using MLDataPattern: splitobs, shuffleobs
 
 MPI.Init()
-CUDA.allowscalar(false)
+# FIXME: Need to check. FluxMPI requires scalarindexing??
+CUDA.allowscalar(true)
 
 ## Models
 # Resnet Layer
@@ -149,74 +150,75 @@ function get_model(
     reltol::T,
     model_type::String,
 ) where {T}
-    model =
-        CIFARWidthStackedDEQ(
-            Chain(
-                Conv((3, 3), 3 => 8, relu; bias = true, pad = 1),
-                BatchNorm(8, affine = true),
-            ),
-            Chain(
-                Conv((4, 4), 8 => 16, relu; bias = true, pad = 1, stride = 2),
-                BatchNorm(16, affine = true),
-            ),
-            Chain(
-                Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
-                BatchNorm(32, affine = true),
-            ),
-            [
-                model_type == "skip" ?
-                SkipDeepEquilibriumNetwork(
-                    ResNetLayer(2^(i + 2), 5 * (2^(i + 2))) |> gpu,
-                    ResNetLayer(2^(i + 2), 5 * (2^(i + 2))) |> gpu,
-                    DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
-                    maxiters = maxiters,
-                    sensealg = SteadyStateAdjoint(
-                        autodiff = true,
-                        autojacvec = ZygoteVJP(),
-                        linsolve = LinSolveKrylovJL(
-                            rtol = reltol,
-                            atol = abstol,
-                            itmax = maxiters,
-                        ),
-                    ),
-                    verbose = false,
-                ) :
-                DeepEquilibriumNetwork(
-                    ResNetLayer(2^(i + 2), 5 * (2^(i + 2))) |> gpu,
-                    DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
-                    maxiters = maxiters,
-                    sensealg = SteadyStateAdjoint(
-                        autodiff = true,
-                        autojacvec = ZygoteVJP(),
-                        linsolve = LinSolveKrylovJL(
-                            rtol = reltol,
-                            atol = abstol,
-                            itmax = maxiters,
-                        ),
-                    ),
-                    verbose = false,
-                ) for i = 1:3
-            ]...,
-            Chain(
-                BatchNorm(8, affine = true),
-                Conv((4, 4), 8 => 16, relu; bias = true, pad = 1, stride = 2),
-                BatchNorm(16, affine = true),
-                Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
-            ),
-            Chain(
-                BatchNorm(16, affine = true),
-                Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
-            ),
+    model = CIFARWidthStackedDEQ(
+        Chain(
+            Conv((3, 3), 3 => 8, relu; bias = true, pad = 1),
+            BatchNorm(8, affine = true),
+        ),
+        Chain(
+            Conv((4, 4), 8 => 16, relu; bias = true, pad = 1, stride = 2),
+            BatchNorm(16, affine = true),
+        ),
+        Chain(
+            Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
             BatchNorm(32, affine = true),
-            (x...) -> foldl(+, x),
-            Chain(Flux.flatten, Dense(8 * 8 * 32, 10)),
-        )
+        ),
+        [
+            model_type == "skip" ?
+            SkipDeepEquilibriumNetwork(
+                ResNetLayer(2^(i + 2), 5 * (2^(i + 2))) |> gpu,
+                ResNetLayer(2^(i + 2), 5 * (2^(i + 2))) |> gpu,
+                DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                maxiters = maxiters,
+                sensealg = SteadyStateAdjoint(
+                    autodiff = true,
+                    autojacvec = ZygoteVJP(),
+                    linsolve = LinSolveKrylovJL(
+                        rtol = reltol,
+                        atol = abstol,
+                        itmax = maxiters,
+                    ),
+                ),
+                verbose = false,
+            ) :
+            DeepEquilibriumNetwork(
+                ResNetLayer(2^(i + 2), 5 * (2^(i + 2))) |> gpu,
+                DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                maxiters = maxiters,
+                sensealg = SteadyStateAdjoint(
+                    autodiff = true,
+                    autojacvec = ZygoteVJP(),
+                    linsolve = LinSolveKrylovJL(
+                        rtol = reltol,
+                        atol = abstol,
+                        itmax = maxiters,
+                    ),
+                ),
+                verbose = false,
+            ) for i = 1:3
+        ]...,
+        Chain(
+            BatchNorm(8, affine = true),
+            Conv((4, 4), 8 => 16, relu; bias = true, pad = 1, stride = 2),
+            BatchNorm(16, affine = true),
+            Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
+        ),
+        Chain(
+            BatchNorm(16, affine = true),
+            Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
+        ),
+        BatchNorm(32, affine = true),
+        (x...) -> foldl(+, x),
+        Chain(Flux.flatten, Dense(8 * 8 * 32, 10)),
+    )
     return DataParallelFluxModel(
         model,
-        [i % length(CUDA.devices()) for i = 1:MPI.Comm_size(MPI.COMM_WORLD)]
+        [i % length(CUDA.devices()) for i = 1:MPI.Comm_size(MPI.COMM_WORLD)],
     )
 end
 
+(lc::SupervisedLossContainer)(model::DataParallelFluxModel, x, y; kwargs...) =
+    lc(model.model, x, y, kwargs...)
 
 function (lc::SupervisedLossContainer)(
     model::CIFARWidthStackedDEQ{false},
@@ -307,10 +309,8 @@ function train(config::Dict)
     _xs_train, _ys_train = CIFAR10.traindata(Float32)
     _xs_test, _ys_test = CIFAR10.testdata(Float32)
 
-    xs_train, ys_train =
-        Flux.unbatch(_xs_train), Float32.(Flux.onehotbatch(_ys_train, 0:9))
-    xs_test, ys_test =
-        Flux.unbatch(_xs_test), Float32.(Flux.onehotbatch(_ys_test, 0:9))
+    xs_train, ys_train = _xs_train, Float32.(Flux.onehotbatch(_ys_train, 0:9))
+    xs_test, ys_test = _xs_test, Float32.(Flux.onehotbatch(_ys_test, 0:9))
 
     traindata = (xs_train, ys_train)
     trainiter = DataParallelDataLoader(
@@ -341,8 +341,7 @@ function train(config::Dict)
                 x = x |> gpu
                 y = y |> gpu
 
-                _res =
-                    Zygote.withgradient(() -> loss_function(model, x, y), ps)
+                _res = Zygote.withgradient(() -> loss_function(model, x, y), ps)
                 loss = res.val
                 gs = res.grad
 
@@ -368,7 +367,11 @@ function train(config::Dict)
             ### Training Loss/Accuracy
             train_loss, train_acc, train_nfe = loss_and_accuracy(
                 model,
-                Flux.Data.DataLoader(traindata; batchsize = eval_batch_size),
+                Flux.Data.DataLoader(
+                    traindata;
+                    batchsize = eval_batch_size,
+                    shuffle = false,
+                ),
             )
             log(
                 lg,
