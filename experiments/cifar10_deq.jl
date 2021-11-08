@@ -16,6 +16,7 @@ using CUDA,
     Zygote
 using MLDataPattern: splitobs, shuffleobs
 
+MPI.Init()
 CUDA.allowscalar(false)
 
 ## Models
@@ -251,6 +252,10 @@ function register_nfe_counts(model, buffer)
 end
 
 function loss_and_accuracy(model, dataloader)
+    comm = MPI.COMM_WORLD
+    rank = MPI.Comm_rank(comm)
+    rank != 0 && return (0, 0, [0, 0, 0])
+
     matches, total_loss, total_datasize, total_nfe = 0, 0, 0, [0, 0, 0]
     for (x, y) in dataloader
         x = x |> gpu
@@ -277,14 +282,23 @@ function train(config::Dict)
     rank = MPI.Comm_rank(comm)
 
     ## Setup Logging & Experiment Configuration
-    lg = rank == 0 ? WandbLogger(
+    ## TODO: Fix Wandb for MPI
+    lg = WandbLoggerMPI(
         project = "FastDEQ.jl",
         name = "fastdeqjl-supervised_cifar10_classication-$(now())",
         config = config,
-    ) : nothing
+    )
 
     ## Reproducibility
     Random.seed!(get_config(lg, "seed"))
+
+    ## Model Setup
+    model = get_model(
+        get_config(lg, "maxiters"),
+        Float32(get_config(lg, "abstol")),
+        Float32(get_config(lg, "reltol")),
+        get_config(lg, "model_type"),
+    )
 
     ## Dataset
     batch_size = get_config(lg, "batch_size")
@@ -310,14 +324,7 @@ function train(config::Dict)
         shuffle = false,
     )
 
-    ## Model Setup
-    model = get_model(
-        get_config(lg, "maxiters"),
-        Float32(get_config(lg, "abstol")),
-        Float32(get_config(lg, "reltol")),
-        get_config(lg, "model_type"),
-    )
-
+    ## Loss Function
     loss_function =
         SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0)
 
@@ -334,62 +341,60 @@ function train(config::Dict)
                 x = x |> gpu
                 y = y |> gpu
 
-                loss, back =
-                    Zygote.pullback(() -> loss_function(model, x, y), ps)
-                gs = back(one(loss))
+                _res =
+                    Zygote.withgradient(() -> loss_function(model, x, y), ps)
+                loss = res.val
+                gs = res.grad
+
                 Flux.Optimise.update!(opt, ps, gs)
 
-                if rank == 0
-                    ### Store the NFE Count
-                    cb()
+                ### Store the NFE Count
+                cb()
 
-                    ### Log the losses
-                    log(
-                        lg,
-                        Dict(
-                            "Training/Step/Loss" => loss,
-                            "Training/Step/NFE1" => nfe_counts[end][1],
-                            "Training/Step/NFE2" => nfe_counts[end][2],
-                            "Training/Step/NFE3" => nfe_counts[end][3],
-                            "Training/Step/Count" => step,
-                        ),
-                    )
-                end
+                ### Log the losses
+                log(
+                    lg,
+                    Dict(
+                        "Training/Step/Loss" => loss,
+                        "Training/Step/NFE1" => nfe_counts[end][1],
+                        "Training/Step/NFE2" => nfe_counts[end][2],
+                        "Training/Step/NFE3" => nfe_counts[end][3],
+                        "Training/Step/Count" => step,
+                    ),
+                )
                 step += 1
             end
 
-            if rank == 0
-                ### Training Loss/Accuracy
-                train_loss, train_acc, train_nfe = loss_and_accuracy(
-                    model,
-                    Flux.Data.DataLoader(traindata; batchsize = eval_batch_size),
-                )
-                log(
-                    lg,
-                    Dict(
-                        "Training/Epoch/Count" => epoch,
-                        "Training/Epoch/Loss" => train_loss,
-                        "Training/Epoch/NFE1" => train_nfe[1],
-                        "Training/Epoch/NFE2" => train_nfe[2],
-                        "Training/Epoch/NFE3" => train_nfe[3],
-                        "Training/Epoch/Accuracy" => train_acc,
-                    ),
-                )
+            ### Training Loss/Accuracy
+            train_loss, train_acc, train_nfe = loss_and_accuracy(
+                model,
+                Flux.Data.DataLoader(traindata; batchsize = eval_batch_size),
+            )
+            log(
+                lg,
+                Dict(
+                    "Training/Epoch/Count" => epoch,
+                    "Training/Epoch/Loss" => train_loss,
+                    "Training/Epoch/NFE1" => train_nfe[1],
+                    "Training/Epoch/NFE2" => train_nfe[2],
+                    "Training/Epoch/NFE3" => train_nfe[3],
+                    "Training/Epoch/Accuracy" => train_acc,
+                ),
+            )
 
-                ### Testing Loss/Accuracy
-                test_loss, test_acc, test_nfe = loss_and_accuracy(model, testiter)
-                log(
-                    lg,
-                    Dict(
-                        "Testing/Epoch/Count" => epoch,
-                        "Testing/Epoch/Loss" => test_loss,
-                        "Testing/Epoch/NFE1" => test_nfe[1],
-                        "Testing/Epoch/NFE2" => test_nfe[2],
-                        "Testing/Epoch/NFE3" => test_nfe[3],
-                        "Testing/Epoch/Accuracy" => test_acc,
-                    ),
-                )
-            end
+            ### Testing Loss/Accuracy
+            test_loss, test_acc, test_nfe = loss_and_accuracy(model, testiter)
+            log(
+                lg,
+                Dict(
+                    "Testing/Epoch/Count" => epoch,
+                    "Testing/Epoch/Loss" => test_loss,
+                    "Testing/Epoch/NFE1" => test_nfe[1],
+                    "Testing/Epoch/NFE2" => test_nfe[2],
+                    "Testing/Epoch/NFE3" => test_nfe[3],
+                    "Testing/Epoch/Accuracy" => test_acc,
+                ),
+            )
 
             MPI.Barrier(comm)
         catch ex
