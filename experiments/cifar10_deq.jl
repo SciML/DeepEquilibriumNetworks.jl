@@ -17,8 +17,7 @@ using CUDA,
 using MLDataPattern: splitobs, shuffleobs
 
 MPI.Init()
-# FIXME: Need to check. FluxMPI requires scalarindexing??
-CUDA.allowscalar(true)
+CUDA.allowscalar(false)
 
 ## Models
 # Resnet Layer
@@ -166,8 +165,8 @@ function get_model(
         [
             model_type == "skip" ?
             SkipDeepEquilibriumNetwork(
-                ResNetLayer(2^(i + 2), 5 * (2^(i + 2))) |> gpu,
-                ResNetLayer(2^(i + 2), 5 * (2^(i + 2))) |> gpu,
+                ResNetLayer(2^(i + 2), 5 * (2^(i + 2))),
+                ResNetLayer(2^(i + 2), 5 * (2^(i + 2))),
                 DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                 maxiters = maxiters,
                 sensealg = SteadyStateAdjoint(
@@ -182,7 +181,7 @@ function get_model(
                 verbose = false,
             ) :
             DeepEquilibriumNetwork(
-                ResNetLayer(2^(i + 2), 5 * (2^(i + 2))) |> gpu,
+                ResNetLayer(2^(i + 2), 5 * (2^(i + 2))),
                 DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                 maxiters = maxiters,
                 sensealg = SteadyStateAdjoint(

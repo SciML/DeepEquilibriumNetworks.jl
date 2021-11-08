@@ -15,6 +15,19 @@ struct MultiScaleSkipDeepEquilibriumNetworkS4{M1,M2,M3,RE1,RE2,RE3,P,A,K,S} <:
     stats::DEQTrainingStats
 end
 
+function Flux.gpu(deq::MultiScaleSkipDeepEquilibriumNetworkS4)
+    return MultiScaleSkipDeepEquilibriumNetworkS4(
+        map(gpu, deq.main_layers),
+        map(x -> x .|> gpu, deq.mapping_layers),
+        map(gpu, deq.shortcut_layers),
+        deq.args[1];
+        p = deq.p |> gpu,
+        sensealg = deq.sensealg,
+        deq.kwargs...
+    )
+end
+
+
 Flux.@functor MultiScaleSkipDeepEquilibriumNetworkS4 (p,)
 
 function MultiScaleSkipDeepEquilibriumNetworkS4(

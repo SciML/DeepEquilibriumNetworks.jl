@@ -10,6 +10,16 @@ end
 
 Flux.@functor DeepEquilibriumNetwork
 
+function Flux.gpu(deq::DeepEquilibriumNetwork)
+    return DeepEquilibriumNetwork(
+        deq.model |> gpu,
+        deq.args...;
+        p = deq.p |> gpu,
+        sensealg = deq.sensealg,
+        deq.kwargs...
+    )
+end
+
 function DeepEquilibriumNetwork(
     model,
     args...;

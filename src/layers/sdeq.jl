@@ -14,6 +14,17 @@ end
 
 Flux.@functor SkipDeepEquilibriumNetwork
 
+function Flux.gpu(deq::SkipDeepEquilibriumNetwork)
+    return SkipDeepEquilibriumNetwork(
+        deq.model |> gpu,
+        deq.shortcut |> gpu,
+        deq.args...;
+        p = deq.p |> gpu,
+        sensealg = deq.sensealg,
+        deq.kwargs...
+    )
+end
+
 function SkipDeepEquilibriumNetwork(
     model,
     shortcut,
