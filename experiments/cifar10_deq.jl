@@ -341,8 +341,8 @@ function train(config::Dict)
                 y = y |> gpu
 
                 _res = Zygote.withgradient(() -> loss_function(model, x, y), ps)
-                loss = res.val
-                gs = res.grad
+                loss = _res.val
+                gs = _res.grad
 
                 Flux.Optimise.update!(opt, ps, gs)
 
