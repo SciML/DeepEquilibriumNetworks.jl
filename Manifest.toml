@@ -310,6 +310,12 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 deps = ["Mmap"]
 uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
+[[deps.DensityInterface]]
+deps = ["InverseFunctions", "Test"]
+git-tree-sha1 = "794daf62dce7df839b8ed446fc59c68db4b5182f"
+uuid = "b429d917-457f-4dbc-8f4c-0cc954292b1d"
+version = "0.3.3"
+
 [[deps.DiffEqBase]]
 deps = ["ArrayInterface", "ChainRulesCore", "DEDataArrays", "DataStructures", "Distributions", "DocStringExtensions", "FastBroadcast", "ForwardDiff", "FunctionWrappers", "IterativeSolvers", "LabelledArrays", "LinearAlgebra", "Logging", "MuladdMacro", "NonlinearSolve", "Parameters", "PreallocationTools", "Printf", "RecursiveArrayTools", "RecursiveFactorization", "Reexport", "Requires", "SciMLBase", "Setfield", "SparseArrays", "StaticArrays", "Statistics", "SuiteSparse", "ZygoteRules"]
 git-tree-sha1 = "5c3d877ddfc2da61ce5cc1f5ce330ff97789c57c"
@@ -371,10 +377,10 @@ deps = ["Random", "Serialization", "Sockets"]
 uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
-deps = ["ChainRulesCore", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns"]
-git-tree-sha1 = "72dcda9e19f88d09bf21b5f9507a0bb430bce2aa"
+deps = ["ChainRulesCore", "DensityInterface", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns"]
+git-tree-sha1 = "b66f784c86bff7754c5678993d7f3b57ea914364"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.24"
+version = "0.25.25"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
@@ -506,7 +512,7 @@ version = "0.12.8"
 
 [[deps.FluxMPI]]
 deps = ["CUDA", "Flux", "MPI", "Random", "Statistics", "Zygote"]
-git-tree-sha1 = "d32e3ac19bfbdce2e766f574a698cd66a825ada2"
+git-tree-sha1 = "535575760ece090e89fd156e5e317f0fd3f9be0c"
 repo-rev = "main"
 repo-url = "https://github.com/avik-pal/FluxMPI.jl.git"
 uuid = "acf642fa-ee0e-513a-b9d5-bcd150f7ec3b"
@@ -825,9 +831,9 @@ version = "1.3.0"
 
 [[deps.LabelledArrays]]
 deps = ["ArrayInterface", "LinearAlgebra", "MacroTools", "StaticArrays"]
-git-tree-sha1 = "8f5fd068dfee92655b79e0859ecad8b492dfe8b1"
+git-tree-sha1 = "fa07d4ee13edf79a6ac2575ad28d9f43694e1190"
 uuid = "2ee39098-c373-598a-b85f-a56591580800"
-version = "1.6.5"
+version = "1.6.6"
 
 [[deps.Latexify]]
 deps = ["Formatting", "InteractiveUtils", "LaTeXStrings", "MacroTools", "Markdown", "Printf", "Requires"]
@@ -1595,9 +1601,9 @@ version = "6.40.0"
 
 [[deps.StrideArraysCore]]
 deps = ["ArrayInterface", "CloseOpenIntervals", "IfElse", "LayoutPointers", "ManualMemory", "Requires", "SIMDTypes", "Static", "ThreadingUtilities"]
-git-tree-sha1 = "f081c3c985849f4263fd0ed13e51feceed4ccc79"
+git-tree-sha1 = "12cf3253ebd8e2a3214ae171fbfe51e7e8d8ad28"
 uuid = "7792a7ef-975c-4747-a70f-980b88e8d1da"
-version = "0.2.8"
+version = "0.2.9"
 
 [[deps.StructArrays]]
 deps = ["Adapt", "DataAPI", "StaticArrays", "Tables"]

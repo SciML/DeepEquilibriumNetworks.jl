@@ -69,6 +69,7 @@ export AGNConv, AGNMaxPool, AGNMeanPool
 export batch_graph_data
 export VariationalHiddenDropout
 export reset_mask!
+export Sequential
 
 export get_and_clear_nfe!
 export SupervisedLossContainer

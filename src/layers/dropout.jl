@@ -4,6 +4,8 @@ mutable struct VariationalHiddenDropout{F,M}
     active::Union{Bool,Nothing}
 end
 
+Flux.trainable(::VariationalHiddenDropout) = ()
+
 Flux.gpu(hd::VariationalHiddenDropout) =
     VariationalHiddenDropout(hd.p, hd.mask |> gpu, hd.active)
 
@@ -19,6 +21,8 @@ function reset_mask!(a::VariationalHiddenDropout)
     Flux.rand!(a.mask)
     a.mask .= Flux._dropout_kernel.(a.mask, a.p, 1 - a.p)
 end
+
+Zygote.@nograd reset_mask!
 
 function (a::VariationalHiddenDropout)(x)
     Flux._isactive(a) || return x

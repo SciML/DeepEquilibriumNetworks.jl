@@ -21,21 +21,38 @@ CUDA.allowscalar(false)
 
 ## Models
 # Resnet Layer
-struct ResNetLayer{C1,C2,N1,N2,N3}
+struct ResNetLayer{C1,C2,D1,D2,N1,N2,N3}
     conv1::C1
     conv2::C2
+    dropout1::D1
+    dropout2::D2
     norm1::N1
     norm2::N2
     norm3::N3
+end
+
+function Flux.gpu(r::ResNetLayer)
+    return ResNetLayer(
+        Flux.gpu(r.conv1),
+        Flux.gpu(r.conv2),
+        Flux.gpu(r.dropout1),
+        Flux.gpu(r.dropout2),
+        Flux.gpu(r.norm1),
+        Flux.gpu(r.norm2),
+        Flux.gpu(r.norm3)
+    )
 end
 
 Flux.@functor ResNetLayer
 
 function ResNetLayer(
     n_channels::Int,
-    n_inner_channels::Int;
+    n_inner_channels::Int,
+    drop1_size::Tuple,
+    drop2_size::Tuple,
+    dropout_rate::Real;
     kernel_size::Tuple{Int,Int} = (3, 3),
-    num_groups::Int = 4,
+    num_groups::Int = 8,
     affine::Bool = false,
 )
     conv1 = Conv(
@@ -46,6 +63,7 @@ function ResNetLayer(
         bias = false,
         init = (dims...) -> randn(Float32, dims...) .* 0.01f0,
     )
+    dropout1 = VariationalHiddenDropout(dropout_rate, drop1_size)
     conv2 = Conv(
         kernel_size,
         n_inner_channels => n_channels;
@@ -53,18 +71,19 @@ function ResNetLayer(
         bias = false,
         init = (dims...) -> randn(Float32, dims...) .* 0.01f0,
     )
+    dropout2 = VariationalHiddenDropout(dropout_rate, drop2_size)
     norm1 = GroupNorm(n_inner_channels, num_groups, affine = affine)
     norm2 = GroupNorm(n_channels, num_groups, affine = affine)
     norm3 = GroupNorm(n_channels, num_groups, affine = affine)
 
-    return ResNetLayer(conv1, conv2, norm1, norm2, norm3)
+    return ResNetLayer(conv1, conv2, dropout1, dropout2, norm1, norm2, norm3)
 end
 
 (rl::ResNetLayer)(z, x) =
-    rl.norm3(relu.(z .+ rl.norm2(x .+ rl.conv2(rl.norm1(rl.conv1(z))))))
+    rl.norm3(relu.(z .+ rl.norm2(x .+ rl.dropout2(rl.conv2(rl.norm1(rl.dropout1(rl.conv1(z))))))))
 
 (rl::ResNetLayer)(x) =
-    rl.norm3(relu.(rl.norm2(rl.conv2(rl.norm1(rl.conv1(x))))))
+    rl.norm3(relu.(rl.norm2(rl.dropout2(rl.conv2(rl.norm1(rl.dropout1(rl.conv1(x))))))))
 
 
 struct CIFARWidthStackedDEQ{has_sdeq,L1,S1,S2,D1,D2,D3,PD1,PD2,PD3,CL,C}
@@ -81,10 +100,27 @@ struct CIFARWidthStackedDEQ{has_sdeq,L1,S1,S2,D1,D2,D3,PD1,PD2,PD3,CL,C}
     classifier::C
 end
 
+function Flux.gpu(c::CIFARWidthStackedDEQ{S}) where {S}
+    return CIFARWidthStackedDEQ(
+        S,
+        Flux.gpu(c.layer1),
+        Flux.gpu(c.scale_down1),
+        Flux.gpu(c.scale_down2),
+        Flux.gpu(c.deq1),
+        Flux.gpu(c.deq2),
+        Flux.gpu(c.deq3),
+        Flux.gpu(c.post_deq1),
+        Flux.gpu(c.post_deq2),
+        Flux.gpu(c.post_deq3),
+        Flux.gpu(c.combination_layer),
+        Flux.gpu(c.classifier),
+    )
+end
+
 Flux.@functor CIFARWidthStackedDEQ
 
 CIFARWidthStackedDEQ(has_sdeq::Bool, layers...) =
-    MnistWidthStackedDEQ{has_sdeq,typeof.(layers)...}(layers...)
+    CIFARWidthStackedDEQ{has_sdeq,typeof.(layers)...}(layers...)
 
 function CIFARWidthStackedDEQ(layers...)
     has_sdeq = false
@@ -147,26 +183,42 @@ function get_model(
     maxiters::Int,
     abstol::T,
     reltol::T,
+    dropout_rate::Real,
     model_type::String,
 ) where {T}
     model = CIFARWidthStackedDEQ(
-        Chain(
+        Sequential(
             Conv((3, 3), 3 => 8, relu; bias = true, pad = 1),
             BatchNorm(8, affine = true),
+            VariationalHiddenDropout(dropout_rate, (32, 32, 8, 1)),
         ),
-        Chain(
+        Sequential(
             Conv((4, 4), 8 => 16, relu; bias = true, pad = 1, stride = 2),
             BatchNorm(16, affine = true),
+            VariationalHiddenDropout(dropout_rate, (16, 16, 16, 1)),
         ),
-        Chain(
+        Sequential(
             Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
             BatchNorm(32, affine = true),
+            VariationalHiddenDropout(dropout_rate, (8, 8, 32, 1)),
         ),
         [
             model_type == "skip" ?
             SkipDeepEquilibriumNetwork(
-                ResNetLayer(2^(i + 2), 5 * (2^(i + 2))),
-                ResNetLayer(2^(i + 2), 5 * (2^(i + 2))),
+                ResNetLayer(
+                    2^(i + 2),
+                    5 * (2^(i + 2)),
+                    (32 ÷ (2 ^ (i - 1)), 32 ÷ (2 ^ (i - 1)), 5 * 2^(i + 2), 1),
+                    (32 ÷ (2 ^ (i - 1)), 32 ÷ (2 ^ (i - 1)), 2^(i + 2), 1),
+                    dropout_rate
+                ),
+                ResNetLayer(
+                    2^(i + 2),
+                    5 * (2^(i + 2)),
+                    (32 ÷ (2 ^ (i - 1)), 32 ÷ (2 ^ (i - 1)), 5 * 2^(i + 2), 1),
+                    (32 ÷ (2 ^ (i - 1)), 32 ÷ (2 ^ (i - 1)), 2^(i + 2), 1),
+                    dropout_rate
+                ),
                 DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                 maxiters = maxiters,
                 sensealg = SteadyStateAdjoint(
@@ -181,7 +233,13 @@ function get_model(
                 verbose = false,
             ) :
             DeepEquilibriumNetwork(
-                ResNetLayer(2^(i + 2), 5 * (2^(i + 2))),
+                ResNetLayer(
+                    2^(i + 2),
+                    5 * (2^(i + 2)),
+                    (32 ÷ (2 ^ (i - 1)), 32 ÷ (2 ^ (i - 1)), 5 * 2^(i + 2), 1),
+                    (32 ÷ (2 ^ (i - 1)), 32 ÷ (2 ^ (i - 1)), 2^(i + 2), 1),
+                    dropout_rate
+                ),
                 DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                 maxiters = maxiters,
                 sensealg = SteadyStateAdjoint(
@@ -196,19 +254,25 @@ function get_model(
                 verbose = false,
             ) for i = 1:3
         ]...,
-        Chain(
+        Sequential(
             BatchNorm(8, affine = true),
             Conv((4, 4), 8 => 16, relu; bias = true, pad = 1, stride = 2),
+            VariationalHiddenDropout(dropout_rate, (16, 16, 16, 1)),
             BatchNorm(16, affine = true),
             Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
+            VariationalHiddenDropout(dropout_rate, (8, 8, 32, 1)),
         ),
-        Chain(
+        Sequential(
             BatchNorm(16, affine = true),
             Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
+            VariationalHiddenDropout(dropout_rate, (8, 8, 32, 1)),
         ),
-        BatchNorm(32, affine = true),
+        Sequential(
+            BatchNorm(32, affine = true),
+            VariationalHiddenDropout(dropout_rate, (8, 8, 32, 1)),
+        ),
         (x...) -> foldl(+, x),
-        Chain(Flux.flatten, Dense(8 * 8 * 32, 10)),
+        Sequential(Flux.flatten, Dense(8 * 8 * 32, 10)),
     )
     return DataParallelFluxModel(
         model,
@@ -244,6 +308,9 @@ end
 
 FastDEQ.get_and_clear_nfe!(model::CIFARWidthStackedDEQ) =
     get_and_clear_nfe!.([model.deq1, model.deq2, model.deq3])
+
+FastDEQ.get_and_clear_nfe!(model::DataParallelFluxModel) =
+    get_and_clear_nfe!(model.model)
 
 
 ## Utilities
@@ -283,7 +350,6 @@ function train(config::Dict)
     rank = MPI.Comm_rank(comm)
 
     ## Setup Logging & Experiment Configuration
-    ## TODO: Fix Wandb for MPI
     lg = WandbLoggerMPI(
         project = "FastDEQ.jl",
         name = "fastdeqjl-supervised_cifar10_classication-$(now())",
@@ -298,6 +364,7 @@ function train(config::Dict)
         get_config(lg, "maxiters"),
         Float32(get_config(lg, "abstol")),
         Float32(get_config(lg, "reltol")),
+        Float64(get_config(lg, "dropout_rate")),
         get_config(lg, "model_type"),
     )
 
@@ -329,6 +396,14 @@ function train(config::Dict)
 
     nfe_counts = Vector{Int64}[]
     cb = register_nfe_counts(model, nfe_counts)
+
+    ## Warmup with a smaller batch
+    _x_warmup, _y_warmup = rand(32, 32, 3, 1) |> gpu, Flux.onehotbatch([1], 0:9) |> gpu
+    Zygote.gradient(
+        () -> loss_function(model, _x_warmup, _y_warmup),
+        Flux.params(model)
+    )
+    @info "Rank $rank: Warmup Completed"
 
     ## Training Loop
     ps = Flux.params(model)
@@ -433,11 +508,12 @@ for seed in [1, 11, 111]
         config = Dict(
             "seed" => seed,
             "learning_rate" => 0.001,
-            "abstol" => 1f-1,
-            "reltol" => 1f-1,
-            "maxiters" => 40,
+            "abstol" => 1f-3,
+            "reltol" => 1f-3,
+            "maxiters" => 20,
             "epochs" => 50,
-            "batch_size" => 128,
+            "dropout_rate" => 0.1,
+            "batch_size" => 256,
             "eval_batch_size" => 512,
             "model_type" => model_type,
         )
