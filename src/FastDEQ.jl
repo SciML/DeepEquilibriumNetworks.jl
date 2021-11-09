@@ -22,6 +22,15 @@ using UnPack
 using Zygote
 
 
+const is_inside_deq = Ref(false)
+
+is_in_deq() = is_inside_deq[]
+
+@inline function update_is_in_deq(val::Bool)
+    is_inside_deq[] = val
+end
+
+
 abstract type AbstractDeepEquilibriumNetwork end
 
 function Base.show(io::IO, l::AbstractDeepEquilibriumNetwork)
@@ -58,6 +67,8 @@ export DEQChain
 
 export AGNConv, AGNMaxPool, AGNMeanPool
 export batch_graph_data
+export VariationalHiddenDropout
+export reset_mask!
 
 export get_and_clear_nfe!
 export SupervisedLossContainer

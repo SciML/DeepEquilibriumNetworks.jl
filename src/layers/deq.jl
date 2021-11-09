@@ -46,7 +46,10 @@ end
 
 function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
     # Solving the equation f(u) - u = du = 0
-    z = zero(x)
+    z = deq.re(p)(x)
+    deq.stats.nfe += 1
+
+    update_is_in_deq(true)
 
     function dudt(u, _p, t)
         deq.stats.nfe += 1
@@ -61,8 +64,12 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
         sensealg = deq.sensealg,
         deq.kwargs...,
     )
+    res = deq.re(p)(sol.u, x)::typeof(x)
     deq.stats.nfe += 1
-    return deq.re(p)(sol.u, x)::typeof(x)
+
+    update_is_in_deq(false)
+
+    return res
 end
 
 # function (deq::DeepEquilibriumNetwork)(lapl::AbstractMatrix{T}, x::AbstractArray{T}, p = deq.p) where {T}

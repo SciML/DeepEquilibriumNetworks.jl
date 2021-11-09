@@ -60,7 +60,12 @@ function (deq::SkipDeepEquilibriumNetwork)(
 ) where {T}
     p1, p2 = p[1:deq.split_idx], p[deq.split_idx+1:end]
     z = deq.re2(p2)(x)::typeof(x)
-    deq.stats.nfe += 1
+
+    # Dummy call to ensure that mask is generated
+    _ = deq.re1(p1)(x)
+    update_is_in_deq(true)
+
+    deq.stats.nfe += 2
 
     # Solving the equation f(u) - u = du = 0
     function dudt(u, _p, t)
@@ -78,6 +83,9 @@ function (deq::SkipDeepEquilibriumNetwork)(
     ).u::typeof(x)
     res = deq.re1(p1)(u, x)::typeof(x)
     deq.stats.nfe += 1
+
+    update_is_in_deq(false)
+
     return res, z
 end
 

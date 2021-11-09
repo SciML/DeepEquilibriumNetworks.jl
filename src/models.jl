@@ -4,6 +4,9 @@ modeltype_to_val(::MultiScaleDeepEquilibriumNetworkS4) = Val(3)
 modeltype_to_val(::MultiScaleSkipDeepEquilibriumNetworkS4) = Val(4)
 modeltype_to_val(m) = Val(-1)
 
+# Default to nothing happening
+reset_mask!(x) = nothing
+
 struct DEQChain{V,P1,D,P2}
     pre_deq::P1
     deq::D
