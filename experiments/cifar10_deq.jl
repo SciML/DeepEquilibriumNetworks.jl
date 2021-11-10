@@ -423,10 +423,9 @@ function train(config::Dict)
             get_config(lg, "learning_rate") / 10,
             100
         ),
-        ADAMW(
+        ADAM(
             get_config(lg, "learning_rate"),
-            (0.9, 0.999),
-            0.00025
+            (0.9, 0.999)
         )
     )
     step = 1
