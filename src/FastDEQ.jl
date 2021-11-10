@@ -11,6 +11,7 @@ using Flux
 using Functors
 using LinearAlgebra
 using LinearSolve
+using MPI
 using MultiScaleArrays
 using OrdinaryDiffEq
 # using RecursiveArrayTools: ArrayPartition
@@ -58,6 +59,7 @@ include("layers/dropout.jl")
 include("models.jl")
 include("losses.jl")
 include("zygote.jl")
+include("logger.jl")
 
 
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork

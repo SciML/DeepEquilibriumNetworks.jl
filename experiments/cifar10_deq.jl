@@ -420,8 +420,8 @@ function train(config::Dict)
     opt = Scheduler(
         Cos(
             get_config(lg, "learning_rate"),
-            get_config(lg, "learning_rate") / 10,
-            100
+            1e-6,
+            length(dataiter) * get_config(lg, "epochs"),
         ),
         ADAM(
             get_config(lg, "learning_rate"),
@@ -470,14 +470,14 @@ function train(config::Dict)
             train_loss, train_acc, train_nfe =
                 loss_and_accuracy(model, trainiter)
 
-            train_vec[0] .= train_loss * datacount_trainiter
-            train_vec[1] .= train_acc * datacount_trainiter
-            train_vec[2:end] .= train_nfe .* datacount_trainiter
+            train_vec[1] .= train_loss * datacount_trainiter
+            train_vec[2] .= train_acc * datacount_trainiter
+            train_vec[3:end] .= train_nfe .* datacount_trainiter
             safe_reduce!(train_vec, +, 0, comm)
             train_loss, train_acc, train_nfe = (
-                train_vec[0] / datacount_trainiter_total,
                 train_vec[1] / datacount_trainiter_total,
-                train_vec[2:end] ./ datacount_trainiter_total
+                train_vec[2] / datacount_trainiter_total,
+                train_vec[3:end] ./ datacount_trainiter_total
             )
 
             log(
@@ -495,14 +495,14 @@ function train(config::Dict)
             ### Testing Loss/Accuracy
             test_loss, test_acc, test_nfe = loss_and_accuracy(model, testiter)
 
-            test_vec[0] .= test_loss * datacount_testiter
-            test_vec[1] .= test_acc * datacount_testiter
-            test_vec[2:end] .= test_nfe .* datacount_testiter
+            test_vec[1] .= test_loss * datacount_testiter
+            test_vec[2] .= test_acc * datacount_testiter
+            test_vec[3:end] .= test_nfe .* datacount_testiter
             safe_reduce!(test_vec, +, 0, comm)
             test_loss, test_acc, test_nfe = (
-                test_vec[0] / datacount_testiter_total,
                 test_vec[1] / datacount_testiter_total,
-                test_vec[2:end] ./ datacount_testiter_total
+                test_vec[2] / datacount_testiter_total,
+                test_vec[3:end] ./ datacount_testiter_total
             )
 
             log(
