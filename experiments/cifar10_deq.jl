@@ -421,7 +421,7 @@ function train(config::Dict)
         Cos(
             get_config(lg, "learning_rate"),
             1e-6,
-            length(dataiter) * get_config(lg, "epochs"),
+            length(trainiter) * get_config(lg, "epochs"),
         ),
         ADAM(
             get_config(lg, "learning_rate"),
@@ -557,7 +557,7 @@ for seed in [1, 11, 111]
             "maxiters" => 20,
             "epochs" => 50,
             "dropout_rate" => 0.1,
-            "batch_size" => 32,
+            "batch_size" => 64,
             "eval_batch_size" => 64,
             "model_type" => model_type,
         )
