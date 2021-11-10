@@ -12,8 +12,10 @@ using CUDA,
     MPI,
     Plots,
     Random,
+    ParameterSchedulers,
     Wandb,
     Zygote
+using ParameterSchedulers: Scheduler, Cos
 using MLDataPattern: splitobs, shuffleobs
 
 MPI.Init()
@@ -39,7 +41,7 @@ function Flux.gpu(r::ResNetLayer)
         Flux.gpu(r.dropout2),
         Flux.gpu(r.norm1),
         Flux.gpu(r.norm2),
-        Flux.gpu(r.norm3)
+        Flux.gpu(r.norm3),
     )
 end
 
@@ -79,11 +81,17 @@ function ResNetLayer(
     return ResNetLayer(conv1, conv2, dropout1, dropout2, norm1, norm2, norm3)
 end
 
-(rl::ResNetLayer)(z, x) =
-    rl.norm3(relu.(z .+ rl.norm2(x .+ rl.dropout2(rl.conv2(rl.norm1(rl.dropout1(rl.conv1(z))))))))
+(rl::ResNetLayer)(z, x) = rl.norm3(
+    relu.(
+        z .+ rl.norm2(
+            x .+ rl.dropout2(rl.conv2(rl.norm1(rl.dropout1(rl.conv1(z))))),
+        ),
+    ),
+)
 
-(rl::ResNetLayer)(x) =
-    rl.norm3(relu.(rl.norm2(rl.dropout2(rl.conv2(rl.norm1(rl.dropout1(rl.conv1(x))))))))
+(rl::ResNetLayer)(x) = rl.norm3(
+    relu.(rl.norm2(rl.dropout2(rl.conv2(rl.norm1(rl.dropout1(rl.conv1(x))))))),
+)
 
 
 struct CIFARWidthStackedDEQ{has_sdeq,L1,S1,S2,D1,D2,D3,PD1,PD2,PD3,CL,C}
@@ -208,16 +216,16 @@ function get_model(
                 ResNetLayer(
                     2^(i + 2),
                     5 * (2^(i + 2)),
-                    (32 ÷ (2 ^ (i - 1)), 32 ÷ (2 ^ (i - 1)), 5 * 2^(i + 2), 1),
-                    (32 ÷ (2 ^ (i - 1)), 32 ÷ (2 ^ (i - 1)), 2^(i + 2), 1),
-                    dropout_rate
+                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 5 * 2^(i + 2), 1),
+                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 2^(i + 2), 1),
+                    dropout_rate,
                 ),
                 ResNetLayer(
                     2^(i + 2),
                     5 * (2^(i + 2)),
-                    (32 ÷ (2 ^ (i - 1)), 32 ÷ (2 ^ (i - 1)), 5 * 2^(i + 2), 1),
-                    (32 ÷ (2 ^ (i - 1)), 32 ÷ (2 ^ (i - 1)), 2^(i + 2), 1),
-                    dropout_rate
+                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 5 * 2^(i + 2), 1),
+                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 2^(i + 2), 1),
+                    dropout_rate,
                 ),
                 DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                 maxiters = maxiters,
@@ -236,9 +244,9 @@ function get_model(
                 ResNetLayer(
                     2^(i + 2),
                     5 * (2^(i + 2)),
-                    (32 ÷ (2 ^ (i - 1)), 32 ÷ (2 ^ (i - 1)), 5 * 2^(i + 2), 1),
-                    (32 ÷ (2 ^ (i - 1)), 32 ÷ (2 ^ (i - 1)), 2^(i + 2), 1),
-                    dropout_rate
+                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 5 * 2^(i + 2), 1),
+                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 2^(i + 2), 1),
+                    dropout_rate,
                 ),
                 DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                 maxiters = maxiters,
@@ -348,6 +356,7 @@ end
 function train(config::Dict)
     comm = MPI.COMM_WORLD
     rank = MPI.Comm_rank(comm)
+    comm_size = MPI.Comm_size(comm)
 
     ## Setup Logging & Experiment Configuration
     lg = WandbLoggerMPI(
@@ -398,17 +407,37 @@ function train(config::Dict)
     cb = register_nfe_counts(model, nfe_counts)
 
     ## Warmup with a smaller batch
-    _x_warmup, _y_warmup = rand(32, 32, 3, 1) |> gpu, Flux.onehotbatch([1], 0:9) |> gpu
+    _x_warmup, _y_warmup =
+        rand(32, 32, 3, 1) |> gpu, Flux.onehotbatch([1], 0:9) |> gpu
     Zygote.gradient(
         () -> loss_function(model, _x_warmup, _y_warmup),
-        Flux.params(model)
+        Flux.params(model),
     )
     @info "Rank $rank: Warmup Completed"
 
     ## Training Loop
     ps = Flux.params(model)
-    opt = ADAM(get_config(lg, "learning_rate"))
+    opt = Scheduler(
+        Cos(
+            get_config(lg, "learning_rate"),
+            get_config(lg, "learning_rate") / 10,
+            100
+        ),
+        ADAMW(
+            get_config(lg, "learning_rate"),
+            (0.9, 0.999),
+            0.00025
+        )
+    )
     step = 1
+    train_vec = zeros(Float32, 5)
+    test_vec = zeros(Float32, 5)
+
+    datacount_trainiter = length(trainiter.indices)
+    datacount_testiter = length(testiter.indices)
+    datacount_trainiter_total = size(xs_train, ndims(xs_train))
+    datacount_testiter_total = size(xs_test, ndims(xs_test))
+
     for epoch = 1:get_config(lg, "epochs")
         try
             for (x, y) in trainiter
@@ -439,14 +468,19 @@ function train(config::Dict)
             end
 
             ### Training Loss/Accuracy
-            train_loss, train_acc, train_nfe = loss_and_accuracy(
-                model,
-                Flux.Data.DataLoader(
-                    traindata;
-                    batchsize = eval_batch_size,
-                    shuffle = false,
-                ),
+            train_loss, train_acc, train_nfe =
+                loss_and_accuracy(model, trainiter)
+
+            train_vec[0] .= train_loss * datacount_trainiter
+            train_vec[1] .= train_acc * datacount_trainiter
+            train_vec[2:end] .= train_nfe .* datacount_trainiter
+            safe_reduce!(train_vec, +, 0, comm)
+            train_loss, train_acc, train_nfe = (
+                train_vec[0] / datacount_trainiter_total,
+                train_vec[1] / datacount_trainiter_total,
+                train_vec[2:end] ./ datacount_trainiter_total
             )
+
             log(
                 lg,
                 Dict(
@@ -461,6 +495,17 @@ function train(config::Dict)
 
             ### Testing Loss/Accuracy
             test_loss, test_acc, test_nfe = loss_and_accuracy(model, testiter)
+
+            test_vec[0] .= test_loss * datacount_testiter
+            test_vec[1] .= test_acc * datacount_testiter
+            test_vec[2:end] .= test_nfe .* datacount_testiter
+            safe_reduce!(test_vec, +, 0, comm)
+            test_loss, test_acc, test_nfe = (
+                test_vec[0] / datacount_testiter_total,
+                test_vec[1] / datacount_testiter_total,
+                test_vec[2:end] ./ datacount_testiter_total
+            )
+
             log(
                 lg,
                 Dict(
@@ -513,8 +558,8 @@ for seed in [1, 11, 111]
             "maxiters" => 20,
             "epochs" => 50,
             "dropout_rate" => 0.1,
-            "batch_size" => 256,
-            "eval_batch_size" => 512,
+            "batch_size" => 32,
+            "eval_batch_size" => 64,
             "model_type" => model_type,
         )
 
