@@ -328,10 +328,6 @@ function register_nfe_counts(model, buffer)
 end
 
 function loss_and_accuracy(model, dataloader)
-    comm = MPI.COMM_WORLD
-    rank = MPI.Comm_rank(comm)
-    rank != 0 && return (0, 0, [0, 0, 0])
-
     matches, total_loss, total_datasize, total_nfe = 0, 0, 0, [0, 0, 0]
     for (x, y) in dataloader
         x = x |> gpu
