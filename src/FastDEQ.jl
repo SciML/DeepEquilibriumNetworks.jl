@@ -8,6 +8,7 @@ using DiffEqBase
 using DiffEqCallbacks
 using DiffEqSensitivity
 using Flux
+using Format
 using Functors
 using LinearAlgebra
 using LinearSolve
@@ -72,6 +73,8 @@ export batch_graph_data
 export VariationalHiddenDropout
 export reset_mask!
 export Sequential
+
+export PrettyTableLogger
 
 export get_and_clear_nfe!
 export SupervisedLossContainer

@@ -359,27 +359,44 @@ function train(config::Dict)
     comm_size = MPI.Comm_size(comm)
 
     ## Setup Logging & Experiment Configuration
-    lg = WandbLoggerMPI(
+    lg_wandb = WandbLoggerMPI(
         project = "FastDEQ.jl",
         name = "fastdeqjl-supervised_cifar10_classication-$(now())",
         config = config,
     )
+    lg_term = PrettyTableLogger(
+        "logs/fastdeqjl-supervised_cifar10_classication-$(now()).log",
+        [
+            "Epoch Number",
+            "Train/NFE1",
+            "Train/NFE2",
+            "Train/NFE3",
+            "Train/Accuracy",
+            "Train/Loss",
+            "Test/NFE1",
+            "Test/NFE2",
+            "Test/NFE3",
+            "Test/Accuracy",
+            "Test/Loss",
+        ],
+    )
+
 
     ## Reproducibility
-    Random.seed!(get_config(lg, "seed"))
+    Random.seed!(get_config(lg_wandb, "seed"))
 
     ## Model Setup
     model = get_model(
-        get_config(lg, "maxiters"),
-        Float32(get_config(lg, "abstol")),
-        Float32(get_config(lg, "reltol")),
-        Float64(get_config(lg, "dropout_rate")),
-        get_config(lg, "model_type"),
+        get_config(lg_wandb, "maxiters"),
+        Float32(get_config(lg_wandb, "abstol")),
+        Float32(get_config(lg_wandb, "reltol")),
+        Float64(get_config(lg_wandb, "dropout_rate")),
+        get_config(lg_wandb, "model_type"),
     )
 
     ## Dataset
-    batch_size = get_config(lg, "batch_size")
-    eval_batch_size = get_config(lg, "eval_batch_size")
+    batch_size = get_config(lg_wandb, "batch_size")
+    eval_batch_size = get_config(lg_wandb, "eval_batch_size")
 
     _xs_train, _ys_train = CIFAR10.traindata(Float32)
     _xs_test, _ys_test = CIFAR10.testdata(Float32)
@@ -419,14 +436,11 @@ function train(config::Dict)
     ps = Flux.params(model)
     opt = Scheduler(
         Cos(
-            get_config(lg, "learning_rate"),
+            get_config(lg_wandb, "learning_rate"),
             1e-6,
-            length(trainiter) * get_config(lg, "epochs"),
+            length(trainiter) * get_config(lg_wandb, "epochs"),
         ),
-        ADAM(
-            get_config(lg, "learning_rate"),
-            (0.9, 0.999)
-        )
+        ADAM(get_config(lg_wandb, "learning_rate"), (0.9, 0.999)),
     )
     step = 1
     train_vec = zeros(Float32, 5)
@@ -437,7 +451,7 @@ function train(config::Dict)
     datacount_trainiter_total = size(xs_train, ndims(xs_train))
     datacount_testiter_total = size(xs_test, ndims(xs_test))
 
-    for epoch = 1:get_config(lg, "epochs")
+    for epoch = 1:get_config(lg_wandb, "epochs")
         try
             for (x, y) in trainiter
                 x = x |> gpu
@@ -454,7 +468,7 @@ function train(config::Dict)
 
                 ### Log the losses
                 log(
-                    lg,
+                    lg_wandb,
                     Dict(
                         "Training/Step/Loss" => loss,
                         "Training/Step/NFE1" => nfe_counts[end][1],
@@ -477,11 +491,11 @@ function train(config::Dict)
             train_loss, train_acc, train_nfe = (
                 train_vec[1] / datacount_trainiter_total,
                 train_vec[2] / datacount_trainiter_total,
-                train_vec[3:end] ./ datacount_trainiter_total
+                train_vec[3:end] ./ datacount_trainiter_total,
             )
 
             log(
-                lg,
+                lg_wandb,
                 Dict(
                     "Training/Epoch/Count" => epoch,
                     "Training/Epoch/Loss" => train_loss,
@@ -502,11 +516,11 @@ function train(config::Dict)
             test_loss, test_acc, test_nfe = (
                 test_vec[1] / datacount_testiter_total,
                 test_vec[2] / datacount_testiter_total,
-                test_vec[3:end] ./ datacount_testiter_total
+                test_vec[3:end] ./ datacount_testiter_total,
             )
 
             log(
-                lg,
+                lg_wandb,
                 Dict(
                     "Testing/Epoch/Count" => epoch,
                     "Testing/Epoch/Loss" => test_loss,
@@ -515,6 +529,16 @@ function train(config::Dict)
                     "Testing/Epoch/NFE3" => test_nfe[3],
                     "Testing/Epoch/Accuracy" => test_acc,
                 ),
+            )
+
+            lg_term(
+                epoch,
+                train_nfe...,
+                train_acc,
+                train_loss,
+                test_nfe...,
+                test_acc,
+                test_loss,
             )
 
             MPI.Barrier(comm)
@@ -529,7 +553,8 @@ function train(config::Dict)
         end
     end
 
-    lg !== nothing && close(lg)
+    close(lg_wandb)
+    close(lg_term)
 
     return model, nfe_counts
 end

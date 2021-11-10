@@ -1,4 +1,4 @@
-function _should_log(;logging_rank = 0, comm = MPI.COMM_WORLD)
+function _should_log(; logging_rank = 0, comm = MPI.COMM_WORLD)
     MPI.Initialized() || return true # Not using MPI
     return MPI.Comm_rank(comm) == logging_rank
 end
@@ -30,25 +30,31 @@ end
 
 
 # Simple Table Logger
-## TODO: Writing to a file
-struct PrettyTableLogger{N,AM,F,R}
+struct PrettyTableLogger{N,AM,F,R,FIO}
     header::NTuple{N,String}
     average_meters::AM
     span::Int
     fmtrfuncs::F
     records::R
+    fio::FIO
 
-    function PrettyTableLogger(header, record = [])
+    function PrettyTableLogger(filename::String, header, record = [])
+        fio = open(filename, "w")
+
         N = length(header) + length(record)
         ind_lens = vcat(length.(header), length.(record))
         span = sum(ind_lens .+ 3) + 1
         println("="^span)
+        println(fio, "="^span)
         headers = vcat(header, record)
         for h in headers
             print("| $h ")
+            print(fio, "| $h ")
         end
         println("|")
+        println(fio, "|")
         println("="^span)
+        println(fio, "="^span)
 
         avg_meters =
             Dict{String,AverageMeter}(rec => AverageMeter() for rec in record)
@@ -58,17 +64,28 @@ struct PrettyTableLogger{N,AM,F,R}
 
         record = tuple(record...)
 
-        return new{N,typeof(avg_meters),typeof(fmtrfuncs),typeof(record)}(
+        return new{
+            N,
+            typeof(avg_meters),
+            typeof(fmtrfuncs),
+            typeof(record),
+            typeof(fio),
+        }(
             tuple(headers...),
             avg_meters,
             span,
             fmtrfuncs,
-            record
+            record,
+            fio,
         )
     end
 end
 
-function (pl::PrettyTableLogger)(args...; last::Bool = false, records::Dict = Dict())
+function (pl::PrettyTableLogger)(
+    args...;
+    last::Bool = false,
+    records::Dict = Dict(),
+)
     _should_log() || return
     if length(records) > 0
         for (rec, val) in records
@@ -77,14 +94,23 @@ function (pl::PrettyTableLogger)(args...; last::Bool = false, records::Dict = Di
         return
     end
     if last
-        println("="^pl.span)
+        str = "="^pl.span
+        println(str)
+        println(pl.fio, str)
         return
     end
     for h in [
-        fmtrfunc(arg) for (fmtrfunc, arg) in
-        zip(pl.fmtrfuncs, vcat([args...], [pl.average_meters[rec]() for rec in pl.records]))
+        fmtrfunc(arg) for (fmtrfunc, arg) in zip(
+            pl.fmtrfuncs,
+            vcat([args...], [pl.average_meters[rec]() for rec in pl.records]),
+        )
     ]
         print("| $h ")
+        print(pl.fio, "| $h ")
     end
     println("|")
+    println(pl.fio, "|")
+    flush(pl.fio)
 end
+
+Base.close(pl::PrettyTableLogger) = Base.close(pl.fio)
