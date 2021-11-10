@@ -39,22 +39,22 @@ struct PrettyTableLogger{N,AM,F,R,FIO}
     fio::FIO
 
     function PrettyTableLogger(filename::String, header, record = [])
-        fio = open(filename, "w")
+        fio = _should_log() ? open(filename, "w") : nothing
 
         N = length(header) + length(record)
         ind_lens = vcat(length.(header), length.(record))
         span = sum(ind_lens .+ 3) + 1
         println("="^span)
-        println(fio, "="^span)
+        fio === nothing || println(fio, "="^span)
         headers = vcat(header, record)
         for h in headers
             print("| $h ")
-            print(fio, "| $h ")
+            fio === nothing || print(fio, "| $h ")
         end
         println("|")
-        println(fio, "|")
+        fio === nothing || println(fio, "|")
         println("="^span)
-        println(fio, "="^span)
+        fio === nothing || println(fio, "="^span)
 
         avg_meters =
             Dict{String,AverageMeter}(rec => AverageMeter() for rec in record)
