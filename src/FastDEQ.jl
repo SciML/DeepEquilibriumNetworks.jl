@@ -73,6 +73,7 @@ export batch_graph_data
 export VariationalHiddenDropout
 export reset_mask!
 export Sequential
+export CrystalGraphCNN
 
 export PrettyTableLogger
 

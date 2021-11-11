@@ -6,7 +6,7 @@ pool_out_features(num_f::Int64, dim::Int64, stride::Int64, pad::Int64) =
 
 function compute_pool_params(
     num_f_in::Int64,
-    m_f_out::Int64,
+    num_f_out::Int64,
     dim_frac::AbstractFloat;
     start_dim = Int64(round(dim_frac * num_f_in)),
     start_str = Int64(floor(num_f_in / num_f_out)),
