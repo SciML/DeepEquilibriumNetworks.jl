@@ -236,3 +236,15 @@ function (cgcnn::CrystalGraphCNN)(inputs::Tuple)
     _x4 = cgcnn.pool(_lapl3, _x3)
     return cgcnn.dense_chain(_x4)
 end
+
+function (cgcnn::CrystalGraphCNN)(bag::BatchedAtomicGraph)
+    lapl, x = bag.laplacians, bag.encoded_features
+    _lapl1, _x1 = cgcnn.pre_deq(lapl, x)
+    _lapl2, _x2 = cgcnn.deq((_lapl1, _x1))
+    _lapl3, _x3 = cgcnn.post_deq[1](_lapl2, _x2)
+    for layer in cgcnn.post_deq[2:end]
+        _lapl3, _x3 = layer(_lapl3, _x3)
+    end
+    _x4 = hcat([cgcnn.pool(_lapl3[s1+1:s2,s1+1:s2], _x3[:,s1+1:s2]) for (s1, s2) in zip(bag.sizes[1:end-1],bag.sizes[2:end])]...)
+    return cgcnn.dense_chain(_x4)
+end

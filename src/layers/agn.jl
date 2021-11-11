@@ -138,6 +138,14 @@ is massive and hence the return types are sparse. Few of the layers
 don't work with Sparse Arrays (specifically on GPUs), so it would
 make sense to convert them to dense.
 """
+struct BatchedAtomicGraph{T1,T2,S}
+    laplacians::T1
+    encoded_features::T2
+    sizes::S
+end
+
+Flux.@functor BatchedAtomicGraph (laplacians, encoded_features)
+
 function batch_graph_data(laplacians, encoded_features)
     _sizes = map(x -> size(x, 1), laplacians)
     total_nodes = sum(_sizes)
@@ -149,5 +157,9 @@ function batch_graph_data(laplacians, encoded_features)
             laplacians[i]
         idx += _sizes[i]
     end
-    return batched_laplacian, sparse(hcat(encoded_features...))
+    return BatchedAtomicGraph(
+        batched_laplacian,
+        sparse(hcat(encoded_features...)),
+        vcat(0, cumsum(_sizes)),
+    )
 end

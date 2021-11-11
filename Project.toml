@@ -6,6 +6,7 @@ version = "0.1.0"
 [deps]
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+ChemistryFeaturization = "6c925690-434a-421d-aea7-51398c5b007a"
 DataDeps = "124859b0-ceae-595e-8997-d05f6a7a8dfe"
 DataLoaders = "2e981812-ef13-4a9c-bfa0-ab13047b12a9"
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
