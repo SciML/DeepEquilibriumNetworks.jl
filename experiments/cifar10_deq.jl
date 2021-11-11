@@ -433,7 +433,7 @@ function train(config::Dict)
     opt = Scheduler(
         Cos(
             get_config(lg_wandb, "learning_rate"),
-            1e-6,
+            1e-5,
             length(trainiter) * get_config(lg_wandb, "epochs"),
         ),
         ADAM(get_config(lg_wandb, "learning_rate"), (0.9, 0.999)),
@@ -572,12 +572,12 @@ for seed in [1, 11, 111]
     for model_type in ["skip", "vanilla"]
         config = Dict(
             "seed" => seed,
-            "learning_rate" => 0.001,
-            "abstol" => 1f-3,
-            "reltol" => 1f-3,
+            "learning_rate" => 0.005,
+            "abstol" => 1f-1,
+            "reltol" => 1f-1,
             "maxiters" => 20,
             "epochs" => 50,
-            "dropout_rate" => 0.1,
+            "dropout_rate" => 0.05,
             "batch_size" => 64,
             "eval_batch_size" => 64,
             "model_type" => model_type,

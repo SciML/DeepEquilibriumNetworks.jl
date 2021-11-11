@@ -65,7 +65,7 @@ function (deq::SkipDeepEquilibriumNetwork)(
     _ = deq.re1(p1)(x)
     update_is_in_deq(true)
 
-    deq.stats.nfe += 2
+    deq.stats.nfe += 1
 
     # Solving the equation f(u) - u = du = 0
     function dudt(u, _p, t)

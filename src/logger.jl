@@ -113,4 +113,7 @@ function (pl::PrettyTableLogger)(
     flush(pl.fio)
 end
 
-Base.close(pl::PrettyTableLogger) = Base.close(pl.fio)
+function Base.close(pl::PrettyTableLogger)
+    pl(;last = true)
+    pl.fio === nothing || close(pl.fio)
+end
