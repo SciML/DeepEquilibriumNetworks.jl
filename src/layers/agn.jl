@@ -157,9 +157,33 @@ function batch_graph_data(laplacians, encoded_features)
             laplacians[i]
         idx += _sizes[i]
     end
+    _sizes = vcat(0, cumsum(_sizes))
+    enc_feats = sparse(hcat(encoded_features...))
     return BatchedAtomicGraph(
         batched_laplacian,
-        sparse(hcat(encoded_features...)),
-        vcat(0, cumsum(_sizes)),
+        enc_feats,
+        _sizes,
     )
 end
+
+function BatchedAtomicGraph(batch_size::Int, atoms::Vector{FeaturizedAtoms})
+    return BatchedAtomicGraph(
+        batch_size,
+        map(x -> x.atoms.laplacian, atoms),
+        map(x -> x.encoded_features, atoms),
+    )
+end
+
+function BatchedAtomicGraph(batch_size::Int, laplacians, encoded_features)
+    _l = length(laplacians)
+    data = Vector{BatchedAtomicGraph}(undef, Int(ceil(_l / batch_size)))
+    for i = 1:length(data)
+        data[i] = batch_graph_data(
+            laplacians[(i-1)*batch_size+1:min(i*batch_size, _l)],
+            encoded_features[(i-1)*batch_size+1:min(i*batch_size, _l)],
+        )
+    end
+    return data
+end
+
+BatchedAtomicGraph(l, e, s) = BatchedAtomicGraph{typeof(l), typeof(e), typeof(s)}(l, e, s)

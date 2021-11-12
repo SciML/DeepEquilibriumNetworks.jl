@@ -433,7 +433,7 @@ function train(config::Dict)
     opt = Scheduler(
         Cos(
             get_config(lg_wandb, "learning_rate"),
-            1e-5,
+            1e-4,
             length(trainiter) * get_config(lg_wandb, "epochs"),
         ),
         ADAM(get_config(lg_wandb, "learning_rate"), (0.9, 0.999)),

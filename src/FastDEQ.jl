@@ -1,6 +1,7 @@
 module FastDEQ
 
 using ChainRulesCore
+using ChemistryFeaturization
 using CUDA
 using DataDeps
 using DataLoaders
@@ -69,7 +70,7 @@ export MultiScaleDeepEquilibriumNetworkS4,
 export DEQChain
 
 export AGNConv, AGNMaxPool, AGNMeanPool
-export batch_graph_data
+export batch_graph_data, BatchedAtomicGraph
 export VariationalHiddenDropout
 export reset_mask!
 export Sequential
