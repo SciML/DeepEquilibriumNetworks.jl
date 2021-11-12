@@ -146,6 +146,8 @@ end
 
 Flux.@functor BatchedAtomicGraph (laplacians, encoded_features)
 
+batch_graph_data(t::Tuple) = batch_graph_data(t[1], t[2])
+
 function batch_graph_data(laplacians, encoded_features)
     _sizes = map(x -> size(x, 1), laplacians)
     total_nodes = sum(_sizes)
