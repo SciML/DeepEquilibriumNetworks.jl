@@ -51,6 +51,7 @@ end
 include("utils.jl")
 include("dataloaders.jl")
 include("solvers/broyden.jl")
+include("solvers/limited_memory_broyden.jl")
 include("solvers/linsolve.jl")
 include("layers/agn.jl")
 include("layers/deq.jl")
@@ -81,6 +82,7 @@ export PrettyTableLogger
 export get_and_clear_nfe!
 export SupervisedLossContainer
 export BroydenCache, broyden
+export limited_memory_broyden
 export LinSolveKrylovJL
 export SingleResolutionFeatures, MultiResolutionFeatures
 

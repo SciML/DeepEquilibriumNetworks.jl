@@ -182,5 +182,3 @@ BatchedAtomicGraph(batch_size::Int, laplacians, encoded_features) =
             Iterators.partition(encoded_features, batch_size)
         )
     )
-
-BatchedAtomicGraph(l, e, s) = BatchedAtomicGraph{typeof(l), typeof(e), typeof(s)}(l, e, s)

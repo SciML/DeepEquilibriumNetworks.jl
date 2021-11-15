@@ -70,6 +70,39 @@ using Test
         @test all(isfinite.(gs[_p]))
     end
 
+    # Testing L-Broyden Solver
+    Random.seed!(0)
+    model = Chain(
+        Conv((3, 3), 1 => 3, relu; pad = 1, stride = 1),
+        SkipDeepEquilibriumNetwork(
+            Parallel(
+                +,
+                Conv((3, 3), 3 => 3, relu; pad = 1, stride = 1),
+                Conv((3, 3), 3 => 3, relu; pad = 1, stride = 1),
+            ) |> gpu,
+            Conv((3, 3), 3 => 3, relu; pad = 1, stride = 1) |> gpu,
+            SSRootfind(
+                nlsolve = (f, u0, abstol) -> limited_memory_broyden(f, u0; original_dims = (8 * 8, 3), abstol = abstol)
+            ),
+            sensealg = SteadyStateAdjoint(
+                autodiff = false,
+                autojacvec = ZygoteVJP(),
+                linsolve = LinSolveKrylovJL(atol = 0.1f0, rtol = 0.1f0),
+            )
+        )
+    ) |> gpu
+    x = rand(Float32, 8, 8, 1, 4) |> gpu
+    y = rand(Float32, 8, 8, 1, 4) |> gpu
+    ps = Flux.params(model)
+    gs = Flux.gradient(() -> begin
+        ŷ, z = model(x)
+        sum(abs2, ŷ .- y) + sum(abs2, ŷ .- z)
+    end, ps)
+    for _p in ps
+        @test all(isfinite.(gs[_p]))
+    end
+
+
     # Testing MultiScaleDEQ
     Random.seed!(0)
 

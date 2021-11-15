@@ -18,7 +18,6 @@ function train(;
     # data-related options
     train_frac = 0.8 # what fraction for training?
     num_train = Int32(round(train_frac * num_pts))
-    num_test = num_pts - num_train
     prop = :Cv # choose any column from labels.csv except :key
     id = :key # field by which to label each input material
 
@@ -68,12 +67,12 @@ function train(;
         num_features,
         num_conv = num_conv,
         atom_conv_feature_length = crys_fea_len,
-        pooled_feature_length = (Int(crys_fea_len / 2)),
+        pooled_feature_length = Int(crys_fea_len / 2),
         num_hidden_layers = num_hidden_layers,
     ) |> gpu
 
     # define loss function and a callback to monitor progress
-    loss(x, y) = Flux.Losses.mse(vec(model(x)), y)
+    loss(x, y) = mean(abs, vec(model(x)) .- y)
     loss(xy) = loss(xy[1], xy[2])
     evalcb_verbose() = @show(mean(loss.(test_data)))
     evalcb_quiet() = return nothing
@@ -92,3 +91,5 @@ function train(;
 
     return model
 end
+
+train()

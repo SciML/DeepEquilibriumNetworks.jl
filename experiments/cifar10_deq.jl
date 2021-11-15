@@ -220,14 +220,32 @@ function get_model(
                     (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 2^(i + 2), 1),
                     dropout_rate,
                 ),
-                ResNetLayer(
-                    2^(i + 2),
-                    5 * (2^(i + 2)),
-                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 5 * 2^(i + 2), 1),
-                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 2^(i + 2), 1),
-                    dropout_rate,
+                Sequential(
+                    ResNetLayer(
+                        2^(i + 2),
+                        5 * (2^(i + 2)),
+                        (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 5 * 2^(i + 2), 1),
+                        (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 2^(i + 2), 1),
+                        dropout_rate,
+                    ),
+                    ResNetLayer(
+                        2^(i + 2),
+                        5 * (2^(i + 2)),
+                        (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 5 * 2^(i + 2), 1),
+                        (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 2^(i + 2), 1),
+                        dropout_rate,
+                    ),
                 ),
-                DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                # DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                SSRootfind(
+                    nlsolve = (f, u0, abstol) -> limited_memory_broyden(
+                        f,
+                        u0;
+                        original_dims = (2 * 32 ÷ (2^(i - 1)), 2^(i + 2)),
+                        abstol = abstol,
+                        maxiters = maxiters,
+                    ),
+                ),
                 maxiters = maxiters,
                 sensealg = SteadyStateAdjoint(
                     autodiff = true,
@@ -248,7 +266,16 @@ function get_model(
                     (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 2^(i + 2), 1),
                     dropout_rate,
                 ),
-                DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                # DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                SSRootfind(
+                    nlsolve = (f, u0, abstol) -> limited_memory_broyden(
+                        f,
+                        u0;
+                        original_dims = (2 * 32 ÷ (2^(i - 1)), 2^(i + 2)),
+                        abstol = abstol,
+                        maxiters = maxiters,
+                    ),
+                ),
                 maxiters = maxiters,
                 sensealg = SteadyStateAdjoint(
                     autodiff = true,
