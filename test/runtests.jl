@@ -72,6 +72,12 @@ using Test
 
     # Testing L-Broyden Solver
     Random.seed!(0)
+    solver = LimitedMemoryBroydenSolver(;
+        device = gpu,
+        original_dims = (8 * 8, 1),
+        batch_size = 4,
+        abstol = 1e-3,
+    )
     model = Chain(
         Conv((3, 3), 1 => 3, relu; pad = 1, stride = 1),
         SkipDeepEquilibriumNetwork(
@@ -81,9 +87,7 @@ using Test
                 Conv((3, 3), 3 => 3, relu; pad = 1, stride = 1),
             ) |> gpu,
             Conv((3, 3), 3 => 3, relu; pad = 1, stride = 1) |> gpu,
-            SSRootfind(
-                nlsolve = (f, u0, abstol) -> limited_memory_broyden(f, u0; original_dims = (8 * 8, 3), abstol = abstol)
-            ),
+            SSRootfind(nlsolve = (f, u0, abstol) -> solver(f, u0)),
             sensealg = SteadyStateAdjoint(
                 autodiff = false,
                 autojacvec = ZygoteVJP(),

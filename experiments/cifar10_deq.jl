@@ -191,9 +191,20 @@ function get_model(
     maxiters::Int,
     abstol::T,
     reltol::T,
+    batch_size::Int,
     dropout_rate::Real,
     model_type::String,
 ) where {T}
+    solvers = [
+        LimitedMemoryBroydenSolver(;
+            device = gpu,
+            original_dims = (2 * 32 ÷ (2^(i - 1)), 2^(i + 2)),
+            abstol = abstol,
+            maxiters = maxiters,
+            batch_size = batch_size,
+        )
+        for _ = 1:3
+    ]
     model = CIFARWidthStackedDEQ(
         Sequential(
             Conv((3, 3), 3 => 8, relu; bias = true, pad = 1),
@@ -237,15 +248,7 @@ function get_model(
                     ),
                 ),
                 # DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
-                SSRootfind(
-                    nlsolve = (f, u0, abstol) -> limited_memory_broyden(
-                        f,
-                        u0;
-                        original_dims = (2 * 32 ÷ (2^(i - 1)), 2^(i + 2)),
-                        abstol = abstol,
-                        maxiters = maxiters,
-                    ),
-                ),
+                SSRootfind(;nlsolve = (f, u0, abstol) -> solvers[i](f, u0)),
                 maxiters = maxiters,
                 sensealg = SteadyStateAdjoint(
                     autodiff = true,
@@ -267,15 +270,7 @@ function get_model(
                     dropout_rate,
                 ),
                 # DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
-                SSRootfind(
-                    nlsolve = (f, u0, abstol) -> limited_memory_broyden(
-                        f,
-                        u0;
-                        original_dims = (2 * 32 ÷ (2^(i - 1)), 2^(i + 2)),
-                        abstol = abstol,
-                        maxiters = maxiters,
-                    ),
-                ),
+                SSRootfind(;nlsolve = (f, u0, abstol) -> solvers[i](f, u0)),
                 maxiters = maxiters,
                 sensealg = SteadyStateAdjoint(
                     autodiff = true,
@@ -600,9 +595,9 @@ for seed in [1, 11, 111]
         config = Dict(
             "seed" => seed,
             "learning_rate" => 0.005,
-            "abstol" => 1f-1,
-            "reltol" => 1f-1,
-            "maxiters" => 20,
+            "abstol" => 1f-3,
+            "reltol" => 1f-3,
+            "maxiters" => 50,
             "epochs" => 50,
             "dropout_rate" => 0.05,
             "batch_size" => 64,

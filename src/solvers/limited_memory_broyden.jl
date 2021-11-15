@@ -1,23 +1,64 @@
 # Limited Memory Broyden
 ## Reference: https://arxiv.org/pdf/2006.08656.pdf
-# struct LimitedMemoryBroydenCache{bT,uT,vT,F,X}
-#     B::bT
-#     u::uT
-#     v::vT
-#     fx::F
-#     Δfx::F
-#     fx_old::F
-#     x::X
-#     Δx::X
-#     x_old::X
-# end
+struct LimitedMemoryBroydenCache{uT,vT,F,X}
+    Us::uT
+    VTs::vT
+    fx_::F
+    x::X
+end
 
-# function LimitedMemoryBroydenCache(x)
-#     fx, Δfx, fx_old = copy(x), copy(x), copy(x)
-#     x, Δx, x_old = copy(x), copy(x), copy(x)
-#     Jinv = _init_identity_matrix(x)
-#     return LimitedMemoryBroydenCache(Jinv, fx, Δfx, fx_old, x, Δx, x_old)
-# end
+struct LimitedMemoryBroydenSolver{C<:LimitedMemoryBroydenCache,T<:Real}
+    cache::C
+    original_dims::Tuple{Int,Int}
+    maxiters::Int
+    batch_size::Int
+    ϵ::T
+end
+
+function LimitedMemoryBroydenSolver(
+    T = Float32;
+    device,
+    original_dims,
+    batch_size,
+    maxiters::Int = 50,
+    ϵ::Real = 1e-6,
+    abstol::Union{Real,Nothing} = nothing,
+    reltol::Union{Real,Nothing} = nothing,
+)
+    ϵ = abstol !== nothing ? abstol : ϵ
+
+    if reltol !== nothing
+        @warn maxlog = 1 "reltol is set to $reltol, but `limited_memory_broyden` ignores this value"
+    end
+
+    LBFGS_threshold = min(maxiters, 27)
+
+    x = zeros(T, original_dims..., batch_size) |> device
+    fx = zeros(T, original_dims..., batch_size) |> device
+
+    total_hsize, n_elem, batch_size = size(x)
+
+    # L x 2D x C x N
+    Us = fill!(
+        similar(x, (LBFGS_threshold, total_hsize, n_elem, batch_size)),
+        T(0),
+    )
+    # 2D x C x L x N
+    VTs = fill!(
+        similar(x, (total_hsize, n_elem, LBFGS_threshold, batch_size)),
+        T(0),
+    )
+
+    cache = LimitedMemoryBroydenCache(Us, VTs, vec(fx), x)
+
+    return LimitedMemoryBroydenSolver(
+        cache,
+        original_dims,
+        maxiters,
+        batch_size,
+        T(ϵ),
+    )
+end
 
 function line_search(update, x₀, f₀, f, nstep::Int = 0, on::Bool = false)
     # TODO: Implement a line search algorithm
@@ -26,59 +67,49 @@ function line_search(update, x₀, f₀, f, nstep::Int = 0, on::Bool = false)
     return (x_est, f₀_new, x_est .- x₀, f₀_new .- f₀, 0)
 end
 
-# This function is designed for the case where x_actual is a 4D Array (Images)
-function limited_memory_broyden(
-    f!::Function,
-    x_::AbstractVector{T};
-    # If size(x_actual) = (D x D x C x N) then original_dims = (2D x C)
-    original_dims::Tuple{Int,Int},
-    maxiters::Int = 10,
-    ϵ::Real = 1e-6,
-    abstol::Union{Real,Nothing} = nothing,
-    reltol::Union{Real,Nothing} = nothing,
-) where {T}
-    ϵ = abstol !== nothing ? abstol : ϵ
-
-    if reltol !== nothing
-        @warn maxlog = 1 "reltol is set to $reltol, but `limited_memory_broyden` ignores this value"
+function (lbroyden::LimitedMemoryBroydenSolver{C,T})(f!, x_::AbstractVector{T}) where {C,T}
+    @unpack cache, original_dims, batch_size, maxiters, ϵ = lbroyden
+    nfeatures = prod(original_dims)
+    if nfeatures * batch_size != length(x_)
+        # Maybe the last batch is smaller than the others
+        cache = LimitedMemoryBroydenSolver(
+            T;
+            device = x_ isa CuArray ? gpu : cpu,
+            original_dims = original_dims,
+            batch_size = length(x_) ÷ nfeatures,
+            maxiters = maxiters,
+            ϵ = ϵ,
+        ).cache
     end
+    @unpack Us, VTs, fx_, x = cache
+    x .= reshape(x_, size(x))
+    LBFGS_threshold = size(Us, 1)
+    fill!(Us, T(0))
+    fill!(VTs, T(0))
 
+    # Counters
     nstep = 1
     tnstep = 1
-    LBFGS_threshold = min(maxiters, 27)
 
-    # Make allocations
-    ## TODO: Use a cache to prevent recurring allocations
-    x__ = copy(x_)
-    x_est = reshape(x__, original_dims..., :)  # 2D x C x N
-    total_hsize, n_elem, batch_size = size(x_est)
-    actual_size = (total_hsize, n_elem, batch_size)
+    # Initialize
+    total_hsize, n_elem, batch_size = size(x)
+    actual_size = size(x)
 
-    fx_ = zero(x_)  # ((2D x C x N),)
+    # Modify the functions
     f(x) = (f!(fx_, vec(x)); return reshape(fx_, actual_size))
-    fx = f(x_est)  # 2D x C x N
+    fx = f(x)
 
-    # L x 2D x C x N
-    Us = fill!(
-        similar(x_est, (LBFGS_threshold, total_hsize, n_elem, batch_size)),
-        T(0),
-    )
-    # 2D x C x L x N
-    VTs = fill!(
-        similar(x_est, (total_hsize, n_elem, LBFGS_threshold, batch_size)),
-        T(0),
-    )
+    update = fx
+    new_objective = norm(fx)
 
     protect_threshold = T(1e6) * n_elem
-    update = reshape(fx, actual_size)
-    new_objective = norm(fx)
     initial_objective = new_objective
     lowest_objective = new_objective
-    lowest_xest = x_est
+    lowest_xest = x
 
     @inbounds while nstep < maxiters
-        x_est, fx, Δx, Δfx, ite =
-            line_search(update, x_est, fx, f, nstep, false)
+        x, fx, Δx, Δfx, ite =
+            line_search(update, x, fx, f, nstep, false)
         nstep += 1
         tnstep += (ite + 1)
 
@@ -86,7 +117,7 @@ function limited_memory_broyden(
         # TODO: Terminate Early if Stagnant
         if new_objective < lowest_objective
             lowest_objective = new_objective
-            lowest_xest = x_est
+            lowest_xest = x
         end
         new_objective < ϵ && break
 
@@ -108,7 +139,7 @@ function limited_memory_broyden(
 
         @views update =
             -matvec(
-                part_Us[1:min(LBFGS_threshold, nstep + 1), :, :, :],
+                Us[1:min(LBFGS_threshold, nstep + 1), :, :, :],
                 VTs[:, :, 1:min(LBFGS_threshold, nstep + 1), :],
                 fx,
             )

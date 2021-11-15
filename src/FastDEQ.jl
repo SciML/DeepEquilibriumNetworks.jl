@@ -82,7 +82,7 @@ export PrettyTableLogger
 export get_and_clear_nfe!
 export SupervisedLossContainer
 export BroydenCache, broyden
-export limited_memory_broyden
+export LimitedMemoryBroydenSolver, LimitedMemoryBroydenCache
 export LinSolveKrylovJL
 export SingleResolutionFeatures, MultiResolutionFeatures
 
