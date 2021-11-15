@@ -408,6 +408,7 @@ function train(config::Dict)
         get_config(lg_wandb, "maxiters"),
         Float32(get_config(lg_wandb, "abstol")),
         Float32(get_config(lg_wandb, "reltol")),
+        Int64(get_config(lg_wandb, "batch_size")),
         Float64(get_config(lg_wandb, "dropout_rate")),
         get_config(lg_wandb, "model_type"),
     )
