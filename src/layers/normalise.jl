@@ -49,6 +49,8 @@ Flux.cpu(gn::GroupNormV2) = GroupNormV2(
     gn.attrs,
 )
 
+Flux.@functor GroupNormV2 (β, γ)
+
 Flux.trainable(gn::GroupNormV2) = hasaffine(gn) ? (gn.β, gn.γ) : ()
 
 function GroupNormV2(
