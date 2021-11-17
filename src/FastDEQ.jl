@@ -52,9 +52,11 @@ end
 
 include("utils.jl")
 include("dataloaders.jl")
+
 include("solvers/broyden.jl")
 include("solvers/limited_memory_broyden.jl")
 include("solvers/linsolve.jl")
+
 include("layers/agn.jl")
 include("layers/deq.jl")
 include("layers/sdeq.jl")
@@ -62,9 +64,11 @@ include("layers/mdeq.jl")
 include("layers/smdeq.jl")
 include("layers/dropout.jl")
 include("layers/normalise.jl")
+
 include("models/chain.jl")
 include("models/basics.jl")
 include("models/cgcnn.jl")
+
 include("losses.jl")
 include("zygote.jl")
 include("logger.jl")
@@ -78,8 +82,9 @@ export VariationalHiddenDropout
 export GroupNormV2
 
 export DEQChain, Sequential
-export CrystalGraphCNN
 export BasicResidualBlock
+export DownsampleModule, UpsampleModule
+export CrystalGraphCNN
 
 export batch_graph_data, BatchedAtomicGraph
 export reset_mask!

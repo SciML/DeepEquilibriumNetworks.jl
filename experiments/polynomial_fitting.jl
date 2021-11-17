@@ -26,7 +26,10 @@ end
 Flux.@functor BranchAndMerge
 
 (bam::BranchAndMerge)(x, y) =
-    bam.final(gelu.(bam.branch_1(x) .+ bam.branch_2(y)))
+    bam.final(softplus.(bam.branch_1(x) .+ bam.branch_2(y)))
+
+(bam::BranchAndMerge)(x) = bam.final(softplus.(bam.branch_1(x)))
+
 
 ## Model and Loss Function
 function get_model(
@@ -38,7 +41,7 @@ function get_model(
     if model_type == "vanilla"
         model =
             DEQChain(
-                Dense(1, hdims, gelu),
+                Dense(1, hdims, softplus),
                 DeepEquilibriumNetwork(
                     BranchAndMerge(
                         Dense(hdims, hdims * 2),
@@ -56,19 +59,42 @@ function get_model(
                 Dense(hdims, 1),
             ) |> gpu
     elseif model_type == "skip"
+        inner_block = BranchAndMerge(
+            Dense(hdims, hdims * 2),
+            Dense(hdims, hdims * 2),
+            Dense(hdims * 2, hdims),
+        )
+        approx_block = Chain(
+            Dense(hdims, hdims * 5, softplus),
+            Dense(hdims * 5, hdims),
+        )
         model =
             DEQChain(
-                Dense(1, hdims, gelu),
+                Dense(1, hdims, softplus),
                 SkipDeepEquilibriumNetwork(
-                    BranchAndMerge(
-                        Dense(hdims, hdims * 2),
-                        Dense(hdims, hdims * 2),
-                        Dense(hdims * 2, hdims),
+                    inner_block,
+                    approx_block,
+                    DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                    sensealg = SteadyStateAdjoint(
+                        autodiff = true,
+                        autojacvec = ZygoteVJP(),
+                        linsolve = LinSolveKrylovJL(),
                     ),
-                    Chain(
-                        Dense(hdims, hdims * 5, gelu),
-                        Dense(hdims * 5, hdims),
-                    ),
+                    maxiters = 50,
+                ),
+                Dense(hdims, 1),
+            ) |> gpu
+    elseif model_type == "skip_no_extra_param"
+        inner_block = BranchAndMerge(
+            Dense(hdims, hdims * 2),
+            Dense(hdims, hdims * 2),
+            Dense(hdims * 2, hdims),
+        )
+        model =
+            DEQChain(
+                Dense(1, hdims, softplus),
+                SkipDeepEquilibriumNetwork(
+                    inner_block,
                     DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                     sensealg = SteadyStateAdjoint(
                         autodiff = true,
@@ -80,7 +106,7 @@ function get_model(
                 Dense(hdims, 1),
             ) |> gpu
     else
-        throw(ArgumentError("$model_type must be either `vanilla` or `skip`"))
+        throw(ArgumentError("$model_type must be either `vanilla` or `skip` or `skip_no_extra_param`"))
     end
     return model
 end
@@ -208,7 +234,7 @@ end
 nfe_count_dict = Dict("vanilla" => [], "skip" => [])
 
 for seed in [1, 11, 111]
-    for model_type in ["skip", "vanilla"]
+    for model_type in ["skip", "vanilla", "skip_no_extra_param"]
         config = Dict(
             "seed" => seed,
             "learning_rate" => 1f-4,

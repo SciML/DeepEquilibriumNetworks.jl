@@ -28,7 +28,7 @@ end
 function SkipDeepEquilibriumNetwork(
     model,
     shortcut,
-    args...;
+    solver;
     p = nothing,
     sensealg = SteadyStateAdjoint(
         autodiff = false,
@@ -47,7 +47,34 @@ function SkipDeepEquilibriumNetwork(
         re1,
         re2,
         length(p1),
-        args,
+        (solver,),
+        kwargs,
+        sensealg,
+        DEQTrainingStats(0),
+    )
+end
+
+function SkipDeepEquilibriumNetwork(
+    model,
+    solver;
+    p = nothing,
+    sensealg = SteadyStateAdjoint(
+        autodiff = false,
+        autojacvec = ZygoteVJP(),
+        linsolve = LinSolveKrylovJL(rtol = 0.1f0, atol = 0.1f0),
+    ),
+    kwargs...,
+)
+    p1, re1 = Flux.destructure(model)
+    p = p === nothing ? p1 : p
+    return SkipDeepEquilibriumNetwork(
+        model,
+        nothing,
+        p,
+        re1,
+        nothing,
+        length(p1),
+        (solver,),
         kwargs,
         sensealg,
         DEQTrainingStats(0),
@@ -82,6 +109,37 @@ function (deq::SkipDeepEquilibriumNetwork)(
         deq.kwargs...,
     ).u::typeof(x)
     res = deq.re1(p1)(u, x)::typeof(x)
+    deq.stats.nfe += 1
+
+    update_is_in_deq(false)
+
+    return res, z
+end
+
+function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(
+    x::AbstractArray{T},
+    p = deq.p,
+) where {M,T}
+    z = deq.re1(p)(x, zero(x))::typeof(x)
+
+    update_is_in_deq(true)
+    deq.stats.nfe += 1
+
+    # Solving the equation f(u) - u = du = 0
+    function dudt(u, _p, t)
+        deq.stats.nfe += 1
+        return deq.re1(_p)(u, x) .- u
+    end
+
+    ssprob = SteadyStateProblem(dudt, z, p)
+    u = solve(
+        ssprob,
+        deq.args...;
+        u0 = z,
+        sensealg = deq.sensealg,
+        deq.kwargs...,
+    ).u::typeof(x)
+    res = deq.re1(p)(u, x)::typeof(x)
     deq.stats.nfe += 1
 
     update_is_in_deq(false)

@@ -22,78 +22,6 @@ MPI.Init()
 CUDA.allowscalar(false)
 
 ## Models
-# Resnet Layer
-struct ResNetLayer{C1,C2,D1,D2,N1,N2,N3}
-    conv1::C1
-    conv2::C2
-    dropout1::D1
-    dropout2::D2
-    norm1::N1
-    norm2::N2
-    norm3::N3
-end
-
-function Flux.gpu(r::ResNetLayer)
-    return ResNetLayer(
-        Flux.gpu(r.conv1),
-        Flux.gpu(r.conv2),
-        Flux.gpu(r.dropout1),
-        Flux.gpu(r.dropout2),
-        Flux.gpu(r.norm1),
-        Flux.gpu(r.norm2),
-        Flux.gpu(r.norm3),
-    )
-end
-
-Flux.@functor ResNetLayer
-
-function ResNetLayer(
-    n_channels::Int,
-    n_inner_channels::Int,
-    drop1_size::Tuple,
-    drop2_size::Tuple,
-    dropout_rate::Real;
-    kernel_size::Tuple{Int,Int} = (3, 3),
-    num_groups::Int = 8,
-    affine::Bool = false,
-)
-    conv1 = Conv(
-        kernel_size,
-        n_channels => n_inner_channels,
-        relu;
-        pad = kernel_size .÷ 2,
-        bias = false,
-        init = (dims...) -> randn(Float32, dims...) .* 0.01f0,
-    )
-    dropout1 = VariationalHiddenDropout(dropout_rate, drop1_size)
-    conv2 = Conv(
-        kernel_size,
-        n_inner_channels => n_channels;
-        pad = kernel_size .÷ 2,
-        bias = false,
-        init = (dims...) -> randn(Float32, dims...) .* 0.01f0,
-    )
-    dropout2 = VariationalHiddenDropout(dropout_rate, drop2_size)
-    norm1 = GroupNorm(n_inner_channels, num_groups, affine = affine)
-    norm2 = GroupNorm(n_channels, num_groups, affine = affine)
-    norm3 = GroupNorm(n_channels, num_groups, affine = affine)
-
-    return ResNetLayer(conv1, conv2, dropout1, dropout2, norm1, norm2, norm3)
-end
-
-(rl::ResNetLayer)(z, x) = rl.norm3(
-    relu.(
-        z .+ rl.norm2(
-            x .+ rl.dropout2(rl.conv2(rl.norm1(rl.dropout1(rl.conv1(z))))),
-        ),
-    ),
-)
-
-(rl::ResNetLayer)(x) = rl.norm3(
-    relu.(rl.norm2(rl.dropout2(rl.conv2(rl.norm1(rl.dropout1(rl.conv1(x))))))),
-)
-
-
 struct CIFARWidthStackedDEQ{has_sdeq,L1,S1,S2,D1,D2,D3,PD1,PD2,PD3,CL,C}
     layer1::L1
     scale_down1::S1
@@ -191,20 +119,9 @@ function get_model(
     maxiters::Int,
     abstol::T,
     reltol::T,
-    batch_size::Int,
     dropout_rate::Real,
     model_type::String,
 ) where {T}
-    # solvers = [
-    #     LimitedMemoryBroydenSolver(;
-    #         device = gpu,
-    #         original_dims = (2 * 32 ÷ (2^(i - 1)), 2^(i + 2)),
-    #         abstol = abstol,
-    #         maxiters = maxiters,
-    #         batch_size = batch_size,
-    #     )
-    #     for _ = 1:3
-    # ]
     model = CIFARWidthStackedDEQ(
         Sequential(
             Conv((3, 3), 3 => 8, relu; bias = true, pad = 1),
@@ -224,31 +141,19 @@ function get_model(
         [
             model_type == "skip" ?
             SkipDeepEquilibriumNetwork(
-                ResNetLayer(
+                BasicResidualBlock(
+                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1))),
                     2^(i + 2),
-                    5 * (2^(i + 2)),
-                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 5 * 2^(i + 2), 1),
-                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 2^(i + 2), 1),
-                    dropout_rate,
+                    2^(i + 2);
+                    dropout_rate = dropout_rate,
                 ),
-                Sequential(
-                    ResNetLayer(
-                        2^(i + 2),
-                        5 * (2^(i + 2)),
-                        (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 5 * 2^(i + 2), 1),
-                        (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 2^(i + 2), 1),
-                        dropout_rate,
-                    ),
-                    ResNetLayer(
-                        2^(i + 2),
-                        5 * (2^(i + 2)),
-                        (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 5 * 2^(i + 2), 1),
-                        (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 2^(i + 2), 1),
-                        dropout_rate,
-                    ),
+                BasicResidualBlock(
+                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1))),
+                    2^(i + 2),
+                    2^(i + 2);
+                    dropout_rate = dropout_rate,
                 ),
                 DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
-                # SSRootfind(;nlsolve = (f, u0, abstol) -> solvers[i](f, u0)),
                 maxiters = maxiters,
                 sensealg = SteadyStateAdjoint(
                     autodiff = true,
@@ -262,15 +167,13 @@ function get_model(
                 verbose = false,
             ) :
             DeepEquilibriumNetwork(
-                ResNetLayer(
+                BasicResidualBlock(
+                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1))),
                     2^(i + 2),
-                    5 * (2^(i + 2)),
-                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 5 * 2^(i + 2), 1),
-                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 2^(i + 2), 1),
-                    dropout_rate,
+                    2^(i + 2);
+                    dropout_rate = dropout_rate,
                 ),
                 DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
-                # SSRootfind(;nlsolve = (f, u0, abstol) -> solvers[i](f, u0)),
                 maxiters = maxiters,
                 sensealg = SteadyStateAdjoint(
                     autodiff = true,
@@ -408,7 +311,6 @@ function train(config::Dict)
         get_config(lg_wandb, "maxiters"),
         Float32(get_config(lg_wandb, "abstol")),
         Float32(get_config(lg_wandb, "reltol")),
-        Int64(get_config(lg_wandb, "batch_size")),
         Float64(get_config(lg_wandb, "dropout_rate")),
         get_config(lg_wandb, "model_type"),
     )
@@ -603,7 +505,7 @@ for seed in [1, 11, 111]
             "reltol" => 1f-1,
             "maxiters" => 50,
             "epochs" => 50,
-            "dropout_rate" => 0.05,
+            "dropout_rate" => 0.25,
             "batch_size" => 64,
             "eval_batch_size" => 64,
             "model_type" => model_type,
