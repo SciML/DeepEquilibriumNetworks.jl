@@ -195,16 +195,16 @@ function get_model(
     dropout_rate::Real,
     model_type::String,
 ) where {T}
-    solvers = [
-        LimitedMemoryBroydenSolver(;
-            device = gpu,
-            original_dims = (2 * 32 ÷ (2^(i - 1)), 2^(i + 2)),
-            abstol = abstol,
-            maxiters = maxiters,
-            batch_size = batch_size,
-        )
-        for _ = 1:3
-    ]
+    # solvers = [
+    #     LimitedMemoryBroydenSolver(;
+    #         device = gpu,
+    #         original_dims = (2 * 32 ÷ (2^(i - 1)), 2^(i + 2)),
+    #         abstol = abstol,
+    #         maxiters = maxiters,
+    #         batch_size = batch_size,
+    #     )
+    #     for _ = 1:3
+    # ]
     model = CIFARWidthStackedDEQ(
         Sequential(
             Conv((3, 3), 3 => 8, relu; bias = true, pad = 1),
@@ -247,8 +247,8 @@ function get_model(
                         dropout_rate,
                     ),
                 ),
-                # DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
-                SSRootfind(;nlsolve = (f, u0, abstol) -> solvers[i](f, u0)),
+                DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                # SSRootfind(;nlsolve = (f, u0, abstol) -> solvers[i](f, u0)),
                 maxiters = maxiters,
                 sensealg = SteadyStateAdjoint(
                     autodiff = true,
@@ -269,8 +269,8 @@ function get_model(
                     (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1)), 2^(i + 2), 1),
                     dropout_rate,
                 ),
-                # DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
-                SSRootfind(;nlsolve = (f, u0, abstol) -> solvers[i](f, u0)),
+                DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                # SSRootfind(;nlsolve = (f, u0, abstol) -> solvers[i](f, u0)),
                 maxiters = maxiters,
                 sensealg = SteadyStateAdjoint(
                     autodiff = true,
@@ -453,13 +453,16 @@ function train(config::Dict)
 
     ## Training Loop
     ps = Flux.params(model)
-    opt = Scheduler(
-        Cos(
-            get_config(lg_wandb, "learning_rate"),
-            1e-4,
-            length(trainiter) * get_config(lg_wandb, "epochs"),
-        ),
-        ADAM(get_config(lg_wandb, "learning_rate"), (0.9, 0.999)),
+    opt = Flux.Optimise.Optimiser(
+        WeightDecay(0.0000025),
+        Scheduler(
+            Cos(
+                get_config(lg_wandb, "learning_rate"),
+                1e-5,
+                length(trainiter) * get_config(lg_wandb, "epochs"),
+            ),
+            ADAM(get_config(lg_wandb, "learning_rate"), (0.9, 0.999)),
+        )
     )
     step = 1
     train_vec = zeros(Float32, 5)
@@ -595,9 +598,9 @@ for seed in [1, 11, 111]
     for model_type in ["skip", "vanilla"]
         config = Dict(
             "seed" => seed,
-            "learning_rate" => 0.005,
-            "abstol" => 1f-3,
-            "reltol" => 1f-3,
+            "learning_rate" => 0.001,
+            "abstol" => 1f-1,
+            "reltol" => 1f-1,
             "maxiters" => 50,
             "epochs" => 50,
             "dropout_rate" => 0.05,

@@ -26,3 +26,8 @@ To be ported to NonLinearSolve.jl
 ## Troubleshooting
 
 1. `libhdf5.so` not found: If you have admin priviledges, just install hdf5 for your system. Else install `h5py` using Conda and export a new environment `JULIA_HDF5_PATH="<path to (ana|mini)conda>/lib"`. Next do `]build` in the Julia REPL.
+
+
+## TODOs:
+
+- [ ] `Flux.@functor` messes up the parameters of models. The easiest fix is to manually define the parameters and device transfer functions (`cpu` / `gpu`).

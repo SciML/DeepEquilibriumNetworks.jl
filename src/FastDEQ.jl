@@ -24,6 +24,8 @@ using SteadyStateDiffEq
 using UnPack
 using Zygote
 
+using Flux: hasaffine, ones32, zeros32, _isactive
+
 
 const is_inside_deq = Ref(false)
 
@@ -59,7 +61,10 @@ include("layers/sdeq.jl")
 include("layers/mdeq.jl")
 include("layers/smdeq.jl")
 include("layers/dropout.jl")
-include("models.jl")
+include("layers/normalise.jl")
+include("models/chain.jl")
+include("models/basics.jl")
+include("models/cgcnn.jl")
 include("losses.jl")
 include("zygote.jl")
 include("logger.jl")
@@ -68,22 +73,26 @@ include("logger.jl")
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
 export MultiScaleDeepEquilibriumNetworkS4,
     MultiScaleSkipDeepEquilibriumNetworkS4
-export DEQChain
-
 export AGNConv, AGNMaxPool, AGNMeanPool
-export batch_graph_data, BatchedAtomicGraph
 export VariationalHiddenDropout
-export reset_mask!
-export Sequential
+export GroupNormV2
+
+export DEQChain, Sequential
 export CrystalGraphCNN
+export BasicResidualBlock
+
+export batch_graph_data, BatchedAtomicGraph
+export reset_mask!
+export get_and_clear_nfe!
 
 export PrettyTableLogger
 
-export get_and_clear_nfe!
 export SupervisedLossContainer
+
 export BroydenCache, broyden
 export LimitedMemoryBroydenSolver, LimitedMemoryBroydenCache
 export LinSolveKrylovJL
+
 export SingleResolutionFeatures, MultiResolutionFeatures
 
 end
