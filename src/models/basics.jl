@@ -64,7 +64,7 @@ function BasicResidualBlock(
     )
 
     conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(
-        inplanes => inner_planes;
+        inner_planes => planes;
         stride = 1,
         bias = false,
     )
