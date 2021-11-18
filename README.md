@@ -8,9 +8,8 @@
 
 ## Non-Linear Solvers (GPU Compatible)
 
-To be ported to NonLinearSolve.jl
-
-* Broyden
+* `BroydenSolver`
+* `LimitedMemoryBroydenSolver`    
 
 ## Linear Solvers (GPU Compatible)
 

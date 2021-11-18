@@ -16,16 +16,44 @@ function BroydenCache(x)
     return BroydenCache(Jinv, fx, Δfx, fx_old, x, Δx, x_old)
 end
 
+BroydenCache(vec_length::Int, device) = BroydenCache(device(zeros(vec_length)))
 
-function broyden(
-    f!,
-    x_::AbstractVector{T};
-    cache::BroydenCache = BroydenCache(x_),
-    max_iter::Int = 1000,
-    abstol = 1e-3,
-    reltol = 1e-3,
-) where {T}
-    @unpack Jinv, fx, Δfx, fx_old, x, Δx, x_old = cache
+struct BroydenSolver{C<:BroydenCache,T<:Real}
+    cache::C
+    maxiters::Int
+    batch_size::Int
+    ϵ::T
+end
+
+function BroydenSolver(
+    T = Float32;
+    device,
+    original_dims,
+    batch_size,
+    maxiters::Int = 50,
+    ϵ::Real = 1e-6,
+    abstol::Union{Real,Nothing} = nothing,
+    reltol::Union{Real,Nothing} = nothing,
+)
+    ϵ = abstol !== nothing ? abstol : ϵ
+
+    if reltol !== nothing
+        @warn maxlog = 1 "reltol is set to $reltol, but `limited_memory_broyden` ignores this value"
+    end
+
+    x = zeros(T, prod(original_dims) * batch_size) |> device
+    cache = BroydenCache(x)
+
+    return BroydenSolver(
+        cache,
+        maxiters,
+        batch_size,
+        T(ϵ),
+    )
+end
+
+function (broyden::BroydenSolver{C,T})(f!, x_::AbstractVector{T}) where {C,T}
+    @unpack Jinv, fx, Δfx, fx_old, x, Δx, x_old = broyden.cache
     if size(x) != size(x_)
         # This might happen when the last batch with insufficient batch_size
         # is passed.
@@ -40,7 +68,7 @@ function broyden(
     max_resets = 3
     resets = 0
 
-    for i = 1:max_iter
+    for i = 1:broyden.maxiters
         x_old .= x
         fx_old .= fx
 
@@ -75,8 +103,7 @@ function broyden(
         maybe_stuck = false
 
         # Convergence Check
-        Δfx_norm = norm(Δfx, 2)
-        (Δfx_norm ≤ abstol || Δfx_norm ./ min(norm(fx), norm(Δfx)) ≤ reltol) && return x
+        norm(Δfx, 2) ≤ broyden.ϵ && return x
     end
 
     return x

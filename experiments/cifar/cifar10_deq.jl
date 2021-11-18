@@ -147,12 +147,12 @@ function get_model(
                     2^(i + 2);
                     dropout_rate = dropout_rate,
                 ),
-                # BasicResidualBlock(
-                #     (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1))),
-                #     2^(i + 2),
-                #     2^(i + 2);
-                #     dropout_rate = dropout_rate,
-                # ),
+                BasicResidualBlock(
+                    (32 ÷ (2^(i - 1)), 32 ÷ (2^(i - 1))),
+                    2^(i + 2),
+                    2^(i + 2);
+                    dropout_rate = dropout_rate,
+                ),
                 DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
                 maxiters = maxiters,
                 sensealg = SteadyStateAdjoint(

@@ -18,7 +18,7 @@ end
 function LimitedMemoryBroydenSolver(
     T = Float32;
     device,
-    original_dims,
+    original_dims::Tuple{Int,Int},
     batch_size,
     maxiters::Int = 50,
     ϵ::Real = 1e-6,
@@ -28,7 +28,7 @@ function LimitedMemoryBroydenSolver(
     ϵ = abstol !== nothing ? abstol : ϵ
 
     if reltol !== nothing
-        @warn maxlog = 1 "reltol is set to $reltol, but `limited_memory_broyden` ignores this value"
+        @warn maxlog = 1 "reltol is set to $reltol, but `LimitedMemoryBroydenSolver` ignores this value"
     end
 
     LBFGS_threshold = min(maxiters, 27)

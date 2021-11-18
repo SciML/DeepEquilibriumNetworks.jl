@@ -48,7 +48,6 @@ end
 
 
 include("utils.jl")
-include("dataloaders.jl")
 
 include("solvers/broyden.jl")
 include("solvers/limited_memory_broyden.jl")
@@ -91,7 +90,7 @@ export PrettyTableLogger
 
 export SupervisedLossContainer
 
-export BroydenCache, broyden
+export BroydenSolver, BroydenCache
 export LimitedMemoryBroydenSolver, LimitedMemoryBroydenCache
 export LinSolveKrylovJL
 
