@@ -11,6 +11,16 @@ function _init_identity_matrix!(x::AbstractMatrix{T}, scale::T = T(1)) where {T}
     return x
 end
 
+function _norm(x; dims = Colon())
+    return sqrt.(sum(abs2, x; dims = dims))
+end
+
+# Compute norm over all dimensions except `except_dim`
+function _norm(x::AbstractArray{T,N}, except_dim) where {T,N}
+    dims = filter(i -> i != except_dim, 1:N)
+    return _norm(x; dims = dims)
+end
+
 
 # General DEQ Utils
 Flux.trainable(deq::AbstractDeepEquilibriumNetwork) = (deq.p,)

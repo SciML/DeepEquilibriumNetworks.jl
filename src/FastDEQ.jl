@@ -60,6 +60,7 @@ include("layers/mdeq.jl")
 include("layers/smdeq.jl")
 include("layers/dropout.jl")
 include("layers/normalise.jl")
+include("layers/weight_norm.jl")
 
 include("models/chain.jl")
 include("models/basics.jl")
@@ -76,6 +77,7 @@ export MultiScaleDeepEquilibriumNetworkS4,
 export AGNConv, AGNMaxPool, AGNMeanPool
 export VariationalHiddenDropout
 export GroupNormV2
+export WeightNorm
 
 export DEQChain, Sequential
 export BasicResidualBlock
