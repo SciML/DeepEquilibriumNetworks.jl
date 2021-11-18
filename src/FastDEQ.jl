@@ -4,9 +4,7 @@ using ChainRulesCore
 using ChemistryFeaturization
 using CUDA
 using DataDeps
-using DataLoaders
 using DiffEqBase
-using DiffEqCallbacks
 using DiffEqSensitivity
 using Flux
 using Format
@@ -16,7 +14,6 @@ using LinearSolve
 using MPI
 using MultiScaleArrays
 using OrdinaryDiffEq
-# using RecursiveArrayTools: ArrayPartition
 using SciMLBase
 using SparseArrays
 using Statistics

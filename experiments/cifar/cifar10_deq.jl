@@ -355,16 +355,13 @@ function train(config::Dict)
 
     ## Training Loop
     ps = Flux.params(model)
-    opt = Flux.Optimise.Optimiser(
-        WeightDecay(0.0000025),
-        Scheduler(
-            Cos(
-                get_config(lg_wandb, "learning_rate"),
-                1e-5,
-                length(trainiter) * get_config(lg_wandb, "epochs"),
-            ),
-            ADAM(get_config(lg_wandb, "learning_rate"), (0.9, 0.999)),
-        )
+    opt = Scheduler(
+        Cos(
+            get_config(lg_wandb, "learning_rate"),
+            1e-5,
+            length(trainiter) * get_config(lg_wandb, "epochs"),
+        ),
+        ADAM(get_config(lg_wandb, "learning_rate"), (0.9, 0.999)),
     )
     step = 1
     train_vec = zeros(Float32, 5)
