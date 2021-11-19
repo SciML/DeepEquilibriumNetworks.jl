@@ -26,11 +26,12 @@ Flux.cpu(wn::WeightNorm) = WeightNorm(
 )
 
 function Base.show(io::IO, wn::WeightNorm)
+    ps = sum(length.(Flux.params(wn)))
     p = update_parameters!(wn)
     l = wn.layer_re(p)
     print(io, "WeightNorm(")
     print(io, l)
-    print(") ", string(length(p)), " Trainable Parameters")
+    print(") ", string(ps), " Trainable Parameters")
 end
 
 function WeightNorm(layer, dim::Union{Tuple,Vector,Int,Nothing} = nothing)
@@ -70,7 +71,7 @@ function update_parameters!(wn::WeightNorm)
         )...,
     )
     Zygote.@ignore wn.cache.p .= p
-    return wn.cache.p
+    return p
 end
 
 (wn::WeightNorm)(args...; kwargs...) =

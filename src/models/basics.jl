@@ -138,15 +138,33 @@ struct BranchNet{L}
     end
 end
 
-function (bn::BranchNet)(
-    x::AbstractArray{T},
-    injection::Union{AbstractArray{T},T} = T(0),
-) where {T}
-    x = bn.layers[1](x, injection)
-    for l in bn.layers[2:end]
-        x = l(x)
+Flux.@functor BranchNet
+
+function (bn::BranchNet)(x::AbstractArray{T}, injection::AbstractArray{T}) where {T}
+    buf = Zygote.Buffer([])
+    push!(buf, bn.layers[1](x, injection))
+    for (i, l) in enumerate(bn.layers[2:end])
+        push!(buf, l(buf[i]))
     end
-    return x
+    return copy(buf)
+end
+
+function (bn::BranchNet)(x::AbstractArray{T}, injection::AbstractArray{T}, injections...) where {T}
+    buf = Zygote.Buffer([])
+    push!(buf, bn.layers[1](x, injection))
+    for (i, l) in enumerate(bn.layers[2:end])
+        push!(buf, l(buf[i], injections[i]))
+    end
+    return copy(buf)
+end
+
+function (bn::BranchNet)(x::AbstractArray{T}, injection::T = T(0)) where {T}
+    buf = Zygote.Buffer([])
+    push!(buf, bn.layers[1](x))
+    for (i, l) in enumerate(bn.layers[2:end])
+        push!(buf, l(buf[i]))
+    end
+    return copy(buf)
 end
 
 

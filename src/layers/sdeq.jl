@@ -89,7 +89,7 @@ function (deq::SkipDeepEquilibriumNetwork)(
     z = deq.re2(p2)(x)::typeof(x)
 
     # Dummy call to ensure that mask is generated
-    _ = deq.re1(p1)(x)
+    Zygote.@ignore _ = deq.re1(p1)(x, x)
     update_is_in_deq(true)
 
     deq.stats.nfe += 1
