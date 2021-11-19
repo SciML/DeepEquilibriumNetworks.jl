@@ -833,6 +833,11 @@ version = "0.21.20"
 deps = ["Artifacts", "Pkg"]
 uuid = "4af54fe1-eca0-43a8-85a7-787d91b784e3"
 
+[[deps.LearnBase]]
+git-tree-sha1 = "a0d90569edd490b82fdc4dc078ea54a5a800d30a"
+uuid = "7f8f8fb0-2700-5f03-b4bd-41f8cfc144b6"
+version = "0.4.1"
+
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
 uuid = "b27032c2-a3e7-50c8-80cd-2d36dbcbfd21"
@@ -955,11 +960,23 @@ git-tree-sha1 = "5455aef09b40e5020e1520f551fa3135040d4ed0"
 uuid = "856f044c-d86e-5d09-b602-aeab76dc8ba7"
 version = "2021.1.1+2"
 
+[[deps.MLDataPattern]]
+deps = ["LearnBase", "MLLabelUtils", "Random", "SparseArrays", "StatsBase"]
+git-tree-sha1 = "2741aabe5ec93c63cc0a5277bb1c2cb819b01bb1"
+uuid = "9920b226-0b2a-5f5f-9153-9aa70a013f8b"
+version = "0.5.5"
+
 [[deps.MLDatasets]]
 deps = ["BinDeps", "ColorTypes", "DataDeps", "DelimitedFiles", "FixedPointNumbers", "GZip", "JSON3", "MAT", "PyCall", "Requires"]
 git-tree-sha1 = "2dc653c644214a64bb44016bb9c45149e6f67ee4"
 uuid = "eb30cadb-4394-5ae3-aed4-317e484a6458"
 version = "0.5.13"
+
+[[deps.MLLabelUtils]]
+deps = ["LearnBase", "MappedArrays", "StatsBase"]
+git-tree-sha1 = "3211c1fdd1efaefa692c8cf60e021fb007b76a08"
+uuid = "66a33bbf-0c2b-5fc8-a008-9da813334f0a"
+version = "0.5.6"
 
 [[deps.MPI]]
 deps = ["Distributed", "DocStringExtensions", "Libdl", "MPICH_jll", "MicrosoftMPI_jll", "OpenMPI_jll", "Pkg", "Random", "Requires", "Serialization", "Sockets"]
@@ -983,6 +1000,11 @@ version = "0.5.9"
 git-tree-sha1 = "9cb207b18148b2199db259adfa923b45593fe08e"
 uuid = "d125e4d3-2237-4719-b19c-fa641b8a4667"
 version = "0.1.6"
+
+[[deps.MappedArrays]]
+git-tree-sha1 = "e8b359ef06ec72e8c030463fe02efe5527ee5142"
+uuid = "dbb5928d-eab1-5f90-85c2-b9b0edb7c900"
+version = "0.4.1"
 
 [[deps.Markdown]]
 deps = ["Base64"]

@@ -123,21 +123,9 @@ function get_model(
     model_type::String,
 ) where {T}
     model = CIFARWidthStackedDEQ(
-        Sequential(
-            Conv((3, 3), 3 => 8, relu; bias = true, pad = 1),
-            BatchNorm(8, affine = true),
-            VariationalHiddenDropout(dropout_rate, (32, 32, 8, 1)),
-        ),
-        Sequential(
-            Conv((4, 4), 8 => 16, relu; bias = true, pad = 1, stride = 2),
-            BatchNorm(16, affine = true),
-            VariationalHiddenDropout(dropout_rate, (16, 16, 16, 1)),
-        ),
-        Sequential(
-            Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
-            BatchNorm(32, affine = true),
-            VariationalHiddenDropout(dropout_rate, (8, 8, 32, 1)),
-        ),
+        expand_channels_module(3, 8),
+        downsample_module(8, 16, 32, 16),
+        downsample_module(16, 32, 16, 8),
         [
             model_type == "skip" ?
             SkipDeepEquilibriumNetwork(
@@ -153,17 +141,9 @@ function get_model(
                     2^(i + 2);
                     dropout_rate = dropout_rate,
                 ),
-                DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                get_default_dynamicss_solver(reltol, abstol, Tsit5()),
                 maxiters = maxiters,
-                sensealg = SteadyStateAdjoint(
-                    autodiff = true,
-                    autojacvec = ZygoteVJP(),
-                    linsolve = LinSolveKrylovJL(
-                        rtol = reltol,
-                        atol = abstol,
-                        itmax = maxiters,
-                    ),
-                ),
+                sensealg = get_default_ssadjoint(reltol, abstol, maxiters),
                 verbose = false,
             ) :
             DeepEquilibriumNetwork(
@@ -173,37 +153,15 @@ function get_model(
                     2^(i + 2);
                     dropout_rate = dropout_rate,
                 ),
-                DynamicSS(Tsit5(); abstol = abstol, reltol = reltol),
+                get_default_dynamicss_solver(reltol, abstol, Tsit5()),
                 maxiters = maxiters,
-                sensealg = SteadyStateAdjoint(
-                    autodiff = true,
-                    autojacvec = ZygoteVJP(),
-                    linsolve = LinSolveKrylovJL(
-                        rtol = reltol,
-                        atol = abstol,
-                        itmax = maxiters,
-                    ),
-                ),
+                sensealg = get_default_ssadjoint(reltol, abstol, maxiters),
                 verbose = false,
             ) for i = 1:3
         ]...,
-        Sequential(
-            BatchNorm(8, affine = true),
-            Conv((4, 4), 8 => 16, relu; bias = true, pad = 1, stride = 2),
-            VariationalHiddenDropout(dropout_rate, (16, 16, 16, 1)),
-            BatchNorm(16, affine = true),
-            Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
-            VariationalHiddenDropout(dropout_rate, (8, 8, 32, 1)),
-        ),
-        Sequential(
-            BatchNorm(16, affine = true),
-            Conv((4, 4), 16 => 32, relu; bias = true, pad = 1, stride = 2),
-            VariationalHiddenDropout(dropout_rate, (8, 8, 32, 1)),
-        ),
-        Sequential(
-            BatchNorm(32, affine = true),
-            VariationalHiddenDropout(dropout_rate, (8, 8, 32, 1)),
-        ),
+        downsample_module(8, 32, 32, 8),
+        downsample_module(16, 32, 16, 8),
+        expand_channels_module(32, 32),
         (x...) -> foldl(+, x),
         Sequential(Flux.flatten, Dense(8 * 8 * 32, 10)),
     )
@@ -339,7 +297,7 @@ function train(config::Dict)
 
     ## Loss Function
     loss_function =
-        SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0)
+        SupervisedLossContainer(Flux.Losses.logitcrossentropy, 0.1f0)
 
     nfe_counts = Vector{Int64}[]
     cb = register_nfe_counts(model, nfe_counts)

@@ -75,18 +75,20 @@ export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
 export MultiScaleDeepEquilibriumNetworkS4,
     MultiScaleSkipDeepEquilibriumNetworkS4
 export AGNConv, AGNMaxPool, AGNMeanPool
-export VariationalHiddenDropout
-export GroupNormV2
-export WeightNorm
+export VariationalHiddenDropout, GroupNormV2, WeightNorm
 
 export DEQChain, Sequential
 export BasicResidualBlock
-export DownsampleModule, UpsampleModule
+export downsample_module,
+    upsample_module, expand_channels_module, conv3x3, conv5x5
 export CrystalGraphCNN
 
 export batch_graph_data, BatchedAtomicGraph
-export reset_mask!
-export get_and_clear_nfe!
+export reset_mask!,
+    get_and_clear_nfe!,
+    get_default_ssadjoint,
+    get_default_dynamicss_solver,
+    get_default_ssrootfind_solver
 
 export PrettyTableLogger
 

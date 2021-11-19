@@ -48,12 +48,17 @@ function BasicResidualBlock(
     n_big_kernels::Int = 0,
     dropout_rate::Real = 0.0f0,
     gn_affine::Bool = true,
+    weight_norm::Bool = true,
 )
+    wn_layer = weight_norm ? WeightNorm : identity
+
     inner_planes = planes * deq_expand
-    conv1 = (n_big_kernels >= 1 ? conv5x5 : conv3x3)(
-        inplanes => inner_planes;
-        stride = 1,
-        bias = false,
+    conv1 = wn_layer(
+        (n_big_kernels >= 1 ? conv5x5 : conv3x3)(
+            inplanes => inner_planes;
+            stride = 1,
+            bias = false,
+        )
     )
     gn1 = GroupNormV2(
         inner_planes,
@@ -63,10 +68,12 @@ function BasicResidualBlock(
         track_stats = true,
     )
 
-    conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(
-        inner_planes => planes;
-        stride = 1,
-        bias = false,
+    conv2 = wn_layer(
+        (n_big_kernels >= 2 ? conv5x5 : conv3x3)(
+            inner_planes => planes;
+            stride = 1,
+            bias = false,
+        )
     )
     gn2 = GroupNormV2(
         planes,
@@ -144,7 +151,7 @@ end
 
 
 # Downsample Module
-function DownsampleModule(
+function downsample_module(
     in_channels::Int,
     out_channels::Int,
     in_resolution::Int,
@@ -188,7 +195,7 @@ end
 
 
 # Upsample Module
-function UpsampleModule(
+function upsample_module(
     in_channels::Int,
     out_channels::Int,
     in_resolution::Int,
@@ -212,5 +219,25 @@ function UpsampleModule(
             track_stats = true,
         ),
         Upsample(:nearest; scale = 2^level_diff),
+    )
+end
+
+
+# Mapping Module
+function expand_channels_module(
+    in_channels::Int,
+    out_channels::Int;
+    num_groups::Int = 4,
+    gn_affine::Bool = true,
+)
+    return Sequential(
+        conv3x3(in_channels => out_channels, bias = false),
+        GroupNormV2(
+            out_channels,
+            num_groups,
+            relu;
+            affine = gn_affine,
+            track_stats = true,
+        ),
     )
 end

@@ -1,24 +1,45 @@
-struct WeightNorm{Re,P,D}
+struct WeightNormParameterCache{T}
+    p::T
+end
+
+struct WeightNorm{Re,P,D,T}
     layer_re::Re
     parameters::P
     dims::D
+    cache::WeightNormParameterCache{T}
 end
 
 Flux.@functor WeightNorm (parameters,)
 
+Flux.gpu(wn::WeightNorm) = WeightNorm(
+    wn.layer_re,
+    Flux.gpu(wn.parameters),
+    wn.dims,
+    WeightNormParameterCache(Flux.gpu(wn.cache.p))
+)
+
+Flux.cpu(wn::WeightNorm) = WeightNorm(
+    wn.layer_re,
+    Flux.cpu(wn.parameters),
+    wn.dims,
+    WeightNormParameterCache(Flux.cpu(wn.cache.p))
+)
+
 function Base.show(io::IO, wn::WeightNorm)
-    p = get_updated_parameters(wn)
+    p = update_parameters!(wn)
     l = wn.layer_re(p)
     print(io, "WeightNorm(")
     print(io, l)
     print(") ", string(length(p)), " Trainable Parameters")
 end
 
-function WeightNorm(layer, dim::Union{Tuple,Vector,Int})
+function WeightNorm(layer, dim::Union{Tuple,Vector,Int,Nothing} = nothing)
     ps = Flux.params(layer)
-    dim isa Int && (dim = [dim for _ = 1:length(ps)])
+    dim =
+        dim === nothing ? [ndims(p) for p in ps] :
+        (dim isa Int ? [dim for _ = 1:length(ps)] : dim)
 
-    _, layer_re = Flux.destructure(layer)
+    p_, layer_re = Flux.destructure(layer)
 
     parameters = []
     for (i, p) in enumerate(ps)
@@ -27,26 +48,30 @@ function WeightNorm(layer, dim::Union{Tuple,Vector,Int})
         push!(parameters, (g_val, v_val))
     end
 
-    return WeightNorm(layer_re, tuple(parameters...), dim)
+    cache = WeightNormParameterCache(similar(p_))
+
+    return WeightNorm(layer_re, tuple(parameters...), dim, cache)
 end
 
 compute_normed_weight(v, g, dim) = v .* (g ./ _norm(v, dim))
 
-get_updated_parameters(wn::WeightNorm) = vcat(
-    ntuple(
-        i -> vec(
-            compute_normed_weight(
-                wn.parameters[i][2],
-                wn.parameters[i][1],
-                wn.dims[i],
+function update_parameters!(wn::WeightNorm)
+    is_in_deq() && return wn.cache.p
+    p = vcat(
+        ntuple(
+            i -> vec(
+                compute_normed_weight(
+                    wn.parameters[i][2],
+                    wn.parameters[i][1],
+                    wn.dims[i],
+                ),
             ),
-        ),
-        length(wn.dims),
-    )...,
-)
-
-function (wn::WeightNorm)(args...; kwargs...)
-    # TODO: We should not have to update when inside DEQ
-    p = get_updated_parameters(wn)
-    return wn.layer_re(p)(args...; kwargs...)
+            length(wn.dims),
+        )...,
+    )
+    Zygote.@ignore wn.cache.p .= p
+    return wn.cache.p
 end
+
+(wn::WeightNorm)(args...; kwargs...) =
+    wn.layer_re(update_parameters!(wn))(args...; kwargs...)

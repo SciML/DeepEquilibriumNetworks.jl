@@ -36,6 +36,29 @@ mutable struct DEQTrainingStats
 end
 
 
+function get_default_ssadjoint(reltol, abstol, maxiters)
+    return SteadyStateAdjoint(
+        autodiff = true,
+        autojacvec = ZygoteVJP(),
+        linsolve = LinSolveKrylovJL(
+            rtol = reltol,
+            atol = abstol,
+            itmax = maxiters,
+        ),
+    )
+end
+
+
+function get_default_dynamicss_solver(reltol, abstol, ode_solver = Tsit5())
+    return DynamicSS(ode_solver, reltol = reltol, abstol = abstol)
+end
+
+
+function get_default_ssrootfind_solver()
+    error("Not Implemented Yet!!!")
+end
+
+
 # For MultiScale DEQs
 struct SingleResolutionFeatures{A,B} <: AbstractMultiScaleArrayLeaf{B}
     values::A
