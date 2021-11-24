@@ -15,11 +15,22 @@ function _norm(x; dims = Colon())
     return sqrt.(sum(abs2, x; dims = dims))
 end
 
+get_and_clear_nfe!(model::DataParallelFluxModel) =
+    get_and_clear_nfe!(model.model)
+
 # Compute norm over all dimensions except `except_dim`
 function _norm(x::AbstractArray{T,N}, except_dim) where {T,N}
     dims = filter(i -> i != except_dim, 1:N)
     return _norm(x; dims = dims)
 end
+
+flatten_merge(x, y) = (x..., y...)
+flatten_merge(x::T, y::T) where {T<:AbstractArray} = (x, y)
+flatten_merge(x::NTuple{2,T}, y::T) where {T<:AbstractArray} = (x..., y)
+flatten_merge(x::T, y::NTuple{2,T}) where {T<:AbstractArray} = (x, y...)
+flatten_merge(x::NTuple{2,T}, y) where {T<:AbstractArray} = (x, y...)
+flatten_merge(x, y::NTuple{2,T}) where {T<:AbstractArray} = (x..., y)
+flatten_merge(x::NTuple{2,T}, y::NTuple{2,T}) where {T<:AbstractArray} = (x, y)
 
 
 # General DEQ Utils

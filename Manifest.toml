@@ -481,6 +481,14 @@ git-tree-sha1 = "e8b37bb43c01eed0418821d1f9d20eca5ba6ab21"
 uuid = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 version = "0.12.8"
 
+[[deps.FluxMPI]]
+deps = ["CUDA", "Flux", "MPI", "Random", "Statistics", "Zygote"]
+git-tree-sha1 = "f0f8fb7ab7e5bc4bb0c8a0a0f8d059e8cb9b977e"
+repo-rev = "main"
+repo-url = "https://github.com/avik-pal/FluxMPI.jl"
+uuid = "acf642fa-ee0e-513a-b9d5-bcd150f7ec3b"
+version = "0.0.1"
+
 [[deps.Format]]
 git-tree-sha1 = "03bcdf8ab1a5b9e6455ccb45c30910d282aa09f4"
 uuid = "1fa38f19-a742-5d3f-a2b9-30dd87b9d5f8"
@@ -1524,7 +1532,9 @@ uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
 
 [[deps.Zygote]]
 deps = ["AbstractFFTs", "ChainRules", "ChainRulesCore", "DiffRules", "Distributed", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics", "ZygoteRules"]
-git-tree-sha1 = "2c30f2df0ba43c17e88c8b55b5b22c401f7cde4e"
+git-tree-sha1 = "2b8415fedafaa8a3263efdcd90a65b7b347b7955"
+repo-rev = "ap/fastdeq"
+repo-url = "https://github.com/avik-pal/Zygote.jl"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
 version = "0.6.30"
 

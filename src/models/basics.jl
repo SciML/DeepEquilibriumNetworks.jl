@@ -65,7 +65,7 @@ function BasicResidualBlock(
         num_gn_groups,
         relu;
         affine = gn_affine,
-        track_stats = true,
+        track_stats = false,
     )
 
     conv2 = wn_layer(
@@ -80,14 +80,14 @@ function BasicResidualBlock(
         num_gn_groups,
         relu;
         affine = gn_affine,
-        track_stats = true,
+        track_stats = false,
     )
 
     gn3 = GroupNormV2(
         planes,
         num_gn_groups;
         affine = gn_affine,
-        track_stats = true,
+        track_stats = false,
     )
 
     return BasicResidualBlock(
@@ -136,7 +136,12 @@ struct BranchNet{L}
         layers = tuple(args...)
         return new{typeof(layers)}(layers)
     end
+
+    BranchNet(layers::Tuple) = new{typeof(layers)}(layers)
 end
+
+Flux.gpu(b::BranchNet) = BranchNet(gpu.(b.layers))
+Flux.cpu(b::BranchNet) = BranchNet(cpu.(b.layers))
 
 Flux.@functor BranchNet
 

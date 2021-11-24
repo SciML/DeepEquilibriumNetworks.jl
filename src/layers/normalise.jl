@@ -102,6 +102,7 @@ function get_stats(::Val{true}, active::Val{true}, l::GroupNormV2, x::AbstractAr
     # trainmode with tracked stats
     μ, σ² = get_stats(Val(false), active, l, x, reduce_dims)
     Zygote.ignore() do
+        # FIXME: Sync for FluxMPI
         mtm = l.momentum
         m = prod(size(x)[reduce_dims])  # needed for computing corrected var
         μnew = vec(N ∈ reduce_dims ? μ : mean(μ, dims = N))

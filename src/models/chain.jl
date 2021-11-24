@@ -107,3 +107,4 @@ end
 
 Flux.gpu(s::Sequential) = Sequential(Chain(gpu.(s.flattened_chain.layers)...))
 
+Flux.cpu(s::Sequential) = Sequential(Chain(cpu.(s.flattened_chain.layers)...))

@@ -7,6 +7,7 @@ using DataDeps
 using DiffEqBase
 using DiffEqSensitivity
 using Flux
+using FluxMPI
 using Format
 using Functors
 using LinearAlgebra
@@ -64,6 +65,7 @@ include("layers/weight_norm.jl")
 
 include("models/chain.jl")
 include("models/basics.jl")
+include("models/width_stacked_deq.jl")
 include("models/cgcnn.jl")
 
 include("losses.jl")
@@ -78,9 +80,10 @@ export AGNConv, AGNMaxPool, AGNMeanPool
 export VariationalHiddenDropout, GroupNormV2, WeightNorm
 
 export DEQChain, Sequential
-export BasicResidualBlock
+export BasicResidualBlock, BranchNet
 export downsample_module,
     upsample_module, expand_channels_module, conv3x3, conv5x5
+export WidthStackedDEQ
 export CrystalGraphCNN
 
 export batch_graph_data, BatchedAtomicGraph
@@ -99,5 +102,6 @@ export LimitedMemoryBroydenSolver, LimitedMemoryBroydenCache
 export LinSolveKrylovJL
 
 export SingleResolutionFeatures, MultiResolutionFeatures
+
 
 end

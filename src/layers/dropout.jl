@@ -19,6 +19,10 @@ end
 
 function reset_mask!(a::VariationalHiddenDropout)
     Flux.rand!(a.mask)
+    # Sync the mask across all processes
+    if MPI.Initialized() && MPI.Comm_size(MPI.COMM_WORLD) > 1
+        safe_bcast!(a.mask, 0, MPI.COMM_WORLD)
+    end
     a.mask .= Flux._dropout_kernel.(a.mask, a.p, 1 - a.p)
 end
 
