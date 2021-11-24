@@ -51,13 +51,16 @@ function WeightNorm(layer, dim::Union{Tuple,Vector,Int,Nothing} = nothing)
 
     cache = WeightNormParameterCache(similar(p_))
 
-    return WeightNorm(layer_re, tuple(parameters...), dim, cache)
+    wn = WeightNorm(layer_re, tuple(parameters...), dim, cache)
+    update_parameters!(wn)
+
+    return wn
 end
 
 compute_normed_weight(v, g, dim) = v .* (g ./ _norm(v, dim))
 
 function update_parameters!(wn::WeightNorm)
-    is_in_deq() && return wn.cache.p
+    !is_weightnorm_update_allowed() && return wn.cache.p
     p = vcat(
         ntuple(
             i -> vec(

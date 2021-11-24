@@ -48,7 +48,7 @@ function BasicResidualBlock(
     n_big_kernels::Int = 0,
     dropout_rate::Real = 0.0f0,
     gn_affine::Bool = true,
-    weight_norm::Bool = true,
+    weight_norm::Bool = false,
 )
     wn_layer = weight_norm ? WeightNorm : identity
 
@@ -146,7 +146,7 @@ Flux.cpu(b::BranchNet) = BranchNet(cpu.(b.layers))
 Flux.@functor BranchNet
 
 function (bn::BranchNet)(x::AbstractArray{T}, injection::AbstractArray{T}) where {T}
-    buf = Zygote.Buffer([])
+    buf = Zygote.Buffer(typeof(x)[])
     push!(buf, bn.layers[1](x, injection))
     for (i, l) in enumerate(bn.layers[2:end])
         push!(buf, l(buf[i]))
@@ -155,7 +155,7 @@ function (bn::BranchNet)(x::AbstractArray{T}, injection::AbstractArray{T}) where
 end
 
 function (bn::BranchNet)(x::AbstractArray{T}, injection::AbstractArray{T}, injections...) where {T}
-    buf = Zygote.Buffer([])
+    buf = Zygote.Buffer(typeof(x)[])
     push!(buf, bn.layers[1](x, injection))
     for (i, l) in enumerate(bn.layers[2:end])
         push!(buf, l(buf[i], injections[i]))
@@ -164,7 +164,7 @@ function (bn::BranchNet)(x::AbstractArray{T}, injection::AbstractArray{T}, injec
 end
 
 function (bn::BranchNet)(x::AbstractArray{T}, injection::T = T(0)) where {T}
-    buf = Zygote.Buffer([])
+    buf = Zygote.Buffer(typeof(x)[])
     push!(buf, bn.layers[1](x))
     for (i, l) in enumerate(bn.layers[2:end])
         push!(buf, l(buf[i]))

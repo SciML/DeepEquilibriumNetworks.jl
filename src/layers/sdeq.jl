@@ -91,8 +91,8 @@ function (deq::SkipDeepEquilibriumNetwork)(
     # Dummy call to ensure that mask is generated
     Zygote.@ignore _ = deq.re1(p1)(x, x)
     update_is_in_deq(true)
-
-    deq.stats.nfe += 1
+    update_is_mask_reset_allowed(false)
+    update_is_weightnorm_update_allowed(false)
 
     # Solving the equation f(u) - u = du = 0
     function dudt(u, _p, t)
@@ -108,9 +108,12 @@ function (deq::SkipDeepEquilibriumNetwork)(
         sensealg = deq.sensealg,
         deq.kwargs...,
     ).u::typeof(x)
+    update_is_weightnorm_update_allowed(true)
+
     res = deq.re1(p1)(u, x)::typeof(x)
     deq.stats.nfe += 1
 
+    update_is_mask_reset_allowed(true)
     update_is_in_deq(false)
 
     return res, z
@@ -120,10 +123,11 @@ function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(
     x::AbstractArray{T},
     p = deq.p,
 ) where {M,T}
-    z = deq.re1(p)(x, zero(x))::typeof(x)
+    z = deq.re1(p)(zero(x), x)::typeof(x)
 
     update_is_in_deq(true)
-    deq.stats.nfe += 1
+    update_is_mask_reset_allowed(false)
+    update_is_weightnorm_update_allowed(false)
 
     # Solving the equation f(u) - u = du = 0
     function dudt(u, _p, t)
@@ -139,9 +143,12 @@ function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(
         sensealg = deq.sensealg,
         deq.kwargs...,
     ).u::typeof(x)
+    update_is_weightnorm_update_allowed(true)
+
     res = deq.re1(p)(u, x)::typeof(x)
     deq.stats.nfe += 1
 
+    update_is_mask_reset_allowed(true)
     update_is_in_deq(false)
 
     return res, z

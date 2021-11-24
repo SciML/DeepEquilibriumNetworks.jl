@@ -534,7 +534,7 @@ uuid = "9aa1b823-49e4-5ca5-8b0f-3971ec8bab6a"
 version = "0.3.2"
 
 [[deps.FastDEQ]]
-deps = ["CUDA", "ChainRulesCore", "ChemistryFeaturization", "DataDeps", "DataFrames", "DiffEqBase", "DiffEqSensitivity", "Flux", "Format", "Functors", "LinearAlgebra", "LinearSolve", "MPI", "MultiScaleArrays", "OrdinaryDiffEq", "SciMLBase", "Serialization", "SparseArrays", "Statistics", "SteadyStateDiffEq", "UnPack", "Zygote"]
+deps = ["CUDA", "ChainRulesCore", "ChemistryFeaturization", "DataDeps", "DataFrames", "DiffEqBase", "DiffEqSensitivity", "Flux", "FluxMPI", "Format", "Functors", "LinearAlgebra", "LinearSolve", "MPI", "MultiScaleArrays", "OrdinaryDiffEq", "SciMLBase", "Serialization", "SparseArrays", "Statistics", "SteadyStateDiffEq", "UnPack", "Zygote"]
 path = "../.."
 uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 version = "0.1.0"
@@ -2114,7 +2114,9 @@ version = "1.5.0+0"
 
 [[deps.Zygote]]
 deps = ["AbstractFFTs", "ChainRules", "ChainRulesCore", "DiffRules", "Distributed", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics", "ZygoteRules"]
-git-tree-sha1 = "2c30f2df0ba43c17e88c8b55b5b22c401f7cde4e"
+git-tree-sha1 = "2b8415fedafaa8a3263efdcd90a65b7b347b7955"
+repo-rev = "ap/fastdeq"
+repo-url = "https://github.com/avik-pal/Zygote.jl"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
 version = "0.6.30"
 

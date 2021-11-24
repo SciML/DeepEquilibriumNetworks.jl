@@ -26,11 +26,44 @@ using Flux: hasaffine, ones32, zeros32, _isactive
 
 
 const is_inside_deq = Ref(false)
+const allow_mask_reset = Ref(false)
+const allow_weightnorm_updates = Ref(false)
 
 is_in_deq() = is_inside_deq[]
+is_mask_reset_allowed() = allow_mask_reset[]
+is_weightnorm_update_allowed() = allow_weightnorm_updates[]
 
-@inline function update_is_in_deq(val::Bool)
+@inline function _update_is_in_deq(val::Bool)
     is_inside_deq[] = val
+end
+
+function update_is_in_deq(val::Bool)
+    Zygote.hook(
+        Δ -> (_update_is_in_deq(!val); return Δ),
+        _update_is_in_deq(val)
+    )
+end
+
+@inline function _update_is_mask_reset_allowed(val::Bool)
+    allow_mask_reset[] = val
+end
+
+function update_is_mask_reset_allowed(val::Bool)
+    Zygote.hook(
+        Δ -> (_update_is_mask_reset_allowed(!val); return Δ),
+        _update_is_mask_reset_allowed(val),
+    )
+end
+
+@inline function _update_is_weightnorm_update_allowed(val::Bool)
+    allow_weightnorm_updates[] = val
+end
+
+function update_is_weightnorm_update_allowed(val::Bool)
+    Zygote.hook(
+        Δ -> (_update_is_weightnorm_update_allowed(!val); return Δ),
+        _update_is_weightnorm_update_allowed(val),
+    )
 end
 
 

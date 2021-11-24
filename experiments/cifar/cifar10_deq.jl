@@ -22,99 +22,6 @@ MPI.Init()
 CUDA.allowscalar(false)
 
 ## Models
-struct CIFARWidthStackedDEQ{has_sdeq,L1,S1,S2,D1,D2,D3,PD1,PD2,PD3,CL,C}
-    layer1::L1
-    scale_down1::S1
-    scale_down2::S2
-    deq1::D1
-    deq2::D2
-    deq3::D3
-    post_deq1::PD1
-    post_deq2::PD2
-    post_deq3::PD3
-    combination_layer::CL
-    classifier::C
-end
-
-function Flux.gpu(c::CIFARWidthStackedDEQ{S}) where {S}
-    return CIFARWidthStackedDEQ(
-        S,
-        Flux.gpu(c.layer1),
-        Flux.gpu(c.scale_down1),
-        Flux.gpu(c.scale_down2),
-        Flux.gpu(c.deq1),
-        Flux.gpu(c.deq2),
-        Flux.gpu(c.deq3),
-        Flux.gpu(c.post_deq1),
-        Flux.gpu(c.post_deq2),
-        Flux.gpu(c.post_deq3),
-        Flux.gpu(c.combination_layer),
-        Flux.gpu(c.classifier),
-    )
-end
-
-Flux.@functor CIFARWidthStackedDEQ
-
-CIFARWidthStackedDEQ(has_sdeq::Bool, layers...) =
-    CIFARWidthStackedDEQ{has_sdeq,typeof.(layers)...}(layers...)
-
-function CIFARWidthStackedDEQ(layers...)
-    has_sdeq = false
-    for l in layers
-        if l isa SkipDeepEquilibriumNetwork
-            has_sdeq = true
-            break
-        end
-    end
-    return CIFARWidthStackedDEQ{has_sdeq,typeof.(layers)...}(layers...)
-end
-
-function (mdeq::CIFARWidthStackedDEQ{false})(x)
-    x1 = mdeq.layer1(x)
-    x2 = mdeq.scale_down1(x1)
-    x3 = mdeq.scale_down2(x2)
-
-    deq_sol_1 = mdeq.deq1(x1)
-    deq_sol_2 = mdeq.deq2(x2)
-    deq_sol_3 = mdeq.deq3(x3)
-
-    post_deq_sol_1 = mdeq.post_deq1(deq_sol_1)
-    post_deq_sol_2 = mdeq.post_deq2(deq_sol_2)
-    post_deq_sol_3 = mdeq.post_deq3(deq_sol_3)
-
-    x4 = mdeq.combination_layer(
-        post_deq_sol_1,
-        post_deq_sol_2,
-        post_deq_sol_3,
-    )::typeof(x)
-    return mdeq.classifier(x4)
-end
-
-function (mdeq::CIFARWidthStackedDEQ{true})(x)
-    x1 = mdeq.layer1(x)
-    x2 = mdeq.scale_down1(x1)
-    x3 = mdeq.scale_down2(x2)
-
-    deq_sol_1, guess1 = mdeq.deq1(x1)::Tuple{typeof(x),typeof(x)}
-    deq_sol_2, guess2 = mdeq.deq2(x2)::Tuple{typeof(x),typeof(x)}
-    deq_sol_3, guess3 = mdeq.deq3(x3)::Tuple{typeof(x),typeof(x)}
-
-    post_deq_sol_1 = mdeq.post_deq1(deq_sol_1)::typeof(x)
-    post_deq_sol_2 = mdeq.post_deq2(deq_sol_2)::typeof(x)
-    post_deq_sol_3 = mdeq.post_deq3(deq_sol_3)::typeof(x)
-
-    x4 = mdeq.combination_layer(
-        post_deq_sol_1,
-        post_deq_sol_2,
-        post_deq_sol_3,
-    )::typeof(x)
-    return (
-        mdeq.classifier(x4),
-        ((deq_sol_1, guess1), (deq_sol_2, guess2), (deq_sol_3, guess3)),
-    )
-end
-
-
 function get_model(
     maxiters::Int,
     abstol::T,
@@ -122,10 +29,12 @@ function get_model(
     dropout_rate::Real,
     model_type::String,
 ) where {T}
-    model = CIFARWidthStackedDEQ(
-        expand_channels_module(3, 8),
-        downsample_module(8, 16, 32, 16),
-        downsample_module(16, 32, 16, 8),
+    model = WidthStackedDEQ(
+        [
+            expand_channels_module(3, 8),
+            downsample_module(8, 16, 32, 16),
+            downsample_module(16, 32, 16, 8),
+        ],
         [
             model_type == "skip" ?
             SkipDeepEquilibriumNetwork(
@@ -158,10 +67,12 @@ function get_model(
                 sensealg = get_default_ssadjoint(reltol, abstol, maxiters),
                 verbose = false,
             ) for i = 1:3
-        ]...,
-        downsample_module(8, 32, 32, 8),
-        downsample_module(16, 32, 16, 8),
-        expand_channels_module(32, 32),
+        ],
+        [
+            downsample_module(8, 32, 32, 8),
+            downsample_module(16, 32, 16, 8),
+            expand_channels_module(32, 32),
+        ],
         (x...) -> foldl(+, x),
         Sequential(Flux.flatten, Dense(8 * 8 * 32, 10)),
     )
@@ -170,38 +81,6 @@ function get_model(
         [i % length(CUDA.devices()) for i = 1:MPI.Comm_size(MPI.COMM_WORLD)],
     )
 end
-
-(lc::SupervisedLossContainer)(model::DataParallelFluxModel, x, y; kwargs...) =
-    lc(model.model, x, y, kwargs...)
-
-function (lc::SupervisedLossContainer)(
-    model::CIFARWidthStackedDEQ{false},
-    x,
-    y;
-    kwargs...,
-)
-    return lc.loss_function(model(x), y)
-end
-
-function (lc::SupervisedLossContainer)(
-    model::CIFARWidthStackedDEQ{true},
-    x,
-    y;
-    kwargs...,
-)
-    ŷ, ((ẑ1, z1), (ẑ2, z2), (ẑ3, z3)) = model(x)
-    l1 = lc.loss_function(ŷ, y)
-    l2 = mean(abs2, ẑ1 .- z1)
-    l3 = mean(abs2, ẑ2 .- z2)
-    l4 = mean(abs2, ẑ3 .- z3)
-    return l1 + lc.λ * l2 + lc.λ * l3 + lc.λ * l4
-end
-
-FastDEQ.get_and_clear_nfe!(model::CIFARWidthStackedDEQ) =
-    get_and_clear_nfe!.([model.deq1, model.deq2, model.deq3])
-
-FastDEQ.get_and_clear_nfe!(model::DataParallelFluxModel) =
-    get_and_clear_nfe!(model.model)
 
 
 ## Utilities
@@ -305,6 +184,8 @@ function train(config::Dict)
     ## Warmup with a smaller batch
     _x_warmup, _y_warmup =
         rand(32, 32, 3, 1) |> gpu, Flux.onehotbatch([1], 0:9) |> gpu
+    loss_function(model, _x_warmup, _y_warmup)
+    @info "Rank $rank: Forward Pass Warmup Completed"
     Zygote.gradient(
         () -> loss_function(model, _x_warmup, _y_warmup),
         Flux.params(model),
@@ -460,9 +341,9 @@ for seed in [1, 11, 111]
             "reltol" => 1f-1,
             "maxiters" => 20,
             "epochs" => 50,
-            "dropout_rate" => 0.25,
-            "batch_size" => 64,
-            "eval_batch_size" => 64,
+            "dropout_rate" => 0.10,
+            "batch_size" => 128,
+            "eval_batch_size" => 128,
             "model_type" => model_type,
         )
 

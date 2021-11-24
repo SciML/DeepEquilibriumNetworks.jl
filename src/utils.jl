@@ -32,6 +32,8 @@ flatten_merge(x::NTuple{2,T}, y) where {T<:AbstractArray} = (x, y...)
 flatten_merge(x, y::NTuple{2,T}) where {T<:AbstractArray} = (x..., y)
 flatten_merge(x::NTuple{2,T}, y::NTuple{2,T}) where {T<:AbstractArray} = (x, y)
 
+Flux.gpu(p::Parallel) = Parallel(gpu(p.connection), gpu.(p.layers))
+Flux.cpu(p::Parallel) = Parallel(cpu(p.connection), cpu.(p.layers))
 
 # General DEQ Utils
 Flux.trainable(deq::AbstractDeepEquilibriumNetwork) = (deq.p,)
