@@ -33,8 +33,8 @@ function (lc::SupervisedLossContainer)(model::WidthStackedDEQ{true}, x, y; kwarg
     ŷ, guess_pairs = model(x)
     l1 = lc.loss_function(ŷ, y)
     l2 = 0
-    for i = 1:length(guess_pairs[1])
-        l2 += mean(abs2, guess_pairs[1][i] .- guess_pairs[2][i])
+    for (y, ŷ) in guess_pairs
+        l2 += mean(abs2, y .- ŷ)
     end
     return l1 + sum(lc.λ .* l2)
 end

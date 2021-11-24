@@ -108,7 +108,7 @@ function (wsdeq::WidthStackedDEQ{true})(x::AbstractArray)
     deq_inputs = wsdeq.pre_branch_net(x)
     deq_outputs = wsdeq.deqs(deq_inputs...)
     post_deq_outputs = wsdeq.post_deq_net(first.(deq_outputs)...)
-    return wsdeq.final_mapping(wsdeq.combination_layer(post_deq_outputs...))
+    return wsdeq.final_mapping(wsdeq.combination_layer(post_deq_outputs...)), deq_outputs
 end
 
 FastDEQ.get_and_clear_nfe!(model::WidthStackedDEQ) =
