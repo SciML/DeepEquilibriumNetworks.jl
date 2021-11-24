@@ -9,6 +9,29 @@ end
 Flux.@functor WidthStackedDEQ
 
 function WidthStackedDEQ(
+    pre_branch_net::BranchNet,
+    deqs::Parallel,
+    post_deq_net::Parallel,
+    combination_layer,
+    final_mapping
+)
+    return WidthStackedDEQ{
+        deqs.layers[1] isa SkipDeepEquilibriumNetwork,
+        typeof(pre_branch_net),
+        typeof(deqs),
+        typeof(post_deq_net),
+        typeof(combination_layer),
+        typeof(final_mapping)
+    }(
+        pre_branch_net,
+        deqs,
+        post_deq_net,
+        combination_layer,
+        final_mapping
+    )
+end
+
+function WidthStackedDEQ(
     pre_branch_net::Vector,
     deqs::Vector,
     post_deq_net::Vector,
