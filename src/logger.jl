@@ -45,20 +45,22 @@ struct PrettyTableLogger{N,AM,F,R,FIO}
 
         N = length(header) + length(record)
         headers = vcat(header, record)
+        _c = 0
+        count() = (_c += 1; _c)
         rsplits =
             first.(
                 map(
-                    x -> length(x) >= 2 ? x : ("", x),
+                    x -> length(x) >= 2 ? x : ("__" * string(count()), x),
                     rsplit.(headers, "/"; limit = 2),
                 ),
             )
         headers = string.(last.(rsplit.(headers, "/"; limit = 2)))
+        headers = map(x -> length(x) <= 6 ? x * (" " ^ length(x)) : x, headers)
         ind_lens = length.(headers)
         span = sum(ind_lens .+ 3) + 1
         rsplit_lens = Dict()
         if fio !== nothing
             for (i, r) in enumerate(rsplits)
-                @show i, r, ind_lens[i]
                 _r = string(r)
                 _r ∉ keys(rsplit_lens) && (rsplit_lens[_r] = - 3 - length(_r) + 1;)
                 rsplit_lens[_r] = rsplit_lens[_r] + ind_lens[i] + 3
@@ -68,7 +70,11 @@ struct PrettyTableLogger{N,AM,F,R,FIO}
                 println("="^span)
                 println(fio, "="^span)
                 for r in rsplits_unique
-                    print("| $r" * (" " ^ rsplit_lens[string(r)]))
+                    if startswith(r, "__")
+                        print("| " * (" " ^ length(r)) * (" " ^ rsplit_lens[string(r)]))
+                    else
+                        print("| $r" * (" " ^ rsplit_lens[string(r)]))
+                    end
                 end
                 println("|")
             end

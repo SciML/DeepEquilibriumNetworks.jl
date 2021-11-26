@@ -367,7 +367,7 @@ for seed in [1, 11, 111]
             "reltol" => 1f-1,
             "maxiters" => 20,
             "epochs" => 50,
-            "dropout_rate" => 0.0,
+            "dropout_rate" => 0.10,
             "batch_size" => 128,
             "eval_batch_size" => 128,
             "model_type" => model_type,

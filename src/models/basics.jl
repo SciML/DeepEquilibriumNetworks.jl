@@ -208,7 +208,7 @@ function downsample_module(
                 num_groups,
                 i == level_diff ? identity : relu;
                 affine = gn_affine,
-                track_stats = true,
+                track_stats = false,
             ),
         )
     end
@@ -239,7 +239,7 @@ function upsample_module(
             num_groups,
             relu;
             affine = gn_affine,
-            track_stats = true,
+            track_stats = false,
         ),
         Upsample(:nearest; scale = 2^level_diff),
     )
@@ -260,7 +260,7 @@ function expand_channels_module(
             num_groups,
             relu;
             affine = gn_affine,
-            track_stats = true,
+            track_stats = false,
         ),
     )
 end
