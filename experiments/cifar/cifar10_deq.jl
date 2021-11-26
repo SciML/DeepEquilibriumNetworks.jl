@@ -21,6 +21,9 @@ using MLDataPattern: splitobs, shuffleobs
 MPI.Init()
 CUDA.allowscalar(false)
 
+const MPI_COMM_WORLD = MPI.COMM_WORLD
+const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
+
 ## Models
 function get_model(
     maxiters::Int,
@@ -76,16 +79,20 @@ function get_model(
         (x...) -> foldl(+, x),
         Sequential(Flux.flatten, Dense(8 * 8 * 32, 10)),
     )
-    return DataParallelFluxModel(
-        model,
-        [i % length(CUDA.devices()) for i = 1:MPI.Comm_size(MPI.COMM_WORLD)],
-    )
+    if MPI_COMM_SIZE > 1
+        return DataParallelFluxModel(
+            model,
+            [i % length(CUDA.devices()) for i = 1:MPI.Comm_size(MPI.COMM_WORLD)],
+        )
+    else
+        return model |> gpu
+    end
 end
 
 
 ## Utilities
 function register_nfe_counts(model, buffer)
-    callback() = push!(buffer, get_and_clear_nfe!(model))
+    callback() = push!(buffer, [get_and_clear_nfe!(model)...])
     return callback
 end
 
@@ -112,9 +119,8 @@ end
 
 ## Training Function
 function train(config::Dict)
-    comm = MPI.COMM_WORLD
+    comm = MPI_COMM_WORLD
     rank = MPI.Comm_rank(comm)
-    comm_size = MPI.Comm_size(comm)
 
     ## Setup Logging & Experiment Configuration
     lg_wandb = WandbLoggerMPI(
@@ -137,6 +143,12 @@ function train(config::Dict)
             "Test/Accuracy",
             "Test/Loss",
         ],
+        [
+            "Train/Running/NFE1",
+            "Train/Running/NFE2",
+            "Train/Running/NFE3",
+            "Train/Running/Loss",
+        ]
     )
 
 
@@ -211,6 +223,8 @@ function train(config::Dict)
     datacount_trainiter_total = size(xs_train, ndims(xs_train))
     datacount_testiter_total = size(xs_test, ndims(xs_test))
 
+    @info "Rank $rank: [ $datacount_trainiter / $datacount_testiter_total ] Training Images | [ $datacount_testiter / $datacount_testiter_total ] Test Images"
+
     for epoch = 1:get_config(lg_wandb, "epochs")
         try
             for (x, y) in trainiter
@@ -237,6 +251,14 @@ function train(config::Dict)
                         "Training/Step/Count" => step,
                     ),
                 )
+                lg_term(;
+                    records = Dict(
+                        "Train/Running/NFE1" => nfe_counts[end][1],
+                        "Train/Running/NFE2" => nfe_counts[end][2],
+                        "Train/Running/NFE3" => nfe_counts[end][3],
+                        "Train/Running/Loss" => loss,
+                    )
+                )
                 step += 1
             end
 
@@ -244,15 +266,17 @@ function train(config::Dict)
             train_loss, train_acc, train_nfe =
                 loss_and_accuracy(model, trainiter)
 
-            train_vec[1] = train_loss * datacount_trainiter
-            train_vec[2] = train_acc * datacount_trainiter
-            train_vec[3:end] .= train_nfe .* datacount_trainiter
-            safe_reduce!(train_vec, +, 0, comm)
-            train_loss, train_acc, train_nfe = (
-                train_vec[1] / datacount_trainiter_total,
-                train_vec[2] / datacount_trainiter_total,
-                train_vec[3:end] ./ datacount_trainiter_total,
-            )
+            if MPI_COMM_SIZE > 1
+                train_vec[1] = train_loss * datacount_trainiter
+                train_vec[2] = train_acc * datacount_trainiter
+                train_vec[3:end] .= train_nfe .* datacount_trainiter
+                safe_reduce!(train_vec, +, 0, comm)
+                train_loss, train_acc, train_nfe = (
+                    train_vec[1] / datacount_trainiter_total,
+                    train_vec[2] / datacount_trainiter_total,
+                    train_vec[3:end] ./ datacount_trainiter_total,
+                )
+            end
 
             log(
                 lg_wandb,
@@ -269,15 +293,17 @@ function train(config::Dict)
             ### Testing Loss/Accuracy
             test_loss, test_acc, test_nfe = loss_and_accuracy(model, testiter)
 
-            test_vec[1] = test_loss * datacount_testiter
-            test_vec[2] = test_acc * datacount_testiter
-            test_vec[3:end] .= test_nfe .* datacount_testiter
-            safe_reduce!(test_vec, +, 0, comm)
-            test_loss, test_acc, test_nfe = (
-                test_vec[1] / datacount_testiter_total,
-                test_vec[2] / datacount_testiter_total,
-                test_vec[3:end] ./ datacount_testiter_total,
-            )
+            if MPI_COMM_SIZE > 1
+                test_vec[1] = test_loss * datacount_testiter
+                test_vec[2] = test_acc * datacount_testiter
+                test_vec[3:end] .= test_nfe .* datacount_testiter
+                safe_reduce!(test_vec, +, 0, comm)
+                test_loss, test_acc, test_nfe = (
+                    test_vec[1] / datacount_testiter_total,
+                    test_vec[2] / datacount_testiter_total,
+                    test_vec[3:end] ./ datacount_testiter_total,
+                )
+            end
 
             log(
                 lg_wandb,
@@ -341,7 +367,7 @@ for seed in [1, 11, 111]
             "reltol" => 1f-1,
             "maxiters" => 20,
             "epochs" => 50,
-            "dropout_rate" => 0.10,
+            "dropout_rate" => 0.0,
             "batch_size" => 128,
             "eval_batch_size" => 128,
             "model_type" => model_type,

@@ -48,7 +48,7 @@ function BasicResidualBlock(
     n_big_kernels::Int = 0,
     dropout_rate::Real = 0.0f0,
     gn_affine::Bool = true,
-    weight_norm::Bool = true,
+    weight_norm::Bool = false,
 )
     wn_layer = weight_norm ? WeightNorm : identity
 

@@ -4,15 +4,30 @@ Base.@kwdef struct SupervisedLossContainer{L,T}
 end
 
 (lc::SupervisedLossContainer)(
-    model::Union{DEQChain{Val(1)},DEQChain{Val(3)},WidthStackedDEQ{false}},
+    model::Union{
+        DEQChain{Val(1)},
+        DEQChain{Val(3)},
+        WidthStackedDEQ{false},
+        DeepEquilibriumNetwork,
+    },
     x,
     y;
-    kwargs...
+    kwargs...,
 ) = lc.loss_function(model(x), y)
 
 function (lc::SupervisedLossContainer)(model::DEQChain{Val(2)}, x, y; kwargs...)
     ŷ, (ẑ, z) = model(x)
     return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- z)
+end
+
+function (lc::SupervisedLossContainer)(
+    model::SkipDeepEquilibriumNetwork,
+    x,
+    y;
+    kwargs...,
+)
+    ŷ, ẑ = model(x)
+    return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- ŷ)
 end
 
 function (lc::SupervisedLossContainer)(model::DEQChain{Val(4)}, x, y; kwargs...)
@@ -25,7 +40,12 @@ function (lc::SupervisedLossContainer)(model::DEQChain{Val(4)}, x, y; kwargs...)
     return l1 + sum(lc.λ .* l2)
 end
 
-function (lc::SupervisedLossContainer)(model::WidthStackedDEQ{true}, x, y; kwargs...)
+function (lc::SupervisedLossContainer)(
+    model::WidthStackedDEQ{true},
+    x,
+    y;
+    kwargs...,
+)
     ŷ, guess_pairs = model(x)
     l1 = lc.loss_function(ŷ, y)
     l2 = 0
@@ -34,3 +54,9 @@ function (lc::SupervisedLossContainer)(model::WidthStackedDEQ{true}, x, y; kwarg
     end
     return l1 + lc.λ * l2
 end
+
+(lc::SupervisedLossContainer)(
+    model::DataParallelFluxModel,
+    args...;
+    kwargs...,
+) = lc(model.model, args...; kwargs...)
