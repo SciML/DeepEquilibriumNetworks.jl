@@ -223,7 +223,7 @@ function train(config::Dict)
     datacount_trainiter_total = size(xs_train, ndims(xs_train))
     datacount_testiter_total = size(xs_test, ndims(xs_test))
 
-    @info "Rank $rank: [ $datacount_trainiter / $datacount_testiter_total ] Training Images | [ $datacount_testiter / $datacount_testiter_total ] Test Images"
+    @info "Rank $rank: [ $datacount_trainiter / $datacount_trainiter_total ] Training Images | [ $datacount_testiter / $datacount_testiter_total ] Test Images"
 
     for epoch = 1:get_config(lg_wandb, "epochs")
         try

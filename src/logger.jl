@@ -26,6 +26,8 @@ function update!(am::AverageMeter{T}, val::T) where {T}
     return am.sum / am.count
 end
 
+update!(am::AverageMeter{T}, val) where {T} = update!(am, T(val))
+
 (am::AverageMeter)() = am.sum / am.count
 
 
@@ -42,10 +44,34 @@ struct PrettyTableLogger{N,AM,F,R,FIO}
         fio = _should_log() ? open(filename, "w") : nothing
 
         N = length(header) + length(record)
-        ind_lens = vcat(length.(header), length.(record))
-        span = sum(ind_lens .+ 3) + 1
         headers = vcat(header, record)
+        rsplits =
+            first.(
+                map(
+                    x -> length(x) >= 2 ? x : ("", x),
+                    rsplit.(headers, "/"; limit = 2),
+                ),
+            )
+        headers = string.(last.(rsplit.(headers, "/"; limit = 2)))
+        ind_lens = length.(headers)
+        span = sum(ind_lens .+ 3) + 1
+        rsplit_lens = Dict()
         if fio !== nothing
+            for (i, r) in enumerate(rsplits)
+                @show i, r, ind_lens[i]
+                _r = string(r)
+                _r ∉ keys(rsplit_lens) && (rsplit_lens[_r] = - 3 - length(_r) + 1;)
+                rsplit_lens[_r] = rsplit_lens[_r] + ind_lens[i] + 3
+            end
+            rsplits_unique = unique(rsplits)
+            if !(length(rsplits_unique) == 1 && rsplits_unique[0] == "")
+                println("="^span)
+                println(fio, "="^span)
+                for r in rsplits_unique
+                    print("| $r" * (" " ^ rsplit_lens[string(r)]))
+                end
+                println("|")
+            end
             println("="^span)
             println(fio, "="^span)
             for h in headers
@@ -116,6 +142,6 @@ function (pl::PrettyTableLogger)(
 end
 
 function Base.close(pl::PrettyTableLogger)
-    pl(;last = true)
+    pl(; last = true)
     pl.fio === nothing || close(pl.fio)
 end
