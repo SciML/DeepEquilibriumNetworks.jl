@@ -1,6 +1,6 @@
 # Limited Memory Broyden
 ## Reference: https://arxiv.org/pdf/2006.08656.pdf
-struct LimitedMemoryBroydenCache{uT,vT,F,X}
+struct LimitedMemoryBroydenCache{uT,vT,F,X} <: IterativeDEQSolver
     Us::uT
     VTs::vT
     fx_::F
@@ -15,8 +15,8 @@ struct LimitedMemoryBroydenSolver{C<:LimitedMemoryBroydenCache,T<:Real}
     ϵ::T
 end
 
-function LimitedMemoryBroydenSolver(
-    T = Float32;
+function LimitedMemoryBroydenSolver(;
+    T = Float32,
     device,
     original_dims::Tuple{Int,Int},
     batch_size,
@@ -28,7 +28,8 @@ function LimitedMemoryBroydenSolver(
     ϵ = abstol !== nothing ? abstol : ϵ
 
     if reltol !== nothing
-        @warn maxlog = 1 "reltol is set to $reltol, but `LimitedMemoryBroydenSolver` ignores this value"
+        warn_txt = "reltol is set to $reltol, but `LimitedMemoryBroydenSolver` ignores this value"
+        @warn maxlog = 1 warn_txt
     end
 
     LBFGS_threshold = min(maxiters, 27)
@@ -72,8 +73,8 @@ function (lbroyden::LimitedMemoryBroydenSolver{C,T})(f!, x_::AbstractVector{T}) 
     nfeatures = prod(original_dims)
     if nfeatures * batch_size != length(x_)
         # Maybe the last batch is smaller than the others
-        cache = LimitedMemoryBroydenSolver(
-            T;
+        cache = LimitedMemoryBroydenSolver(;
+            T = T,
             device = x_ isa CuArray ? gpu : cpu,
             original_dims = original_dims,
             batch_size = length(x_) ÷ nfeatures,

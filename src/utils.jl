@@ -24,13 +24,13 @@ function _norm(x::AbstractArray{T,N}, except_dim) where {T,N}
     return _norm(x; dims = dims)
 end
 
-flatten_merge(x, y) = (x..., y...)
+flatten_merge(x, y) = (error("1"); (x..., y...))
 flatten_merge(x::T, y::T) where {T<:AbstractArray} = (x, y)
-flatten_merge(x::NTuple{2,T}, y::T) where {T<:AbstractArray} = (x..., y)
-flatten_merge(x::T, y::NTuple{2,T}) where {T<:AbstractArray} = (x, y...)
-flatten_merge(x::NTuple{2,T}, y) where {T<:AbstractArray} = (x, y...)
-flatten_merge(x, y::NTuple{2,T}) where {T<:AbstractArray} = (x..., y)
-flatten_merge(x::NTuple{2,T}, y::NTuple{2,T}) where {T<:AbstractArray} = (x, y)
+flatten_merge(x::NTuple{N,T}, y::T) where {N,T<:AbstractArray} = (x..., y)
+flatten_merge(x::T, y::NTuple{N,T}) where {N,T<:AbstractArray} = (x, y...)
+flatten_merge(x::NTuple{N,T}, y) where {N,T<:AbstractArray} = (x, y...)
+flatten_merge(x, y::NTuple{N,T}) where {N,T<:AbstractArray} = (x..., y)
+flatten_merge(x::NTuple{N,T}, y::NTuple{N,T}) where {N,T<:AbstractArray} = (x, y)
 
 Flux.gpu(p::Parallel) = Parallel(gpu(p.connection), gpu.(p.layers))
 Flux.cpu(p::Parallel) = Parallel(cpu(p.connection), cpu.(p.layers))
@@ -48,7 +48,6 @@ mutable struct DEQTrainingStats
     nfe::Int
 end
 
-
 function get_default_ssadjoint(reltol, abstol, maxiters)
     return SteadyStateAdjoint(
         autodiff = true,
@@ -61,81 +60,23 @@ function get_default_ssadjoint(reltol, abstol, maxiters)
     )
 end
 
-
 function get_default_dynamicss_solver(reltol, abstol, ode_solver = Tsit5())
     return DynamicSS(ode_solver, reltol = reltol, abstol = abstol)
 end
 
-
-function get_default_ssrootfind_solver()
-    error("Not Implemented Yet!!!")
+function get_default_ssrootfind_solver(
+    reltol,
+    abstol,
+    solver = LimitedMemoryBroydenSolver;
+    kwargs...,
+)
+    _solver = solver(;kwargs..., reltol = reltol, abstol = abstol)
+    return SSRootfind(; nlsolve = (f, u0, abstol) -> _solver(f, u0))
 end
-
 
 # For MultiScale DEQs
-struct SingleResolutionFeatures{A,B} <: AbstractMultiScaleArrayLeaf{B}
-    values::A
-end
+split_array_by_indices(x::AbstractVector, idxs) =
+    collect((x[i + 1:j] for (i, j) ∈ zip(idxs[1:end-1], idxs[2:end])))
 
-function SingleResolutionFeatures(values::T) where {T}
-    return SingleResolutionFeatures{T,eltype(values)}(values)
-end
-
-struct MultiResolutionFeatures{T<:AbstractMultiScaleArray,B<:Number} <:
-       AbstractMultiScaleArrayHead{B}
-    nodes::Vector{T}
-    values::Vector{B}
-    end_idxs::Vector{Int}
-end
-
-Base.eltype(::Type{MultiResolutionFeatures}) = Float32
-
-Base.vec(v::MultiResolutionFeatures) = v[:]
-
-Base.getindex(v::MultiResolutionFeatures, ::Colon) =
-    vcat([x.values for x in v.nodes]...)
-
-Base.similar(
-    v::MultiResolutionFeatures{T1,T},
-    dims::Union{Integer,AbstractUnitRange},
-) where {T1,T<:Number} = similar(v.nodes[1].values, dims)
-
-Base.similar(
-    v::MultiResolutionFeatures{T1,T},
-    dims::Tuple,
-) where {T1,T<:Number} = similar(v.nodes[1].values, dims)
-
-function SciMLBase.recursivecopy(a::MultiResolutionFeatures)
-    return construct(
-        MultiResolutionFeatures,
-        map(x -> SingleResolutionFeatures(copy(x.values)), a.nodes),
-    )
-end
-
-DiffEqBase.UNITLESS_ABS2(a::MultiResolutionFeatures) =
-    sum(x -> sum(abs2, x.values), a.nodes)::eltype(a)
-
-Base.zero(s::SingleResolutionFeatures) =
-    SingleResolutionFeatures(zero(s.values))
-
-Base.zero(v::MultiResolutionFeatures) =
-    construct(MultiResolutionFeatures, zero.(v.nodes))
-
-DiffEqBase.NAN_CHECK(v::MultiResolutionFeatures) =
-    any(x -> DiffEqBase.NAN_CHECK(x.values), v.nodes)
-
-Base.any(v::MultiResolutionFeatures) = any(x -> any(x.values), v.nodes)
-
-Base.all(v::MultiResolutionFeatures) = all(x -> all(x.values), v.nodes)
-
-Base.copy(v::MultiResolutionFeatures) = SciMLBase.recursivecopy(v)
-
-function Zygote._zero(v::MultiResolutionFeatures, T)
-    return construct(
-        MultiResolutionFeatures,
-        [
-            SingleResolutionFeatures(fill!(similar(x.values, T), T(0))) for
-            x in v.nodes
-        ],
-    )
-end
+split_array_by_indices(x::AbstractMatrix, idxs) =
+    collect((x[i + 1:j, :] for (i, j) ∈ zip(idxs[1:end-1], idxs[2:end])))

@@ -30,11 +30,7 @@ function SkipDeepEquilibriumNetwork(
     shortcut,
     solver;
     p = nothing,
-    sensealg = SteadyStateAdjoint(
-        autodiff = false,
-        autojacvec = ZygoteVJP(),
-        linsolve = LinSolveKrylovJL(rtol = 0.1f0, atol = 0.1f0),
-    ),
+    sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10),
     kwargs...,
 )
     p1, re1 = Flux.destructure(model)

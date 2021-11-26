@@ -72,11 +72,14 @@ struct PrettyTableLogger{N,AM,F,R,FIO}
                 for r in rsplits_unique
                     if startswith(r, "__")
                         print("| " * (" " ^ length(r)) * (" " ^ rsplit_lens[string(r)]))
+                        print(fio, "| " * (" " ^ length(r)) * (" " ^ rsplit_lens[string(r)]))
                     else
                         print("| $r" * (" " ^ rsplit_lens[string(r)]))
+                        print(fio, "| $r" * (" " ^ rsplit_lens[string(r)]))
                     end
                 end
                 println("|")
+                println(fio, "|")
             end
             println("="^span)
             println(fio, "="^span)

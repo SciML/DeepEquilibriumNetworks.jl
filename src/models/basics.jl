@@ -172,6 +172,31 @@ function (bn::BranchNet)(x::AbstractArray{T}, injection::T = T(0)) where {T}
     return copy(buf)
 end
 
+# Multi Parallel Net
+struct MultiParallelNet{L}
+    layers::L
+
+    function MultiParallelNet(args...)
+        layers = tuple(args...)
+        return new{typeof(layers)}(layers)
+    end
+
+    MultiParallelNet(layers::Tuple) = new{typeof(layers)}(layers)
+end
+
+Flux.gpu(b::MultiParallelNet) = MultiParallelNet(gpu.(b.layers))
+Flux.cpu(b::MultiParallelNet) = MultiParallelNet(cpu.(b.layers))
+
+Flux.@functor MultiParallelNet
+
+function (mpn::MultiParallelNet)(args...)
+    buf = Zygote.Buffer([])
+    for l in mpn.layers
+        push!(buf, l(args...))
+    end
+    return copy(buf)
+end
+
 
 # Downsample Module
 function downsample_module(

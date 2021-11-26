@@ -13,7 +13,6 @@ using Functors
 using LinearAlgebra
 using LinearSolve
 using MPI
-using MultiScaleArrays
 using OrdinaryDiffEq
 using SciMLBase
 using SparseArrays
@@ -80,6 +79,7 @@ function Base.show(io::IO, l::AbstractDeepEquilibriumNetwork)
     )
 end
 
+abstract type IterativeDEQSolver end
 
 include("utils.jl")
 
@@ -87,33 +87,32 @@ include("solvers/broyden.jl")
 include("solvers/limited_memory_broyden.jl")
 include("solvers/linsolve.jl")
 
+include("models/basics.jl")
+
 include("layers/agn.jl")
 include("layers/deq.jl")
 include("layers/sdeq.jl")
 include("layers/mdeq.jl")
-include("layers/smdeq.jl")
+# include("layers/smdeq.jl")  # TODO: Update SMDEQ
 include("layers/dropout.jl")
 include("layers/normalise.jl")
 include("layers/weight_norm.jl")
 
 include("models/chain.jl")
-include("models/basics.jl")
 include("models/width_stacked_deq.jl")
 include("models/cgcnn.jl")
 
 include("losses.jl")
-include("zygote.jl")
 include("logger.jl")
 
 
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
-export MultiScaleDeepEquilibriumNetworkS4,
-    MultiScaleSkipDeepEquilibriumNetworkS4
+export MultiScaleDeepEquilibriumNetwork
 export AGNConv, AGNMaxPool, AGNMeanPool
 export VariationalHiddenDropout, GroupNormV2, WeightNorm
 
 export DEQChain, Sequential
-export BasicResidualBlock, BranchNet
+export BasicResidualBlock, BranchNet, MultiParallelNet
 export downsample_module,
     upsample_module, expand_channels_module, conv3x3, conv5x5
 export WidthStackedDEQ
@@ -133,8 +132,6 @@ export SupervisedLossContainer
 export BroydenSolver, BroydenCache
 export LimitedMemoryBroydenSolver, LimitedMemoryBroydenCache
 export LinSolveKrylovJL
-
-export SingleResolutionFeatures, MultiResolutionFeatures
 
 
 end

@@ -1,5 +1,5 @@
 # Broyden
-struct BroydenCache{J,F,X}
+struct BroydenCache{J,F,X} <: IterativeDEQSolver
     Jinv::J
     fx::F
     Δfx::F
@@ -25,8 +25,8 @@ struct BroydenSolver{C<:BroydenCache,T<:Real}
     ϵ::T
 end
 
-function BroydenSolver(
-    T = Float32;
+function BroydenSolver(;
+    T = Float32,
     device,
     original_dims,
     batch_size,
