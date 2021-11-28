@@ -348,12 +348,12 @@ uuid = "9fdde737-9c7f-55bf-ade8-46b3f136cc48"
 version = "4.35.0"
 
 [[deps.DiffEqSensitivity]]
-deps = ["Adapt", "ArrayInterface", "Cassette", "ChainRulesCore", "DiffEqBase", "DiffEqCallbacks", "DiffEqNoiseProcess", "DiffEqOperators", "DiffRules", "Distributions", "Enzyme", "FFTW", "FiniteDiff", "ForwardDiff", "GlobalSensitivity", "LinearAlgebra", "OrdinaryDiffEq", "Parameters", "QuadGK", "QuasiMonteCarlo", "Random", "RandomNumbers", "RecursiveArrayTools", "Reexport", "Requires", "ReverseDiff", "SharedArrays", "Statistics", "StochasticDiffEq", "Tracker", "Zygote", "ZygoteRules"]
-git-tree-sha1 = "011ded5b6aee5519c72c9738a8ae1b1c36591757"
+deps = ["Adapt", "ArrayInterface", "Cassette", "ChainRulesCore", "DiffEqBase", "DiffEqCallbacks", "DiffEqNoiseProcess", "DiffEqOperators", "DiffRules", "Distributions", "Enzyme", "FFTW", "FiniteDiff", "ForwardDiff", "GlobalSensitivity", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "Parameters", "QuadGK", "QuasiMonteCarlo", "Random", "RandomNumbers", "RecursiveArrayTools", "Reexport", "Requires", "ReverseDiff", "SharedArrays", "Statistics", "StochasticDiffEq", "Tracker", "Zygote", "ZygoteRules"]
+git-tree-sha1 = "2e2e15079d80008e5a267fb755e750fc7523ea7a"
 repo-rev = "ap/ssadjoint"
 repo-url = "https://github.com/avik-pal/DiffEqSensitivity.jl"
 uuid = "41bf760c-e81c-5289-8e54-58b1f1f8abe2"
-version = "6.60.2"
+version = "6.60.3"
 
 [[deps.DiffResults]]
 deps = ["StaticArrays"]
@@ -379,9 +379,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
 deps = ["ChainRulesCore", "DensityInterface", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "Test"]
-git-tree-sha1 = "380dab663ca4234c4ec91340c3211c5e73374612"
+git-tree-sha1 = "7f3bec11f4bcd01bc1f507ebce5eadf1b0a78f47"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.32"
+version = "0.25.34"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
@@ -691,6 +691,12 @@ git-tree-sha1 = "bafb88bcdb4a3b60fd3512c5ba20e1c33f19a80c"
 uuid = "ba0b0d4f-ebba-5204-a429-3ac8c609bfb7"
 version = "0.7.8"
 
+[[deps.KrylovKit]]
+deps = ["LinearAlgebra", "Printf"]
+git-tree-sha1 = "0328ad9966ae29ccefb4e1b9bfd8c8867e4360df"
+uuid = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
+version = "0.5.3"
+
 [[deps.LLVM]]
 deps = ["CEnum", "LLVMExtra_jll", "Libdl", "Printf", "Unicode"]
 git-tree-sha1 = "7cc22e69995e2329cc047a879395b2b74647ab5f"
@@ -790,8 +796,10 @@ deps = ["Libdl", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[deps.LinearSolve]]
-deps = ["ArrayInterface", "Krylov", "LinearAlgebra", "Reexport", "SciMLBase", "Setfield", "UnPack"]
-git-tree-sha1 = "a0b28e92ff2fe1f7ceccb15a29f3126483c85f7b"
+deps = ["ArrayInterface", "IterativeSolvers", "Krylov", "KrylovKit", "LinearAlgebra", "RecursiveFactorization", "Reexport", "SciMLBase", "Setfield", "SparseArrays", "UnPack"]
+git-tree-sha1 = "c21765bfcb86ffc9bde2e8694d592c5d866dd68c"
+repo-rev = "main"
+repo-url = "https://github.com/SciML/LinearSolve.jl.git"
 uuid = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
 version = "0.1.0"
 
@@ -824,9 +832,9 @@ version = "0.19.1"
 
 [[deps.MPICH_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "09864c823da1a606dbc151534c1a134fd5506170"
+git-tree-sha1 = "480a8be51647c9dec19ff2211e26c9f30787840b"
 uuid = "7cb0a576-ebde-5e09-9194-50597f1243b4"
-version = "3.4.2+1"
+version = "3.4.2+2"
 
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
@@ -884,9 +892,9 @@ version = "0.1.1"
 
 [[deps.MicrosoftMPI_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "bb2fe65544e6efd883bb2060088df7dfb7273b41"
+git-tree-sha1 = "a16aa086d335ed7e0170c5265247db29172af2f9"
 uuid = "9237b28f-5490-5468-be7b-bb81f5f5e6cf"
-version = "10.1.3+1"
+version = "10.1.3+2"
 
 [[deps.Missings]]
 deps = ["DataAPI"]
@@ -983,9 +991,9 @@ uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
 
 [[deps.OpenMPI_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "872077914c8a8cab9ea1430f338ae6b59258577d"
+git-tree-sha1 = "04f95bf6987a4a29253427b4c59e30fd94fbc16f"
 uuid = "fe0851c0-eecd-5654-98d4-656369965a5c"
-version = "4.1.1+3"
+version = "4.1.1+4"
 
 [[deps.OpenSpecFun_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]

@@ -60,3 +60,29 @@ end
     args...;
     kwargs...,
 ) = lc(model.model, args...; kwargs...)
+
+(lc::SupervisedLossContainer)(
+    model::MultiScaleDeepEquilibriumNetwork,
+    x,
+    ys::Tuple;
+    kwargs...,
+) = sum(ŷy -> lc.loss_function(ŷy[1], ŷy[2]), zip(model(x), ys))
+
+(lc::SupervisedLossContainer)(
+    model::MultiScaleDeepEquilibriumNetwork,
+    x,
+    y;
+    kwargs...,
+) = sum(ŷ -> lc.loss_function(ŷ, y), model(x))
+
+function (lc::SupervisedLossContainer)(
+    model::MultiScaleSkipDeepEquilibriumNetwork,
+    x,
+    ys::Tuple;
+    kwargs...,
+)
+    ŷs, guesses = model(x)
+    l1 = sum(ŷy -> lc.loss_function(ŷy[1], ŷy[2]), zip(ŷs, ys))
+    l2 = sum(ŷy -> mean(abs, ŷy[1] .- ŷy[2]), zip(ŷs, guesses))
+    return l1 + lc.λ * l2
+end

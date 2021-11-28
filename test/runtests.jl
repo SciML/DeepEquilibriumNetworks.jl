@@ -1,44 +1,28 @@
 using FastDEQ
 using CUDA
-using DiffEqOperators
-using DiffEqSensitivity
 using Flux
 using LinearAlgebra
-using OrdinaryDiffEq
 using Random
-using SteadyStateDiffEq
 using Test
 
 @testset "FastDEQ.jl" begin
-    # JVP with LinSolve
-    Random.seed!(0)
-
-    mat = rand(5, 5) |> gpu
-    x = rand(5, 1) |> gpu
-    A = VecJacOperator((u, p, t) -> mat * u, x; autodiff = true)
-    b = rand(5) |> gpu
-    linsolve = LinSolveKrylovJL()
-    @test A * vec(linsolve(zero(x), A, b)) ≈ b
+    mse_loss_function = SupervisedLossContainer(Flux.Losses.mse, 1.0f0)
 
     # Testing LinSolve with DiffEqSensitivity
     Random.seed!(0)
 
-    model = Chain(
+    model = DEQChain(
         Dense(2, 2),
         DeepEquilibriumNetwork(
             Parallel(+, Dense(2, 2), Dense(2, 2)) |> gpu,
-            DynamicSS(Tsit5(); abstol = 0.1f0, reltol = 0.1f0),
-            sensealg = SteadyStateAdjoint(
-                autodiff = false,
-                autojacvec = ZygoteVJP(),
-                linsolve = LinSolveKrylovJL(atol = 0.1f0, rtol = 0.1f0),
-            )
+            get_default_dynamicss_solver(0.1f0, 0.1f0),
+            sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10)
         )
     ) |> gpu
     x = rand(Float32, 2, 1) |> gpu
     y = rand(Float32, 2, 1) |> gpu
     ps = Flux.params(model)
-    gs = Flux.gradient(() -> sum(model(x) .- y), ps)
+    gs = Flux.gradient(() -> mse_loss_function(model, x, y), ps)
     for _p in ps
         @test all(isfinite.(gs[_p]))
     end
@@ -46,62 +30,64 @@ using Test
     # Testing SkipDEQ
     Random.seed!(0)
 
-    model = Chain(
+    model = DEQChain(
         Dense(2, 2),
         SkipDeepEquilibriumNetwork(
             Parallel(+, Dense(2, 2), Dense(2, 2)) |> gpu,
             Dense(2, 2) |> gpu,
-            DynamicSS(Tsit5(); abstol = 0.1f0, reltol = 0.1f0),
-            sensealg = SteadyStateAdjoint(
-                autodiff = false,
-                autojacvec = ZygoteVJP(),
-                linsolve = LinSolveKrylovJL(atol = 0.1f0, rtol = 0.1f0),
-            )
+            get_default_dynamicss_solver(0.1f0, 0.1f0),
+            sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10)
         )
     ) |> gpu
     x = rand(Float32, 2, 1) |> gpu
     y = rand(Float32, 2, 1) |> gpu
     ps = Flux.params(model)
-    gs = Flux.gradient(() -> begin
-        ŷ, z = model(x)
-        sum(abs2, ŷ .- y) + sum(abs2, ŷ .- z)
-    end, ps)
+    gs = Flux.gradient(() -> mse_loss_function(model, x, y), ps)
+    for _p in ps
+        @test all(isfinite.(gs[_p]))
+    end
+
+    # Testing SkipDEQ with no extra parameters
+    Random.seed!(0)
+
+    model = DEQChain(
+        Dense(2, 2),
+        SkipDeepEquilibriumNetwork(
+            Parallel(+, Dense(2, 2), Dense(2, 2)) |> gpu,
+            get_default_dynamicss_solver(0.1f0, 0.1f0),
+            sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10)
+        )
+    ) |> gpu
+    x = rand(Float32, 2, 1) |> gpu
+    y = rand(Float32, 2, 1) |> gpu
+    ps = Flux.params(model)
+    gs = Flux.gradient(() -> mse_loss_function(model, x, y), ps)
     for _p in ps
         @test all(isfinite.(gs[_p]))
     end
 
     # Testing L-Broyden Solver
     Random.seed!(0)
-    solver = LimitedMemoryBroydenSolver(;
-        device = gpu,
-        original_dims = (8 * 8, 1),
-        batch_size = 4,
-        abstol = 1e-3,
-    )
-    model = Chain(
-        Conv((3, 3), 1 => 3, relu; pad = 1, stride = 1),
+
+    model = DEQChain(
+        Conv((3, 3), 1 => 1, relu; pad = 1, stride = 1),
         SkipDeepEquilibriumNetwork(
             Parallel(
                 +,
-                Conv((3, 3), 3 => 3, relu; pad = 1, stride = 1),
-                Conv((3, 3), 3 => 3, relu; pad = 1, stride = 1),
+                Conv((3, 3), 1 => 1, relu; pad = 1, stride = 1),
+                Conv((3, 3), 1 => 1, relu; pad = 1, stride = 1),
             ) |> gpu,
-            Conv((3, 3), 3 => 3, relu; pad = 1, stride = 1) |> gpu,
-            SSRootfind(nlsolve = (f, u0, abstol) -> solver(f, u0)),
-            sensealg = SteadyStateAdjoint(
-                autodiff = false,
-                autojacvec = ZygoteVJP(),
-                linsolve = LinSolveKrylovJL(atol = 0.1f0, rtol = 0.1f0),
-            )
+            Conv((3, 3), 1 => 1, relu; pad = 1, stride = 1) |> gpu,
+            get_default_ssrootfind_solver(0.1f0, 0.1f0, LimitedMemoryBroydenSolver;
+                                          device = gpu, original_dims = (8 * 8, 1),
+                                          batch_size = 4, abstol = 1f-3),
+            sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10)
         )
     ) |> gpu
     x = rand(Float32, 8, 8, 1, 4) |> gpu
     y = rand(Float32, 8, 8, 1, 4) |> gpu
     ps = Flux.params(model)
-    gs = Flux.gradient(() -> begin
-        ŷ, z = model(x)
-        sum(abs2, ŷ .- y) + sum(abs2, ŷ .- z)
-    end, ps)
+    gs = Flux.gradient(() -> mse_loss_function(model, x, y), ps)
     for _p in ps
         @test all(isfinite.(gs[_p]))
     end
@@ -110,104 +96,99 @@ using Test
     # Testing MultiScaleDEQ
     Random.seed!(0)
 
-    CUDA.allowscalar() do
-
-    model = MultiScaleDeepEquilibriumNetworkS4(
+    model = MultiScaleDeepEquilibriumNetwork(
         (
             Parallel(+, Dense(4, 4, tanh), Dense(4, 4, tanh)),
             Dense(3, 3, tanh),
             Dense(2, 2, tanh),
             Dense(1, 1, tanh),
         ) .|> gpu,
-        (
-            (identity, Dense(4, 3, tanh), Dense(4, 2, tanh), Dense(4, 1, tanh)) .|> gpu,
-            (Dense(3, 4, tanh), identity, Dense(3, 2, tanh), Dense(3, 1, tanh)) .|> gpu,
-            (Dense(2, 4, tanh), Dense(2, 3, tanh), identity, Dense(2, 1, tanh)) .|> gpu,
-            (Dense(1, 4, tanh), Dense(1, 3, tanh), Dense(1, 2, tanh), identity) .|> gpu,
-        ),
-        DynamicSS(Tsit5(); abstol = 0.1, reltol = 0.1),
-        sensealg = SteadyStateAdjoint(
-            autodiff = false,
-            autojacvec = ZygoteVJP(),
-            linsolve = LinSolveKrylovJL(atol = 0.1, rtol = 0.1),
-        ),
-        maxiter = 100,
+        [
+            identity Dense(4, 3, tanh) Dense(4, 2, tanh) Dense(4, 1, tanh);
+            Dense(3, 4, tanh) identity Dense(3, 2, tanh) Dense(3, 1, tanh);
+            Dense(2, 4, tanh) Dense(2, 3, tanh) identity Dense(2, 1, tanh);
+            Dense(1, 4, tanh) Dense(1, 3, tanh) Dense(1, 2, tanh) identity
+        ] .|> gpu,
+        get_default_ssrootfind_solver(0.1f0, 0.1f0, LimitedMemoryBroydenSolver;
+                                      device = gpu, original_dims = (1, 10),
+                                      batch_size = 2, maxiters = 10);
+        sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10),
+        maxiter = 10,
     )
-    x = rand(4, 128) |> gpu
+    x = rand(4, 2) |> gpu
+    y = tuple([gpu(rand(i, 2)) for i in 4:-1:1]...)
     sol = model(x)
     ps = Flux.params(model)
-    gs = Flux.gradient(
-        () -> begin
-            x1, x2, x3, x4 = model(x)
-            return (
-                sum(abs2, x1 .- x) +
-                sum(abs2, x2) +
-                sum(abs2, x3) +
-                sum(abs2, x4)
-            )
-        end,
-        ps
-    )
+    gs = Flux.gradient(() -> mse_loss_function(model, x, y), ps)
     for _p in ps
         @test all(isfinite.(gs[_p]))
-    end
-
     end
 
     # Testing MultiScaleSkipDEQ
     Random.seed!(0)
 
-    CUDA.allowscalar() do
-
-    model = MultiScaleSkipDeepEquilibriumNetworkS4(
+    model = MultiScaleSkipDeepEquilibriumNetwork(
         (
             Parallel(+, Dense(4, 4, tanh), Dense(4, 4, tanh)),
             Dense(3, 3, tanh),
             Dense(2, 2, tanh),
             Dense(1, 1, tanh),
         ) .|> gpu,
-        (
-            (identity, Dense(4, 3, tanh), Dense(4, 2, tanh), Dense(4, 1, tanh)) .|> gpu,
-            (Dense(3, 4, tanh), identity, Dense(3, 2, tanh), Dense(3, 1, tanh)) .|> gpu,
-            (Dense(2, 4, tanh), Dense(2, 3, tanh), identity, Dense(2, 1, tanh)) .|> gpu,
-            (Dense(1, 4, tanh), Dense(1, 3, tanh), Dense(1, 2, tanh), identity) .|> gpu,
-        ),
+        [
+            identity Dense(4, 3, tanh) Dense(4, 2, tanh) Dense(4, 1, tanh);
+            Dense(3, 4, tanh) identity Dense(3, 2, tanh) Dense(3, 1, tanh);
+            Dense(2, 4, tanh) Dense(2, 3, tanh) identity Dense(2, 1, tanh);
+            Dense(1, 4, tanh) Dense(1, 3, tanh) Dense(1, 2, tanh) identity
+        ] .|> gpu,
         (
             Dense(4, 4, tanh),
             Dense(4, 3, tanh),
             Dense(4, 2, tanh),
             Dense(4, 1, tanh),
         ) .|> gpu,
-        DynamicSS(Tsit5(); abstol = 0.1, reltol = 0.1),
-        sensealg = SteadyStateAdjoint(
-            autodiff = false,
-            autojacvec = ZygoteVJP(),
-            linsolve = LinSolveKrylovJL(atol = 0.1, rtol = 0.1),
-        ),
-        maxiter = 100,
+        get_default_ssrootfind_solver(0.1f0, 0.1f0, LimitedMemoryBroydenSolver;
+                                      device = gpu, original_dims = (1, 10),
+                                      batch_size = 2, maxiters = 10);
+        sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10),
+        maxiter = 10,
     )
-    x = rand(4, 128) |> gpu
+    x = rand(4, 2) |> gpu
+    y = tuple([gpu(rand(i, 2)) for i in 4:-1:1]...)
     sol = model(x)
     ps = Flux.params(model)
-    Flux.gradient(
-        () -> begin
-            (x1, x2, x3, x4), (x1g, x2g, x3g, x4g) = model(x)
-            return (
-                sum(abs2, x1 .- x) +
-                sum(abs2, x2) +
-                sum(abs2, x3) +
-                sum(abs2, x4) +
-                sum(abs2, x1 .- x1g) +
-                sum(abs2, x2 .- x2g) +
-                sum(abs2, x3 .- x3g) +
-                sum(abs2, x4 .- x4g)
-            )
-        end,
-        ps
-    )
+    gs = Flux.gradient(() -> mse_loss_function(model, x, y), ps)
     for _p in ps
         @test all(isfinite.(gs[_p]))
     end
 
+    # Testing MultiScaleSkipDEQ with no extra parameters
+    Random.seed!(0)
+
+    model = MultiScaleSkipDeepEquilibriumNetwork(
+        (
+            Parallel(+, Dense(4, 4, tanh), Dense(4, 4, tanh)),
+            Dense(3, 3, tanh),
+            Dense(2, 2, tanh),
+            Dense(1, 1, tanh),
+        ) .|> gpu,
+        [
+            identity Dense(4, 3, tanh) Dense(4, 2, tanh) Dense(4, 1, tanh);
+            Dense(3, 4, tanh) identity Dense(3, 2, tanh) Dense(3, 1, tanh);
+            Dense(2, 4, tanh) Dense(2, 3, tanh) identity Dense(2, 1, tanh);
+            Dense(1, 4, tanh) Dense(1, 3, tanh) Dense(1, 2, tanh) identity
+        ] .|> gpu,
+        get_default_ssrootfind_solver(0.1f0, 0.1f0, LimitedMemoryBroydenSolver;
+                                        device = gpu, original_dims = (1, 10),
+                                        batch_size = 2, maxiters = 10);
+        sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10),
+        maxiter = 10,
+    )
+    x = rand(4, 2) |> gpu
+    y = tuple([gpu(rand(i, 2)) for i in 4:-1:1]...)
+    sol = model(x)
+    ps = Flux.params(model)
+    gs = Flux.gradient(() -> mse_loss_function(model, x, y), ps)
+    for _p in ps
+        @test all(isfinite.(gs[_p]))
     end
 end

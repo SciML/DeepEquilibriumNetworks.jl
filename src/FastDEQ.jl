@@ -85,7 +85,6 @@ include("utils.jl")
 
 include("solvers/broyden.jl")
 include("solvers/limited_memory_broyden.jl")
-include("solvers/linsolve.jl")
 
 include("models/basics.jl")
 
@@ -93,7 +92,7 @@ include("layers/agn.jl")
 include("layers/deq.jl")
 include("layers/sdeq.jl")
 include("layers/mdeq.jl")
-# include("layers/smdeq.jl")  # TODO: Update SMDEQ
+include("layers/smdeq.jl")
 include("layers/dropout.jl")
 include("layers/normalise.jl")
 include("layers/weight_norm.jl")
@@ -108,6 +107,7 @@ include("logger.jl")
 
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
 export MultiScaleDeepEquilibriumNetwork
+export MultiScaleSkipDeepEquilibriumNetwork
 export AGNConv, AGNMaxPool, AGNMeanPool
 export VariationalHiddenDropout, GroupNormV2, WeightNorm
 
@@ -131,7 +131,6 @@ export SupervisedLossContainer
 
 export BroydenSolver, BroydenCache
 export LimitedMemoryBroydenSolver, LimitedMemoryBroydenCache
-export LinSolveKrylovJL
 
 
 end
