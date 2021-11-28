@@ -349,7 +349,7 @@ version = "4.35.0"
 
 [[deps.DiffEqSensitivity]]
 deps = ["Adapt", "ArrayInterface", "Cassette", "ChainRulesCore", "DiffEqBase", "DiffEqCallbacks", "DiffEqNoiseProcess", "DiffEqOperators", "DiffRules", "Distributions", "Enzyme", "FFTW", "FiniteDiff", "ForwardDiff", "GlobalSensitivity", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "Parameters", "QuadGK", "QuasiMonteCarlo", "Random", "RandomNumbers", "RecursiveArrayTools", "Reexport", "Requires", "ReverseDiff", "SharedArrays", "Statistics", "StochasticDiffEq", "Tracker", "Zygote", "ZygoteRules"]
-git-tree-sha1 = "2e2e15079d80008e5a267fb755e750fc7523ea7a"
+git-tree-sha1 = "a9ec4fb90a7a774056524c271acdb5eefb4bd7e8"
 repo-rev = "ap/ssadjoint"
 repo-url = "https://github.com/avik-pal/DiffEqSensitivity.jl"
 uuid = "41bf760c-e81c-5289-8e54-58b1f1f8abe2"
@@ -797,11 +797,9 @@ uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[deps.LinearSolve]]
 deps = ["ArrayInterface", "IterativeSolvers", "Krylov", "KrylovKit", "LinearAlgebra", "RecursiveFactorization", "Reexport", "SciMLBase", "Setfield", "SparseArrays", "UnPack"]
-git-tree-sha1 = "c21765bfcb86ffc9bde2e8694d592c5d866dd68c"
-repo-rev = "main"
-repo-url = "https://github.com/SciML/LinearSolve.jl.git"
+git-tree-sha1 = "5abeadb3f59156e4566627c0995bfe668e0753db"
 uuid = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
-version = "0.1.0"
+version = "0.1.1"
 
 [[deps.LogExpFunctions]]
 deps = ["ChainRulesCore", "ChangesOfVariables", "DocStringExtensions", "InverseFunctions", "IrrationalConstants", "LinearAlgebra"]

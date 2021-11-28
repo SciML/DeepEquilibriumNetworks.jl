@@ -1,7 +1,7 @@
 modeltype_to_val(::DeepEquilibriumNetwork) = Val(1)
 modeltype_to_val(::SkipDeepEquilibriumNetwork) = Val(2)
-# modeltype_to_val(::MultiScaleDeepEquilibriumNetworkS4) = Val(3)
-# modeltype_to_val(::MultiScaleSkipDeepEquilibriumNetworkS4) = Val(4)
+modeltype_to_val(::MultiScaleDeepEquilibriumNetwork) = Val(3)
+modeltype_to_val(::MultiScaleSkipDeepEquilibriumNetwork) = Val(4)
 modeltype_to_val(m) = Val(-1)
 
 # Default to nothing happening

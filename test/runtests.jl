@@ -178,8 +178,8 @@ using Test
             Dense(1, 4, tanh) Dense(1, 3, tanh) Dense(1, 2, tanh) identity
         ] .|> gpu,
         get_default_ssrootfind_solver(0.1f0, 0.1f0, LimitedMemoryBroydenSolver;
-                                        device = gpu, original_dims = (1, 10),
-                                        batch_size = 2, maxiters = 10);
+                                      device = gpu, original_dims = (1, 10),
+                                      batch_size = 2, maxiters = 10);
         sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10),
         maxiter = 10,
     )

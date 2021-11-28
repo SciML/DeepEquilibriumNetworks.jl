@@ -1,6 +1,5 @@
 module FastDEQ
 
-using ChainRulesCore
 using ChemistryFeaturization
 using CUDA
 using DataDeps
