@@ -45,9 +45,7 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
     z = deq.re(p)(zero(x), x)::typeof(x)
     deq.stats.nfe += 1
 
-    update_is_in_deq(true)
     update_is_mask_reset_allowed(false)
-    update_is_weightnorm_update_allowed(false)
 
     function dudt(u, _p, t)
         deq.stats.nfe += 1
@@ -62,13 +60,11 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
         sensealg = deq.sensealg,
         deq.kwargs...,
     )
-    update_is_weightnorm_update_allowed(true)
 
     res = deq.re(p)(sol.u, x)::typeof(x)
     deq.stats.nfe += 1
 
     update_is_mask_reset_allowed(true)
-    update_is_in_deq(false)
 
     return res
 end

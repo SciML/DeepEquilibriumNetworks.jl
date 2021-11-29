@@ -24,7 +24,7 @@ function _norm(x::AbstractArray{T,N}, except_dim) where {T,N}
     return _norm(x; dims = dims)
 end
 
-flatten_merge(x, y) = (error("1"); (x..., y...))
+flatten_merge(x, y) = (x..., y...)
 flatten_merge(x::T, y::T) where {T<:AbstractArray} = (x, y)
 flatten_merge(x::NTuple{N,T}, y::T) where {N,T<:AbstractArray} = (x..., y)
 flatten_merge(x::T, y::NTuple{N,T}) where {N,T<:AbstractArray} = (x, y...)

@@ -8,7 +8,7 @@ using Test
 @testset "FastDEQ.jl" begin
     mse_loss_function = SupervisedLossContainer(Flux.Losses.mse, 1.0f0)
 
-    # Testing LinSolve with DiffEqSensitivity
+    # Testing DEQ
     Random.seed!(0)
 
     model = DEQChain(
@@ -186,6 +186,26 @@ using Test
     x = rand(4, 2) |> gpu
     y = tuple([gpu(rand(i, 2)) for i in 4:-1:1]...)
     sol = model(x)
+    ps = Flux.params(model)
+    gs = Flux.gradient(() -> mse_loss_function(model, x, y), ps)
+    for _p in ps
+        @test all(isfinite.(gs[_p]))
+    end
+
+    # Testing WeightNorm Layer
+    Random.seed!(0)
+
+    model = DeepEquilibriumNetwork(
+        Parallel(
+            +,
+            WeightNorm(Dense(2, 2; bias = false)),
+            WeightNorm(Dense(2, 2; bias = false))
+        ),
+        get_default_dynamicss_solver(0.1f0, 0.1f0),
+        sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10)
+    ) |> gpu
+    x = rand(Float32, 2, 1) |> gpu
+    y = rand(Float32, 2, 1) |> gpu
     ps = Flux.params(model)
     gs = Flux.gradient(() -> mse_loss_function(model, x, y), ps)
     for _p in ps

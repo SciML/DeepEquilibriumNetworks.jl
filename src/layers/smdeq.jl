@@ -174,6 +174,7 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork)(
     u0 = vcat(Flux.flatten.(initial_conditions)...)
 
     N = length(u_sizes)
+    update_is_mask_reset_allowed(false)
 
     function dudt_(u, _p)
         mdeq.stats.nfe += 1
@@ -206,6 +207,7 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork)(
         xs -> reshape(xs[1], xs[2]),
         zip(split_array_by_indices(dudt_(sol, p), u_split_idxs), u_sizes),
     )
+    update_is_mask_reset_allowed(true)
 
     return res, initial_conditions
 end
@@ -233,6 +235,7 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{Nothing})(
     u0 = vcat(Flux.flatten.(initial_conditions)...)
 
     N = length(u_sizes)
+    update_is_mask_reset_allowed(false)
 
     function dudt_(u, _p)
         mdeq.stats.nfe += 1
@@ -265,6 +268,7 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{Nothing})(
         xs -> reshape(xs[1], xs[2]),
         zip(split_array_by_indices(dudt_(sol, p), u_split_idxs), u_sizes),
     )
+    update_is_mask_reset_allowed(true)
 
     return res, initial_conditions
 end

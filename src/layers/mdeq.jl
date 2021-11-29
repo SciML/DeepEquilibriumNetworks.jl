@@ -95,6 +95,7 @@ function (mdeq::MultiScaleDeepEquilibriumNetwork)(
     u0 = vcat(Flux.flatten.(initial_conditions)...)
 
     N = length(u_sizes)
+    update_is_mask_reset_allowed(false)
 
     function dudt_(u, _p)
         mdeq.stats.nfe += 1
@@ -120,8 +121,11 @@ function (mdeq::MultiScaleDeepEquilibriumNetwork)(
             sensealg = mdeq.sensealg,
             mdeq.kwargs...,
         ).u
-    return map(
+    x_ = map(
         xs -> reshape(xs[1], xs[2]),
         zip(split_array_by_indices(dudt_(res, p), u_split_idxs), u_sizes)
     )
+    update_is_mask_reset_allowed(true)
+
+    return x_
 end
