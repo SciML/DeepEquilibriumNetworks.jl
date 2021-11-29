@@ -216,10 +216,10 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{Nothing})(
 ) where {T}
     p1, p2 = split_array_by_indices(p, mdeq.ordered_split_idxs)
 
-    _initial_conditions = Zygote.@ignore map(
-        l -> l(x),
+    _initial_conditions = Zygote.@ignore [
+        l(x) for l in
         map(l -> l.layers[1], mdeq.mapping_layers.layers)
-    )
+    ]
     _initial_conditions = mdeq.mapping_layers_re(p2)(
         (x, zero.(_initial_conditions[2:end])...)
     )

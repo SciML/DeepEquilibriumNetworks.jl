@@ -230,7 +230,7 @@ end
 nfe_count_dict = Dict("vanilla" => [], "skip" => [])
 
 for seed in [1, 11, 111]
-    for model_type in ["skip", "vanilla"]
+    for model_type in ["vanilla", "skip"]
         config = Dict(
             "seed" => seed,
             "learning_rate" => 0.001,

@@ -2043,9 +2043,11 @@ version = "1.5.0+0"
 
 [[deps.Zygote]]
 deps = ["AbstractFFTs", "ChainRules", "ChainRulesCore", "DiffRules", "Distributed", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics", "ZygoteRules"]
-git-tree-sha1 = "76475a5aa0be302c689fd319cd257cd1a512fb3c"
+git-tree-sha1 = "2b8415fedafaa8a3263efdcd90a65b7b347b7955"
+repo-rev = "ap/fastdeq"
+repo-url = "https://github.com/avik-pal/Zygote.jl"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
-version = "0.6.32"
+version = "0.6.30"
 
 [[deps.ZygoteRules]]
 deps = ["MacroTools"]

@@ -76,3 +76,11 @@ split_array_by_indices(x::AbstractVector, idxs) =
 
 split_array_by_indices(x::AbstractMatrix, idxs) =
     collect((x[i + 1:j, :] for (i, j) ∈ zip(idxs[1:end-1], idxs[2:end])))
+
+
+# Zygote Fix
+Zygote.accum(x::NTuple{N,T}, y::AbstractVector{T}) where {N,T<:AbstractArray} =
+    Zygote.accum.(x, y)
+
+Zygote.accum(x::AbstractVector{T}, y::NTuple{N,T}) where {N,T<:AbstractArray} =
+    Zygote.accum.(x, y)
