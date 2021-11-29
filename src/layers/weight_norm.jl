@@ -1,4 +1,4 @@
-struct WeightNorm{Re,P,D,T}
+struct WeightNorm{Re,P,D}
     layer_re::Re
     parameters::P
     dims::D
