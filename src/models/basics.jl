@@ -104,6 +104,8 @@ function BasicResidualBlock(
     )
 end
 
+(b::BasicResidualBlock)(t::Tuple) = b(t...)
+
 function (b::BasicResidualBlock)(
     x::AbstractArray{T},
     injection::Union{AbstractArray{T},T} = T(0),
@@ -189,6 +191,14 @@ Flux.cpu(b::MultiParallelNet) = MultiParallelNet(cpu.(b.layers))
 
 Flux.@functor MultiParallelNet
 
+function (mpn::MultiParallelNet)(x::Union{Tuple,Vector})
+    buf = Zygote.Buffer([])
+    for l in mpn.layers
+        push!(buf, l(x...))
+    end
+    return copy(buf)
+end
+
 function (mpn::MultiParallelNet)(args...)
     buf = Zygote.Buffer([])
     for l in mpn.layers
@@ -208,10 +218,9 @@ function downsample_module(
     gn_affine::Bool = true,
 )
     @assert in_resolution > out_resolution
-    @assert ispow2(in_resolution)
-    @assert ispow2(out_resolution)
+    level_diff = Int(log2(in_resolution ÷ out_resolution))
+    @assert ispow2(level_diff)
 
-    level_diff = Int(log2(in_resolution) - log2(out_resolution))
     layers = []
 
     for i = 1:level_diff
@@ -252,10 +261,8 @@ function upsample_module(
     gn_affine::Bool = true,
 )
     @assert in_resolution < out_resolution
-    @assert ispow2(in_resolution)
-    @assert ispow2(out_resolution)
-
-    level_diff = Int(log2(out_resolution) - log2(in_resolution))
+    level_diff = Int(log2(out_resolution ÷ in_resolution))
+    @assert ispow2(level_diff)
 
     return Sequential(
         Conv((1, 1), in_channels => out_channels, bias = false),
