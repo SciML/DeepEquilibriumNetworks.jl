@@ -21,7 +21,7 @@ function Flux.gpu(deq::SkipDeepEquilibriumNetwork)
         deq.args...;
         p = deq.p |> gpu,
         sensealg = deq.sensealg,
-        deq.kwargs...
+        deq.kwargs...,
     )
 end
 
@@ -86,29 +86,21 @@ function (deq::SkipDeepEquilibriumNetwork)(
 
     # Dummy call to ensure that mask is generated
     Zygote.@ignore _ = deq.re1(p1)(x, x)
-    update_is_mask_reset_allowed(false)
 
-    # Solving the equation f(u) - u = du = 0
-    function dudt(u, _p, t)
-        deq.stats.nfe += 1
-        return deq.re1(_p)(u, x) .- u
-    end
-
-    ssprob = SteadyStateProblem(dudt, z, p1)
-    u = solve(
-        ssprob,
-        deq.args...;
-        u0 = z,
-        sensealg = deq.sensealg,
-        deq.kwargs...,
-    ).u::typeof(x)
-
-    res = deq.re1(p1)(u, x)::typeof(x)
-    deq.stats.nfe += 1
-
-    update_is_mask_reset_allowed(true)
-
-    return res, z
+    return (
+        solve_steady_state_problem(
+            deq.re1,
+            p1,
+            x,
+            z,
+            deq.sensealg,
+            deq.args...;
+            dudt = nothing,
+            update_nfe = () -> (deq.stats.nfe += 1),
+            deq.kwargs...,
+        ),
+        z,
+    )
 end
 
 function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(
@@ -117,29 +109,20 @@ function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(
 ) where {M,T}
     z = deq.re1(p)(zero(x), x)::typeof(x)
 
-    update_is_mask_reset_allowed(false)
-
-    # Solving the equation f(u) - u = du = 0
-    function dudt(u, _p, t)
-        deq.stats.nfe += 1
-        return deq.re1(_p)(u, x) .- u
-    end
-
-    ssprob = SteadyStateProblem(dudt, z, p)
-    u = solve(
-        ssprob,
-        deq.args...;
-        u0 = z,
-        sensealg = deq.sensealg,
-        deq.kwargs...,
-    ).u::typeof(x)
-
-    res = deq.re1(p)(u, x)::typeof(x)
-    deq.stats.nfe += 1
-
-    update_is_mask_reset_allowed(true)
-
-    return res, z
+    return (
+        solve_steady_state_problem(
+            deq.re1,
+            p,
+            x,
+            z,
+            deq.sensealg,
+            deq.args...;
+            dudt = nothing,
+            update_nfe = () -> (deq.stats.nfe += 1),
+            deq.kwargs...,
+        ),
+        z,
+    )
 end
 
 function (deq::SkipDeepEquilibriumNetwork)(inputs::Tuple, p = deq.p) where {T}

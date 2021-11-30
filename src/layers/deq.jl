@@ -10,11 +10,23 @@ end
 
 Flux.@functor DeepEquilibriumNetwork
 
-function Flux.gpu(deq::DeepEquilibriumNetwork)
+function Flux.gpu(deq::DeepEquilibriumNetwork{J}) where {J}
     return DeepEquilibriumNetwork(
         deq.model |> gpu,
         deq.args...;
+        jacobian_regularization = J,
         p = deq.p |> gpu,
+        sensealg = deq.sensealg,
+        deq.kwargs...,
+    )
+end
+
+function Flux.cpu(deq::DeepEquilibriumNetwork{J}) where {J}
+    return DeepEquilibriumNetwork(
+        deq.model |> cpu,
+        deq.args...;
+        jacobian_regularization = J,
+        p = deq.p |> cpu,
         sensealg = deq.sensealg,
         deq.kwargs...,
     )
@@ -37,9 +49,8 @@ function DeepEquilibriumNetwork(
         typeof(p),
         typeof(re),
         typeof(args),
-        typeof(kwargs),
         typeof(sensealg),
-        typeof(stats),
+        typeof(kwargs),
     }(
         model,
         p,
@@ -56,28 +67,17 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p = deq.p) where {T}
     z = deq.re(p)(zero(x), x)::typeof(x)
     deq.stats.nfe += 1
 
-    update_is_mask_reset_allowed(false)
-
-    function dudt(u, _p, t)
-        deq.stats.nfe += 1
-        return deq.re(_p)(u, x) .- u
-    end
-
-    ssprob = SteadyStateProblem(dudt, z, p)
-    sol = solve(
-        ssprob,
+    return solve_steady_state_problem(
+        deq.re,
+        p,
+        x,
+        z,
+        deq.sensealg,
         deq.args...;
-        u0 = z,
-        sensealg = deq.sensealg,
+        dudt = nothing,
+        update_nfe = () -> (deq.stats.nfe += 1;),
         deq.kwargs...,
     )
-
-    res = deq.re(p)(sol.u, x)::typeof(x)
-    deq.stats.nfe += 1
-
-    update_is_mask_reset_allowed(true)
-
-    return res
 end
 
 function (deq::DeepEquilibriumNetwork)(inputs::Tuple, p = deq.p) where {T}

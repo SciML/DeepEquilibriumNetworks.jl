@@ -88,6 +88,8 @@ include("solvers/limited_memory_broyden.jl")
 include("models/basics.jl")
 
 include("layers/agn.jl")
+include("layers/jacobian_stabilization.jl")
+include("layers/utils.jl")
 include("layers/deq.jl")
 include("layers/sdeq.jl")
 include("layers/mdeq.jl")
