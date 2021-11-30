@@ -13,10 +13,11 @@ mutable struct AverageMeter{T}
 end
 
 function reset!(am::AverageMeter{T}) where {T}
+    val = am()
     am.last_value = T(0)
     am.sum = T(0)
     am.count = 0
-    return am
+    return val
 end
 
 function update!(am::AverageMeter{T}, val::T) where {T}
@@ -139,7 +140,7 @@ function (pl::PrettyTableLogger)(
     for h in [
         fmtrfunc(arg) for (fmtrfunc, arg) in zip(
             pl.fmtrfuncs,
-            vcat([args...], [pl.average_meters[rec]() for rec in pl.records]),
+            vcat([args...], [reset!(pl.average_meters[rec]) for rec in pl.records]),
         )
     ]
         print("| $h ")

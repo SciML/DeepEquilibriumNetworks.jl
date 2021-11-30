@@ -1,25 +1,25 @@
 # General Utils
-function _init_identity_matrix(x::AbstractArray{T}, scale::T = T(1)) where {T}
+@inline function _init_identity_matrix(x::AbstractArray{T}, scale::T = T(1)) where {T}
     x_ = vec(x)
     return _init_identity_matrix!(x_ .* x_', scale)
 end
 
-function _init_identity_matrix!(x::AbstractMatrix{T}, scale::T = T(1)) where {T}
+@inline function _init_identity_matrix!(x::AbstractMatrix{T}, scale::T = T(1)) where {T}
     x .= zero(T)
     idxs = diagind(x)
     @. @view(x[idxs]) = scale * true
     return x
 end
 
-function _norm(x; dims = Colon())
+@inline function _norm(x; dims = Colon())
     return sqrt.(sum(abs2, x; dims = dims))
 end
 
-get_and_clear_nfe!(model::DataParallelFluxModel) =
+@inline get_and_clear_nfe!(model::DataParallelFluxModel) =
     get_and_clear_nfe!(model.model)
 
 # Compute norm over all dimensions except `except_dim`
-function _norm(x::AbstractArray{T,N}, except_dim) where {T,N}
+@inline function _norm(x::AbstractArray{T,N}, except_dim) where {T,N}
     dims = filter(i -> i != except_dim, 1:N)
     return _norm(x; dims = dims)
 end

@@ -11,52 +11,67 @@ struct DEQChain{V,P1,D,P2}
     pre_deq::P1
     deq::D
     post_deq::P2
+end
 
-    function DEQChain(layers...)
-        if length(layers) == 3
-            pre_deq, deq, post_deq = layers
-            val = modeltype_to_val(deq)
-            val == Val(-1) && error(
-                "$deq must subtype AbstractDeepEquilibriumNetwork and define `modeltype_to_val`",
-            )
-            return new{val,typeof(pre_deq),typeof(deq),typeof(post_deq)}(
-                pre_deq,
-                deq,
-                post_deq,
-            )
-        end
-        pre_deq = []
-        post_deq = []
-        deq = nothing
-        encounter_deq = false
-        global_val = Val(1)
-        for l in layers
-            val = modeltype_to_val(l)
-            if val != Val(-1)
-                global_val = val
-                encounter_deq &&
-                    error("Can have only 1 DEQ Layer in the Chain!!!")
-                deq = l
-                encounter_deq = true
-                continue
-            end
-            if encounter_deq
-                push!(post_deq, l)
-            else
-                push!(pre_deq, l)
-            end
-        end
-        !encounter_deq &&
-            error("No DEQ Layer in the Chain!!! Maybe you wanted to use Chain")
-        pre_deq = length(pre_deq) == 0 ? identity : Chain(pre_deq...)
-        post_deq = length(post_deq) == 0 ? identity : Chain(post_deq...)
-        return new{global_val,typeof(pre_deq),typeof(deq),typeof(post_deq)}(
+function DEQChain(layers...)
+    if length(layers) == 3
+        pre_deq, deq, post_deq = layers
+        val = modeltype_to_val(deq)
+        val == Val(-1) && error(
+            "$deq must subtype AbstractDeepEquilibriumNetwork and define `modeltype_to_val`",
+        )
+        return DEQChain{val,typeof(pre_deq),typeof(deq),typeof(post_deq)}(
             pre_deq,
             deq,
             post_deq,
         )
     end
+    pre_deq = []
+    post_deq = []
+    deq = nothing
+    encounter_deq = false
+    global_val = Val(1)
+    for l in layers
+        val = modeltype_to_val(l)
+        if val != Val(-1)
+            global_val = val
+            encounter_deq &&
+                error("Can have only 1 DEQ Layer in the Chain!!!")
+            deq = l
+            encounter_deq = true
+            continue
+        end
+        if encounter_deq
+            push!(post_deq, l)
+        else
+            push!(pre_deq, l)
+        end
+    end
+    !encounter_deq &&
+        error("No DEQ Layer in the Chain!!! Maybe you wanted to use Chain")
+    pre_deq = length(pre_deq) == 0 ? identity : Chain(pre_deq...)
+    post_deq = length(post_deq) == 0 ? identity : Chain(post_deq...)
+    return DEQChain{global_val,typeof(pre_deq),typeof(deq),typeof(post_deq)}(
+        pre_deq,
+        deq,
+        post_deq,
+    )
 end
+
+Flux.gpu(c::DEQChain) =
+    DEQChain(
+        c.pre_deq |> gpu,
+        c.deq |> gpu,
+        c.post_deq |> gpu,
+    )
+
+Flux.cpu(c::DEQChain) =
+    DEQChain(
+        c.pre_deq |> cpu,
+        c.deq |> cpu,
+        c.post_deq |> cpu,
+    )
+
 
 Flux.@functor DEQChain
 

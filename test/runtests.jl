@@ -113,7 +113,7 @@ using Test
                                       device = gpu, original_dims = (1, 10),
                                       batch_size = 2, maxiters = 10);
         sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10),
-        maxiter = 10,
+        maxiters = 10,
     )
     x = rand(4, 2) |> gpu
     y = tuple([gpu(rand(i, 2)) for i in 4:-1:1]...)
@@ -150,7 +150,7 @@ using Test
                                       device = gpu, original_dims = (1, 10),
                                       batch_size = 2, maxiters = 10);
         sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10),
-        maxiter = 10,
+        maxiters = 10,
     )
     x = rand(4, 2) |> gpu
     y = tuple([gpu(rand(i, 2)) for i in 4:-1:1]...)
@@ -181,7 +181,7 @@ using Test
                                       device = gpu, original_dims = (1, 10),
                                       batch_size = 2, maxiters = 10);
         sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10),
-        maxiter = 10,
+        maxiters = 10,
     )
     x = rand(4, 2) |> gpu
     y = tuple([gpu(rand(i, 2)) for i in 4:-1:1]...)
