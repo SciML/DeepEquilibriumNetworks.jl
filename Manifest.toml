@@ -987,9 +987,9 @@ uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
 
 [[deps.OpenMPI_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "04f95bf6987a4a29253427b4c59e30fd94fbc16f"
+git-tree-sha1 = "08334c7cd6cb033274bc90918ece2174b5f84cc7"
 uuid = "fe0851c0-eecd-5654-98d4-656369965a5c"
-version = "4.1.1+4"
+version = "4.1.1+5"
 
 [[deps.OpenSpecFun_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]

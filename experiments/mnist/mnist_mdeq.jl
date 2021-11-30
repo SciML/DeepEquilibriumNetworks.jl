@@ -114,7 +114,7 @@ function train(config::Dict)
     ## Setup Logging & Experiment Configuration
     expt_name = "fastdeqjl-supervised_mnist_classication-mdeq-$(now())"
     lg_wandb =
-        WandbLogger(project = "FastDEQ.jl", name = expt_name, config = config)
+        WandbLoggerMPI(project = "FastDEQ.jl", name = expt_name, config = config)
     lg_term = PrettyTableLogger(
         expt_name,
         [

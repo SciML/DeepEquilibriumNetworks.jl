@@ -1,4 +1,4 @@
-struct DeepEquilibriumNetwork{M,P,RE,A,S,K} <: AbstractDeepEquilibriumNetwork
+struct DeepEquilibriumNetwork{J,M,P,RE,A,S,K} <: AbstractDeepEquilibriumNetwork
     model::M
     p::P
     re::RE
@@ -16,27 +16,38 @@ function Flux.gpu(deq::DeepEquilibriumNetwork)
         deq.args...;
         p = deq.p |> gpu,
         sensealg = deq.sensealg,
-        deq.kwargs...
+        deq.kwargs...,
     )
 end
 
 function DeepEquilibriumNetwork(
     model,
     args...;
+    jacobian_regularization::Bool = false,
     p = nothing,
     sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10),
     kwargs...,
 )
     _p, re = Flux.destructure(model)
     p = p === nothing ? _p : p
-    return DeepEquilibriumNetwork(
+    stats = DEQTrainingStats(0)
+    return DeepEquilibriumNetwork{
+        jacobian_regularization,
+        typeof(model),
+        typeof(p),
+        typeof(re),
+        typeof(args),
+        typeof(kwargs),
+        typeof(sensealg),
+        typeof(stats),
+    }(
         model,
         p,
         re,
         args,
         kwargs,
         sensealg,
-        DEQTrainingStats(0),
+        stats,
     )
 end
 
