@@ -8,6 +8,7 @@ using CUDA,
     MLDatasets,
     MPI,
     OrdinaryDiffEq,
+    Serialization,
     Statistics,
     SteadyStateDiffEq,
     Plots,
@@ -29,6 +30,7 @@ function get_model(
     reltol::T,
     batch_size::Int,
     model_type::String,
+    solver_type::String,
 ) where {T}
     main_layers = (
         BasicResidualBlock((28, 28), 8, 8),
@@ -40,20 +42,41 @@ function get_model(
         upsample_module(16, 8, 14, 28) identity downsample_module(16, 32, 14, 7)
         upsample_module(32, 8, 7, 28) upsample_module(32, 16, 7, 14) identity
     ]
+    solver =
+        solver_type == "dynamicss" ?
+        get_default_dynamicss_solver(abstol, reltol) :
+        get_default_ssrootfind_solver(
+            abstol,
+            reltol,
+            LimitedMemoryBroydenSolver;
+            device = gpu,
+            original_dims = (1, (28 * 28 * 8) + (14 * 14 * 16) + (7 * 7 * 32)),
+            batch_size = batch_size,
+            maxiters = maxiters,
+        )
     model = DEQChain(
         expand_channels_module(1, 8),
+        model_type == "skip" ?
+        MultiScaleSkipDeepEquilibriumNetwork(
+            main_layers,
+            mapping_layers,
+            (
+                BasicResidualBlock((28, 28), 8, 8),
+                downsample_module(8, 16, 28, 14),
+                downsample_module(8, 32, 28, 7),
+            ),
+            solver,
+            maxiters = maxiters,
+            sensealg = get_default_ssadjoint(abstol, reltol, maxiters),
+            verbose = false,
+        ) :
         (
             model_type == "vanilla" ? MultiScaleDeepEquilibriumNetwork :
             MultiScaleSkipDeepEquilibriumNetwork
         )(
             main_layers,
             mapping_layers,
-            get_default_dynamicss_solver(abstol, reltol),
-            # get_default_ssrootfind_solver(abstol, reltol, LimitedMemoryBroydenSolver;
-            #                               device = gpu, original_dims = (1, (28 * 28 *  8) +
-            #                                                                 (14 * 14 * 16) +
-            #                                                                 ( 7 *  7 * 32)),
-            #                               batch_size = batch_size, maxiters = maxiters),
+            solver,
             maxiters = maxiters,
             sensealg = get_default_ssadjoint(abstol, reltol, maxiters),
             verbose = false,
@@ -113,8 +136,11 @@ function train(config::Dict)
 
     ## Setup Logging & Experiment Configuration
     expt_name = "fastdeqjl-supervised_mnist_classication-mdeq-$(now())"
-    lg_wandb =
-        WandbLoggerMPI(project = "FastDEQ.jl", name = expt_name, config = config)
+    lg_wandb = WandbLoggerMPI(
+        project = "FastDEQ.jl",
+        name = expt_name,
+        config = config,
+    )
     lg_term = PrettyTableLogger(
         expt_name,
         [
@@ -168,10 +194,11 @@ function train(config::Dict)
         Float32(get_config(lg_wandb, "reltol")),
         batch_size,
         get_config(lg_wandb, "model_type"),
+        get_config(lg_wandb, "solver_type"),
     )
 
     loss_function =
-        SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0)
+        SupervisedLossContainer(Flux.Losses.logitcrossentropy, 5.0f0)
 
     ## Warmup
     __x = rand(28, 28, 1, 1) |> gpu
@@ -308,31 +335,23 @@ function train(config::Dict)
     return model, nfe_counts
 end
 
-## Plotting
-function plot_nfe_counts(nfe_counts_1, nfe_counts_2)
-    p = plot(nfe_counts_1, label = "Vanilla DEQ")
-    plot!(p, nfe_counts_2, label = "Skip DEQ")
-    xlabel!(p, "Training Iteration")
-    ylabel!(p, "NFE Count")
-    title!(p, "NFE over Training Iterations of DEQ vs SkipDEQ")
-    return p
-end
-
 ## Run Experiment
-nfe_count_dict = Dict("vanilla" => [], "skip" => [])
+nfe_count_dict =
+    Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [])
 
 for seed in [1, 11, 111]
-    for model_type in ["vanilla", "skip"]
+    for model_type in ["skip", "skip_no_extra_params", "vanilla"]
         config = Dict(
             "seed" => seed,
-            "learning_rate" => 0.001,
+            "learning_rate" => 0.005,
             "abstol" => 0.1f0,
             "reltol" => 0.1f0,
             "maxiters" => 15,
-            "epochs" => 25,
-            "batch_size" => 64,
-            "eval_batch_size" => 128,
+            "epochs" => 10,
+            "batch_size" => 256,
+            "eval_batch_size" => 256,
             "model_type" => model_type,
+            "solver_type" => "dynamicss",
         )
 
         model, nfe_counts = train(config)
@@ -341,7 +360,11 @@ for seed in [1, 11, 111]
     end
 end
 
-plot_nfe_counts(
-    vec(mean(hcat(nfe_count_dict["vanilla"]...), dims = 2)),
-    vec(mean(hcat(nfe_count_dict["skip"]...), dims = 2)),
-)
+if MPI.Comm_rank(MPI_COMM_WORLD) == 0
+    filename = "fastdeqjl-supervised_mnist_classication-mdeq-$(now()).jl_serialized_file"
+    serialize(
+        joinpath("artifacts", filename),
+        nfe_count_dict
+    )
+    @info "Serialized NFE Counts to $filename"
+end

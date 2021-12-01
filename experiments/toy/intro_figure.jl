@@ -6,11 +6,11 @@ using CUDA,
     DiffEqSensitivity,
     FastDEQ,
     Flux,
-    GLMakie,
+    CairoMakie,
     OrdinaryDiffEq,
+    OrderedCollections,
     Statistics,
     SteadyStateDiffEq,
-    Plots,
     Random,
     Zygote
 
@@ -59,10 +59,12 @@ function register_nfe_counts(deq, buffer)
     return callback
 end
 
+h(x) = 3 * (x ^ 3) / 2 + x ^ 2 - 5 * x + 2 * sin(x) - 3
+
 function generate_polynomial_data(count::Int)
-    h(x) = 3 * (x ^ 3) / 2 + x ^ 2 - 5 * x + 2 * sin(x) - 3 + randn() * 0.005
+    h_(x) = h(x) + randn() * 0.005
     x = rand(Float32, count) .* 4 .- 2
-    return x, h.(x)
+    return x, h_.(x)
 end
 
 
@@ -180,6 +182,8 @@ for model_type in ["skip", "vanilla"]
     nfe_counts[model_type] = nfe_count
 end
 
+CUDA.allowscalar(true)
+
 # Generate Trajectories
 function generate_trajectory(
     model::DeepEquilibriumNetwork,
@@ -202,93 +206,167 @@ function generate_trajectory(
     depth = 50,
 )
     traj = []
-    u = model.re1(model.p)(zero(x), x)
+    u = zero(x)
     push!(traj, u)
-    for _ = 1:(depth-2)
+    for _ = 1:(depth-1)
         u = model.re1(model.p)(u, x)
         push!(traj, u)
     end
     return traj
 end
+N = 50
+x_data_vanilla = reshape(collect(LinRange(-2.0f0, 2.0f0, N)), (1, N)) |> gpu;
+x_data_skip = x_data_vanilla;
 
-traj_vanilla = generate_trajectory(models["vanilla"], reshape(unique(datas["vanilla"][1] |> cpu), (1, :)) |> gpu)
-traj_skip = generate_trajectory(models["skip"], reshape(unique(datas["skip"][1] |> cpu), (1, :)) |> gpu)
+traj_vanilla = generate_trajectory(models["vanilla"], x_data_vanilla);
+traj_skip = generate_trajectory(models["skip"], x_data_skip);
 
 function plot_trajectories(traj_1, x_data_1, traj_2, x_data_2)
-    fig = Figure(resolution = (900, 900))
+    fig = Figure(resolution = (900, 600))
 
-    ax = Axis3(
-        fig,
-        aspect = :data,
+    ga = fig[1, 1:2] = GridLayout()
+    gb = fig[2, 1:2] = GridLayout()
+    gaa = ga[1, 1] = GridLayout()
+    gab = ga[1, 2] = GridLayout()
+    gba = gb[1, 1] = GridLayout()
+    gbb = gb[1, 2] = GridLayout()
+
+    get_axis(sc; kwargs...) = Axis3(
+        sc;
         perspectiveness = 0.5,
-        elevation = π / 9,
-        xzpanelcolor = (:black, 0.75),
-        yzpanelcolor = (:black, 0.75),
-        zgridcolor = :grey,
-        ygridcolor = :grey,
-        xgridcolor = :grey,
+        kwargs...
     )
+
+    ax = get_axis(gaa[1, 1]; xlabel = "x", ylabel = "z", zlabel = "f(z, x)", title = "Vanilla DEQ")
 
     x_data = vec(x_data_1) |> cpu
-    z = vcat(vec.(traj_1)...) |> cpu
-    x = repeat(x_data, length(traj_1))
-    y =
-        Float32.(
-            repeat(
-                (1:length(traj_1)) ./ length(traj_1),
-                inner = length(x_data),
-            ),
-        )
+    gt = h.(x_data)
 
-    GLMakie.surface!(
+    CairoMakie.scatterlines!(
+        ax,
+        x_data,
+        gt,
+        gt,
+        color = :red,
+        marker = :x,
+        markersize = 10,
+        markercolor = :red,
+        linewidth = 0.25,
+    )
+
+    x = vec(hcat(repeat(reshape(x_data, (:, 1)), 1, length(traj_1) - 1), [NaN for _ in 1:length(traj_1[1])])')
+    y = vec(hcat(vcat(traj_1[1:end-1]...)', [NaN for _ in 1:length(traj_1[1])])')
+    z = vec(hcat(vcat(traj_1[2:end]...)', [NaN for _ in 1:length(traj_1[1])])')
+    c = vcat(0, 0.5, 0.75, 0.9, LinRange(0.95, 1.0, length(traj_1) - 4))
+    c = repeat(c, length(traj_1[1]))
+
+    CairoMakie.scatterlines!(
         ax,
         x,
         y,
         z,
-        colormap = :viridis,
-        colorrange = (minimum(z), maximum(z)),
+        colormap = :batlow,
+        markersize = 2,
+        color = c,
+        markercolor = c,
+        linewidth = 0.25,
     )
-    fig[1, 1] = ax
 
-    ax = Axis3(
-        fig,
-        aspect = :data,
-        perspectiveness = 0.5,
-        elevation = π / 9,
-        xzpanelcolor = (:black, 0.75),
-        yzpanelcolor = (:black, 0.75),
-        zgridcolor = :grey,
-        ygridcolor = :grey,
-        xgridcolor = :grey,
+    CairoMakie.ylims!(ax, low = -6, high = 6)
+    CairoMakie.zlims!(ax, low = -6, high = 6)
+
+    ax = get_axis(gba[1, 1]; azimuth = 0.65π, xlabel = "x", ylabel = "Depth", zlabel = "Residual")
+
+    CairoMakie.zlims!(ax, high = 8)
+
+    x_ = vec(vcat(reshape(x, :, length(traj_1))[1:9, :], reshape([NaN for _ in 1:length(traj_1)], 1, :)))
+    residuals = vec(vcat(reshape(abs.(z .- y), :, length(traj_1))[1:9, :], reshape([NaN for _ in 1:length(traj_1)], 1, :)))
+    depths = Float32.(repeat(vcat(1:9, NaN), length(traj_1)))
+
+    CairoMakie.scatterlines!(
+        ax,
+        x_,
+        depths,
+        residuals,
+        colormap = :batlow,
+        markersize = 2,
+        color = depths,
+        markercolor = depths,
+        linewidth = 0.25,
     )
+
+
+    ax = get_axis(gab[1, 1]; xlabel = "x", ylabel = "z", zlabel = "f(z, x)", title = "Skip DEQ")
 
     x_data = vec(x_data_2) |> cpu
-    z = vcat(vec.(traj_2)...) |> cpu
-    x = repeat(x_data, length(traj_2))
-    y =
-        Float32.(
-            repeat(
-                (1:length(traj_2)) ./ length(traj_2),
-                inner = length(x_data),
-            ),
-        )
+    gt = h.(x_data)
 
-    GLMakie.surface!(
+    CairoMakie.scatterlines!(
+        ax,
+        x_data,
+        gt,
+        gt,
+        color = :red,
+        marker = :x,
+        markersize = 10,
+        markercolor = :red,
+        linewidth = 0.25,
+    )
+
+    x = vec(hcat(repeat(reshape(x_data, (:, 1)), 1, length(traj_2) - 1), [NaN for _ in 1:length(traj_2[1])])')
+    y = vec(hcat(vcat(traj_2[1:end-1]...)', [NaN for _ in 1:length(traj_2[1])])')
+    z = vec(hcat(vcat(traj_2[2:end]...)', [NaN for _ in 1:length(traj_2[1])])')
+    c = vcat(0, 0.5, 0.75, 0.9, LinRange(0.95, 1.0, length(traj_2) - 4))
+    c = repeat(c, length(traj_2[1]))
+
+    CairoMakie.scatterlines!(
         ax,
         x,
         y,
         z,
-        colormap = :viridis,
-        colorrange = (minimum(z), maximum(z)),
+        colormap = :batlow,
+        markersize = 2,
+        color = c,
+        markercolor = c,
+        linewidth = 0.25,
     )
-    fig[1, 2] = ax
 
+    CairoMakie.ylims!(ax, low = -6, high = 6)
+    CairoMakie.zlims!(ax, low = -6, high = 6)
+
+    ax = get_axis(gbb[1, 1]; azimuth = 0.65π, xlabel = "x", ylabel = "Depth", zlabel = "Residual")
+
+    CairoMakie.zlims!(ax, high = 8)
+
+    x_ = vec(vcat(reshape(x, :, length(traj_2))[1:9, :], reshape([NaN for _ in 1:length(traj_2)], 1, :)))
+    residuals = vec(vcat(reshape(abs.(z .- y), :, length(traj_2))[1:9, :], reshape([NaN for _ in 1:length(traj_2)], 1, :)))
+    depths = Float32.(repeat(vcat(1:9, NaN), length(traj_2)))
+
+    CairoMakie.scatterlines!(
+        ax,
+        x_,
+        depths,
+        residuals,
+        colormap = :batlow,
+        markersize = 2,
+        color = depths,
+        markercolor = depths,
+        linewidth = 0.25,
+    )
+
+    # trim!(fig.layout)
+    # rowsize!(fig.layout, 1, Auto(0.5))
+    # colsize!(fig.layout, 1, Auto(0.5))
     return fig
 end
 
-plot_trajectories(
+fig = plot_trajectories(
     traj_vanilla,
-    reshape(unique(datas["vanilla"][1] |> cpu), (1, :)) |> gpu,
+    x_data_vanilla,
     traj_skip,
-    reshape(unique(datas["skip"][1] |> cpu), (1, :)) |> gpu,
+    x_data_skip,
 )
+
+save("intro_fig.pdf", fig; pt_per_unit = 1)
+
+fig
