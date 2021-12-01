@@ -64,10 +64,14 @@ function Flux.gpu(deq::MultiScaleDeepEquilibriumNetwork)
     return MultiScaleDeepEquilibriumNetwork(
         deq.main_layers |> gpu,
         deq.mapping_layers |> gpu,
-        deq.args[1];
-        p = deq.p |> gpu,
-        sensealg = deq.sensealg,
-        deq.kwargs...,
+        deq.main_layers_re,
+        deq.mapping_layers_re,
+        deq.p |> gpu,
+        deq.ordered_split_idxs,
+        deq.args,
+        deq.kwargs,
+        deq.sensealg,
+        deq.stats,
     )
 end
 
@@ -75,13 +79,16 @@ function Flux.cpu(deq::MultiScaleDeepEquilibriumNetwork)
     return MultiScaleDeepEquilibriumNetwork(
         deq.main_layers |> cpu,
         deq.mapping_layers |> cpu,
-        deq.args[1];
-        p = deq.p |> cpu,
-        sensealg = deq.sensealg,
-        deq.kwargs...,
+        deq.main_layers_re,
+        deq.mapping_layers_re,
+        deq.p |> cpu,
+        deq.ordered_split_idxs,
+        deq.args,
+        deq.kwargs,
+        deq.sensealg,
+        deq.stats,
     )
 end
-
 function (mdeq::MultiScaleDeepEquilibriumNetwork)(
     x::AbstractArray{T}, p = mdeq.p
 ) where {T}
