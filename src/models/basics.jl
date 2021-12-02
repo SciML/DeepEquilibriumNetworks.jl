@@ -1,9 +1,11 @@
 # Functions
-conv3x3(mapping; stride::Int = 1, bias::Bool = false) =
-    Conv((3, 3), mapping; stride = stride, pad = 1, bias = bias)
+function conv3x3(mapping; stride::Int=1, bias::Bool=false)
+    return Conv((3, 3), mapping; stride=stride, pad=1, bias=bias)
+end
 
-conv5x5(mapping; stride::Int = 1, bias::Bool = false) =
-    Conv((5, 5), mapping; stride = stride, pad = 2, bias = bias)
+function conv5x5(mapping; stride::Int=1, bias::Bool=false)
+    return Conv((5, 5), mapping; stride=stride, pad=2, bias=bias)
+end
 
 # Basic Residual Block
 struct BasicResidualBlock{C1,C2,GN1,GN2,GN3,DO,DR}
@@ -18,98 +20,38 @@ end
 
 Flux.@functor BasicResidualBlock
 
-Flux.gpu(b::BasicResidualBlock) = BasicResidualBlock(
-    Flux.gpu(b.conv1),
-    Flux.gpu(b.conv2),
-    Flux.gpu(b.gn1),
-    Flux.gpu(b.gn2),
-    Flux.gpu(b.gn3),
-    Flux.gpu(b.downsample),
-    Flux.gpu(b.dropout),
-)
+function Flux.gpu(b::BasicResidualBlock)
+    return BasicResidualBlock(Flux.gpu(b.conv1), Flux.gpu(b.conv2), Flux.gpu(b.gn1), Flux.gpu(b.gn2), Flux.gpu(b.gn3),
+                              Flux.gpu(b.downsample), Flux.gpu(b.dropout))
+end
 
-Flux.cpu(b::BasicResidualBlock) = BasicResidualBlock(
-    Flux.cpu(b.conv1),
-    Flux.cpu(b.conv2),
-    Flux.cpu(b.gn1),
-    Flux.cpu(b.gn2),
-    Flux.cpu(b.gn3),
-    Flux.cpu(b.downsample),
-    Flux.cpu(b.dropout),
-)
+function Flux.cpu(b::BasicResidualBlock)
+    return BasicResidualBlock(Flux.cpu(b.conv1), Flux.cpu(b.conv2), Flux.cpu(b.gn1), Flux.cpu(b.gn2), Flux.cpu(b.gn3),
+                              Flux.cpu(b.downsample), Flux.cpu(b.dropout))
+end
 
-function BasicResidualBlock(
-    outdims::Tuple,
-    inplanes::Int,
-    planes::Int;
-    deq_expand::Int = 5,
-    num_gn_groups::Int = 4,
-    downsample = identity,
-    n_big_kernels::Int = 0,
-    dropout_rate::Real = 0.0f0,
-    gn_affine::Bool = true,
-    weight_norm::Bool = true,
-)
+function BasicResidualBlock(outdims::Tuple, inplanes::Int, planes::Int; deq_expand::Int=5, num_gn_groups::Int=4,
+                            downsample=identity, n_big_kernels::Int=0, dropout_rate::Real=0.0f0, gn_affine::Bool=true,
+                            weight_norm::Bool=true)
     wn_layer = weight_norm ? WeightNorm : identity
 
     inner_planes = planes * deq_expand
-    conv1 = wn_layer(
-        (n_big_kernels >= 1 ? conv5x5 : conv3x3)(
-            inplanes => inner_planes;
-            stride = 1,
-            bias = false,
-        )
-    )
-    gn1 = GroupNormV2(
-        inner_planes,
-        num_gn_groups,
-        relu;
-        affine = gn_affine,
-        track_stats = false,
-    )
+    conv1 = wn_layer((n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; stride=1, bias=false))
+    gn1 = GroupNormV2(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=false)
 
-    conv2 = wn_layer(
-        (n_big_kernels >= 2 ? conv5x5 : conv3x3)(
-            inner_planes => planes;
-            stride = 1,
-            bias = false,
-        )
-    )
-    gn2 = GroupNormV2(
-        planes,
-        num_gn_groups,
-        relu;
-        affine = gn_affine,
-        track_stats = false,
-    )
+    conv2 = wn_layer((n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => planes; stride=1, bias=false))
+    gn2 = GroupNormV2(planes, num_gn_groups, relu; affine=gn_affine, track_stats=false)
 
-    gn3 = GroupNormV2(
-        planes,
-        num_gn_groups;
-        affine = gn_affine,
-        track_stats = false,
-    )
+    gn3 = GroupNormV2(planes, num_gn_groups; affine=gn_affine, track_stats=false)
 
-    return BasicResidualBlock(
-        conv1,
-        conv2,
-        gn1,
-        gn2,
-        gn3,
-        downsample,
-        (
-            iszero(dropout_rate) ? identity :
-            VariationalHiddenDropout(dropout_rate, (outdims..., planes, 1))
-        ),
-    )
+    return BasicResidualBlock(conv1, conv2, gn1, gn2, gn3, downsample,
+                              (iszero(dropout_rate) ? identity :
+                               VariationalHiddenDropout(dropout_rate, (outdims..., planes, 1))))
 end
 
 (b::BasicResidualBlock)(t::Tuple) = b(t...)
 
-function (b::BasicResidualBlock)(
-    x::AbstractArray{T},
-    injection::Union{AbstractArray{T},T} = T(0),
-) where {T}
+function (b::BasicResidualBlock)(x::AbstractArray{T}, injection::Union{AbstractArray{T},T}=T(0)) where {T}
     # WTF!!! Conv is not type stable
     x_ = x
     x = b.conv1(x)::typeof(x)
@@ -119,16 +61,9 @@ function (b::BasicResidualBlock)(
 end
 
 function Base.show(io::IO, l::BasicResidualBlock)
-    p, _ = Flux.destructure(l)
-    print(
-        io,
-        string(typeof(l).name.name),
-        "() ",
-        string(length(p)),
-        " Trainable Parameters",
-    )
+    p, _ = destructure(l)
+    return print(io, string(typeof(l).name.name), "() ", string(length(p)), " Trainable Parameters")
 end
-
 
 # BranchNet
 struct BranchNet{L}
@@ -165,7 +100,7 @@ function (bn::BranchNet)(x::AbstractArray{T}, injection::AbstractArray{T}, injec
     return copy(buf)
 end
 
-function (bn::BranchNet)(x::AbstractArray{T}, injection::T = T(0)) where {T}
+function (bn::BranchNet)(x::AbstractArray{T}, injection::T=T(0)) where {T}
     buf = Zygote.Buffer(typeof(x)[])
     push!(buf, bn.layers[1](x))
     for (i, l) in enumerate(bn.layers[2:end])
@@ -207,92 +142,40 @@ function (mpn::MultiParallelNet)(args...)
     return copy(buf)
 end
 
-
 # Downsample Module
-function downsample_module(
-    in_channels::Int,
-    out_channels::Int,
-    in_resolution::Int,
-    out_resolution::Int;
-    num_groups::Int = 4,
-    gn_affine::Bool = true,
-)
+function downsample_module(in_channels::Int, out_channels::Int, in_resolution::Int, out_resolution::Int;
+                           num_groups::Int=4, gn_affine::Bool=true)
     @assert in_resolution > out_resolution
     level_diff = Int(log2(in_resolution ÷ out_resolution))
     @assert ispow2(level_diff)
 
     layers = []
 
-    for i = 1:level_diff
+    for i in 1:level_diff
         intermediate_channels = i == level_diff ? out_channels : in_channels
-        push!(
-            layers,
-            Conv(
-                (3, 3),
-                in_channels => intermediate_channels;
-                stride = 2,
-                pad = 1,
-                bias = false,
-            ),
-        )
-        push!(
-            layers,
-            GroupNormV2(
-                intermediate_channels,
-                num_groups,
-                i == level_diff ? identity : relu;
-                affine = gn_affine,
-                track_stats = false,
-            ),
-        )
+        push!(layers, Conv((3, 3), in_channels => intermediate_channels; stride=2, pad=1, bias=false))
+        push!(layers,
+              GroupNormV2(intermediate_channels, num_groups, i == level_diff ? identity : relu; affine=gn_affine,
+                          track_stats=false))
     end
 
     return Sequential(layers...)
 end
 
-
 # Upsample Module
-function upsample_module(
-    in_channels::Int,
-    out_channels::Int,
-    in_resolution::Int,
-    out_resolution::Int;
-    num_groups::Int = 4,
-    gn_affine::Bool = true,
-)
+function upsample_module(in_channels::Int, out_channels::Int, in_resolution::Int, out_resolution::Int;
+                         num_groups::Int=4, gn_affine::Bool=true)
     @assert in_resolution < out_resolution
     level_diff = Int(log2(out_resolution ÷ in_resolution))
     @assert ispow2(level_diff)
 
-    return Sequential(
-        Conv((1, 1), in_channels => out_channels, bias = false),
-        GroupNormV2(
-            out_channels,
-            num_groups,
-            relu;
-            affine = gn_affine,
-            track_stats = false,
-        ),
-        Upsample(:nearest; scale = 2^level_diff),
-    )
+    return Sequential(Conv((1, 1), in_channels => out_channels; bias=false),
+                      GroupNormV2(out_channels, num_groups, relu; affine=gn_affine, track_stats=false),
+                      Upsample(:nearest; scale=2^level_diff))
 end
 
-
 # Mapping Module
-function expand_channels_module(
-    in_channels::Int,
-    out_channels::Int;
-    num_groups::Int = 4,
-    gn_affine::Bool = true,
-)
-    return Sequential(
-        conv3x3(in_channels => out_channels, bias = false),
-        GroupNormV2(
-            out_channels,
-            num_groups,
-            relu;
-            affine = gn_affine,
-            track_stats = false,
-        ),
-    )
+function expand_channels_module(in_channels::Int, out_channels::Int; num_groups::Int=4, gn_affine::Bool=true)
+    return Sequential(conv3x3(in_channels => out_channels; bias=false),
+                      GroupNormV2(out_channels, num_groups, relu; affine=gn_affine, track_stats=false))
 end

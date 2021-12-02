@@ -17,14 +17,8 @@ function DEQChain(layers...)
     if length(layers) == 3
         pre_deq, deq, post_deq = layers
         val = modeltype_to_val(deq)
-        val == Val(-1) && error(
-            "$deq must subtype AbstractDeepEquilibriumNetwork and define `modeltype_to_val`",
-        )
-        return DEQChain{val,typeof(pre_deq),typeof(deq),typeof(post_deq)}(
-            pre_deq,
-            deq,
-            post_deq,
-        )
+        val == Val(-1) && error("$deq must subtype AbstractDeepEquilibriumNetwork and define `modeltype_to_val`")
+        return DEQChain{val,typeof(pre_deq),typeof(deq),typeof(post_deq)}(pre_deq, deq, post_deq)
     end
     pre_deq = []
     post_deq = []
@@ -35,8 +29,7 @@ function DEQChain(layers...)
         val = modeltype_to_val(l)
         if val != Val(-1)
             global_val = val
-            encounter_deq &&
-                error("Can have only 1 DEQ Layer in the Chain!!!")
+            encounter_deq && error("Can have only 1 DEQ Layer in the Chain!!!")
             deq = l
             encounter_deq = true
             continue
@@ -47,36 +40,17 @@ function DEQChain(layers...)
             push!(pre_deq, l)
         end
     end
-    !encounter_deq &&
-        error("No DEQ Layer in the Chain!!! Maybe you wanted to use Chain")
+    !encounter_deq && error("No DEQ Layer in the Chain!!! Maybe you wanted to use Chain")
     pre_deq = length(pre_deq) == 0 ? identity : Chain(pre_deq...)
     post_deq = length(post_deq) == 0 ? identity : Chain(post_deq...)
-    return DEQChain{global_val,typeof(pre_deq),typeof(deq),typeof(post_deq)}(
-        pre_deq,
-        deq,
-        post_deq,
-    )
+    return DEQChain{global_val,typeof(pre_deq),typeof(deq),typeof(post_deq)}(pre_deq, deq, post_deq)
 end
-
-Flux.gpu(c::DEQChain) =
-    DEQChain(
-        c.pre_deq |> gpu,
-        c.deq |> gpu,
-        c.post_deq |> gpu,
-    )
-
-Flux.cpu(c::DEQChain) =
-    DEQChain(
-        c.pre_deq |> cpu,
-        c.deq |> cpu,
-        c.post_deq |> cpu,
-    )
-
 
 Flux.@functor DEQChain
 
-(deq::Union{DEQChain{Val(1)},DEQChain{Val(3)}})(x) =
-    deq.post_deq(deq.deq(deq.pre_deq(x)))
+function (deq::Union{DEQChain{Val(1)},DEQChain{Val(3)}})(x)
+    return deq.post_deq(deq.deq(deq.pre_deq(x)))
+end
 
 function (deq::Union{DEQChain{Val(2)},DEQChain{Val(4)}})(x)
     x1 = deq.pre_deq(x)
@@ -90,7 +64,6 @@ function get_and_clear_nfe!(model::DEQChain)
     model.deq.stats.nfe = 0
     return nfe
 end
-
 
 # Clean Chain
 struct Sequential{C<:Chain}
@@ -108,18 +81,12 @@ Flux.@functor Sequential
 
 _recursively_flatten(x; kwargs...) = x
 
-function _recursively_flatten(c::Chain; depth::Int = 0)
+function _recursively_flatten(c::Chain; depth::Int=0)
     if depth > 0
-        return vcat(_recursively_flatten.(c.layers; depth = depth + 1)...)
+        return vcat(_recursively_flatten.(c.layers; depth=depth + 1)...)
     else
-        return Chain(
-            vcat(_recursively_flatten.(c.layers; depth = depth + 1)...)...,
-        )
+        return Chain(vcat(_recursively_flatten.(c.layers; depth=depth + 1)...)...)
     end
 end
 
 (s::Sequential)(x) = s.flattened_chain(x)
-
-Flux.gpu(s::Sequential) = Sequential(Chain(gpu.(s.flattened_chain.layers)...))
-
-Flux.cpu(s::Sequential) = Sequential(Chain(cpu.(s.flattened_chain.layers)...))

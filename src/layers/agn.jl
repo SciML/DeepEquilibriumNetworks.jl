@@ -1,16 +1,12 @@
 # Code adapted from https://github.com/Chemellia/AtomicGraphNets.jl/blob/main/src/layers.jl
 # Layers have been GPUified (will try to get them upstreamed)
 # AGN stands for AtomicGraphNets
-pool_out_features(num_f::Int64, dim::Int64, stride::Int64, pad::Int64) =
-    Int64(floor((num_f + 2 * pad - dim) / stride + 1))
+function pool_out_features(num_f::Int64, dim::Int64, stride::Int64, pad::Int64)
+    return Int64(floor((num_f + 2 * pad - dim) / stride + 1))
+end
 
-function compute_pool_params(
-    num_f_in::Int64,
-    num_f_out::Int64,
-    dim_frac::AbstractFloat;
-    start_dim = Int64(round(dim_frac * num_f_in)),
-    start_str = Int64(floor(num_f_in / num_f_out)),
-)
+function compute_pool_params(num_f_in::Int64, num_f_out::Int64, dim_frac::AbstractFloat;
+                             start_dim=Int64(round(dim_frac * num_f_in)), start_str=Int64(floor(num_f_in / num_f_out)))
     # take starting guesses
     dim = start_dim
     str = start_str
@@ -35,14 +31,9 @@ function compute_pool_params(
     # check if pad gets comparable to width...
     if pad >= 0.8 * dim
         @warn "specified pooling width was hard to satisfy without nonsensically large padding relative to width, had to increase from desired width"
-        dim, str, pad = compute_pool_params(
-            num_f_in,
-            num_f_out,
-            dim_frac,
-            start_dim = Int64(round(1.2 * start_dim)),
-        )
+        dim, str, pad = compute_pool_params(num_f_in, num_f_out, dim_frac; start_dim=Int64(round(1.2 * start_dim)))
     end
-    dim, str, pad
+    return dim, str, pad
 end
 
 abstract type AtomicGraphLayer end
@@ -56,13 +47,7 @@ struct AGNConv{W,B,F} <: AtomicGraphLayer
     σ::F
 end
 
-function AGNConv(
-    ch::Pair{<:Integer,<:Integer},
-    σ = softplus;
-    initW = Flux.glorot_uniform,
-    initb = zeros,
-    T::DataType = Float32,
-)
+function AGNConv(ch::Pair{<:Integer,<:Integer}, σ=softplus; initW=Flux.glorot_uniform, initb=zeros, T::DataType=Float32)
     selfweight = T.(initW(ch[2], ch[1]))
     convweight = T.(initW(ch[2], ch[1]))
     b = T.(initb(ch[2], 1))
@@ -72,10 +57,7 @@ end
 @functor AGNConv
 
 function (l::AGNConv)(lapl::AbstractMatrix, X::AbstractMatrix)
-    out_mat = Flux.normalise(
-        l.σ.(l.convweight * X * lapl .+ l.selfweight * X .+ l.bias),
-        dims = [1, 2],
-    )
+    out_mat = Flux.normalise(l.σ.(l.convweight * X * lapl .+ l.selfweight * X .+ l.bias); dims=[1, 2])
     return lapl, out_mat
 end
 
@@ -91,17 +73,8 @@ struct AGNMeanPool <: AtomicGraphLayer
     pad::Int64
 end
 
-function AGNPool(
-    pool_type::Symbol,
-    in_num_features::Int64,
-    out_num_features::Int64,
-    pool_width_frac::Float64,
-)
-    dim, stride, pad = compute_pool_params(
-        in_num_features,
-        out_num_features,
-        Float64(pool_width_frac),
-    )
+function AGNPool(pool_type::Symbol, in_num_features::Int64, out_num_features::Int64, pool_width_frac::Float64)
+    dim, stride, pad = compute_pool_params(in_num_features, out_num_features, Float64(pool_width_frac))
     if pool_type == :max
         T = AGNMaxPool
     elseif pool_type == :mean
@@ -116,16 +89,14 @@ AGNMeanPool(args...) = AGNPool(:mean, args...)
 
 function (m::AGNMaxPool)(lapl::AbstractMatrix, X::AbstractMatrix)
     x = reshape(X, (size(X)..., 1, 1))
-    pdims =
-        PoolDims(x, (m.dim, 1); padding = (m.pad, 0), stride = (m.stride, 1))
-    return mean(maxpool(x, pdims), dims = 2)[:, :, 1, 1]
+    pdims = PoolDims(x, (m.dim, 1); padding=(m.pad, 0), stride=(m.stride, 1))
+    return mean(maxpool(x, pdims); dims=2)[:, :, 1, 1]
 end
 
 function (m::AGNMeanPool)(lapl::AbstractMatrix, X::AbstractMatrix)
     x = reshape(X, (size(X)..., 1, 1))
-    pdims =
-        PoolDims(x, (m.dim, 1); padding = (m.pad, 0), stride = (m.stride, 1))
-    return mean(meanpool(x, pdims), dims = 2)[:, :, 1, 1]
+    pdims = PoolDims(x, (m.dim, 1); padding=(m.pad, 0), stride=(m.stride, 1))
+    return mean(meanpool(x, pdims); dims=2)[:, :, 1, 1]
 end
 
 # Batching Utilities
@@ -151,34 +122,22 @@ batch_graph_data(t::Tuple) = batch_graph_data(t[1], t[2])
 function batch_graph_data(laplacians, encoded_features)
     _sizes = map(x -> size(x, 1), laplacians)
     total_nodes = sum(_sizes)
-    batched_laplacian =
-        sparse(zeros(eltype(laplacians[1]), total_nodes, total_nodes))
+    batched_laplacian = sparse(zeros(eltype(laplacians[1]), total_nodes, total_nodes))
     idx = 1
-    for i = 1:length(laplacians)
-        batched_laplacian[idx:idx+_sizes[i]-1, idx:idx+_sizes[i]-1] .=
-            laplacians[i]
+    for i in 1:length(laplacians)
+        batched_laplacian[idx:(idx + _sizes[i] - 1), idx:(idx + _sizes[i] - 1)] .= laplacians[i]
         idx += _sizes[i]
     end
     _sizes = vcat(0, cumsum(_sizes))
     enc_feats = sparse(hcat(encoded_features...))
-    return BatchedAtomicGraph(
-        batched_laplacian,
-        enc_feats,
-        _sizes,
-    )
+    return BatchedAtomicGraph(batched_laplacian, enc_feats, _sizes)
 end
 
-BatchedAtomicGraph(batch_size::Int, atoms::Vector{FeaturizedAtoms}) =
-    BatchedAtomicGraph(
-        batch_size,
-        map(x -> x.atoms.laplacian, atoms),
-        map(x -> x.encoded_features, atoms),
-    )
+function BatchedAtomicGraph(batch_size::Int, atoms::Vector{FeaturizedAtoms})
+    return BatchedAtomicGraph(batch_size, map(x -> x.atoms.laplacian, atoms), map(x -> x.encoded_features, atoms))
+end
 
-BatchedAtomicGraph(batch_size::Int, laplacians, encoded_features) =
-    batch_graph_data.(
-        zip(
-            Iterators.partition(laplacians, batch_size),
-            Iterators.partition(encoded_features, batch_size)
-        )
-    )
+function BatchedAtomicGraph(batch_size::Int, laplacians, encoded_features)
+    return batch_graph_data.(zip(Iterators.partition(laplacians, batch_size),
+                                 Iterators.partition(encoded_features, batch_size)))
+end

@@ -1,20 +1,6 @@
 # Load Packages
-using CUDA,
-    Dates,
-    DiffEqSensitivity,
-    FastDEQ,
-    Flux,
-    FluxMPI,
-    MLDatasets,
-    MPI,
-    OrdinaryDiffEq,
-    Serialization,
-    Statistics,
-    SteadyStateDiffEq,
-    Plots,
-    Random,
-    Wandb,
-    Zygote
+using CUDA, Dates, DiffEqSensitivity, FastDEQ, Flux, FluxMPI, MLDatasets, MPI, OrdinaryDiffEq, Serialization,
+      Statistics, SteadyStateDiffEq, Plots, Random, Wandb, Zygote
 using ParameterSchedulers: Scheduler, Cos
 
 MPI.Init()
@@ -24,83 +10,38 @@ const MPI_COMM_WORLD = MPI.COMM_WORLD
 const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
 
 ## Models
-function get_model(
-    maxiters::Int,
-    abstol::T,
-    reltol::T,
-    batch_size::Int,
-    model_type::String,
-    solver_type::String,
-) where {T}
-    main_layers = (
-        BasicResidualBlock((28, 28), 8, 8),
-        BasicResidualBlock((14, 14), 16, 16),
-        BasicResidualBlock((7, 7), 32, 32),
-    )
-    mapping_layers = [
-        identity downsample_module(8, 16, 28, 14) downsample_module(8, 32, 28, 7)
-        upsample_module(16, 8, 14, 28) identity downsample_module(16, 32, 14, 7)
-        upsample_module(32, 8, 7, 28) upsample_module(32, 16, 7, 14) identity
-    ]
-    solver =
-        solver_type == "dynamicss" ?
-        get_default_dynamicss_solver(abstol, reltol) :
-        get_default_ssrootfind_solver(
-            abstol,
-            reltol,
-            LimitedMemoryBroydenSolver;
-            device = gpu,
-            original_dims = (1, (28 * 28 * 8) + (14 * 14 * 16) + (7 * 7 * 32)),
-            batch_size = batch_size,
-            maxiters = maxiters,
-        )
-    model = DEQChain(
-        expand_channels_module(1, 8),
-        model_type == "skip" ?
-        MultiScaleSkipDeepEquilibriumNetwork(
-            main_layers,
-            mapping_layers,
-            (
-                BasicResidualBlock((28, 28), 8, 8),
-                downsample_module(8, 16, 28, 14),
-                downsample_module(8, 32, 28, 7),
-            ),
-            solver,
-            maxiters = maxiters,
-            sensealg = get_default_ssadjoint(abstol, reltol, maxiters),
-            verbose = false,
-        ) :
-        (
-            model_type == "vanilla" ? MultiScaleDeepEquilibriumNetwork :
-            MultiScaleSkipDeepEquilibriumNetwork
-        )(
-            main_layers,
-            mapping_layers,
-            solver,
-            maxiters = maxiters,
-            sensealg = get_default_ssadjoint(abstol, reltol, maxiters),
-            verbose = false,
-        ),
-        t -> tuple(t...),
-        Parallel(
-            +,
-            downsample_module(8, 32, 28, 7),
-            downsample_module(16, 32, 14, 7),
-            expand_channels_module(32, 32),
-        ),
-        Flux.flatten,
-        Dense(7 * 7 * 32, 10; bias = true),
-    )
-    if MPI_COMM_SIZE > 1
-        return DataParallelFluxModel(
-            model,
-            [i % length(CUDA.devices()) for i = 1:MPI_COMM_SIZE],
-        )
+function get_model(maxiters::Int, abstol::T, reltol::T, batch_size::Int, model_type::String,
+                   solver_type::String) where {T}
+    main_layers = (BasicResidualBlock((28, 28), 8, 8), BasicResidualBlock((14, 14), 16, 16),
+                   BasicResidualBlock((7, 7), 32, 32))
+    mapping_layers = [identity downsample_module(8, 16, 28, 14) downsample_module(8, 32, 28, 7)
+                      upsample_module(16, 8, 14, 28) identity downsample_module(16, 32, 14, 7)
+                      upsample_module(32, 8, 7, 28) upsample_module(32, 16, 7, 14) identity]
+    solver = solver_type == "dynamicss" ? get_default_dynamicss_solver(abstol, reltol) :
+             get_default_ssrootfind_solver(abstol, reltol, LimitedMemoryBroydenSolver; device=gpu,
+                                           original_dims=(1, (28 * 28 * 8) + (14 * 14 * 16) + (7 * 7 * 32)),
+                                           batch_size=batch_size, maxiters=maxiters)
+    if model_type == "skip"
+        deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers,
+                                                   (BasicResidualBlock((28, 28), 8, 8),
+                                                    downsample_module(8, 16, 28, 14), downsample_module(8, 32, 28, 7)),
+                                                   solver; maxiters=maxiters,
+                                                   sensealg=get_default_ssadjoint(abstol, reltol, maxiters),
+                                                   verbose=false)
     else
-        return model |> gpu
+        _deq = model_type == "vanilla" ? MultiScaleDeepEquilibriumNetwork : MultiScaleSkipDeepEquilibriumNetwork
+        deq = _deq(main_layers, mapping_layers, solver; maxiters=maxiters,
+                   sensealg=get_default_ssadjoint(abstol, reltol, maxiters), verbose=false)
+    end
+    model = DEQChain(expand_channels_module(1, 8), deq, t -> tuple(t...),
+                     Parallel(+, downsample_module(8, 32, 28, 7), downsample_module(16, 32, 14, 7),
+                              expand_channels_module(32, 32)), Flux.flatten, Dense(7 * 7 * 32, 10; bias=true))
+    if MPI_COMM_SIZE > 1
+        return DataParallelFluxModel(model, [i % length(CUDA.devices()) for i in 1:MPI_COMM_SIZE])
+    else
+        return gpu(model)
     end
 end
-
 
 ## Utilities
 function register_nfe_counts(model, buffer)
@@ -111,23 +52,18 @@ end
 function loss_and_accuracy(model, dataloader)
     matches, total_loss, total_datasize, total_nfe = 0, 0, 0, 0
     for (x, y) in dataloader
-        x = x |> gpu
-        y = y |> gpu
+        x = gpu(x)
+        y = gpu(y)
 
         ŷ = model(x)
         ŷ = ŷ isa Tuple ? ŷ[1] : ŷ  # Handle SkipDEQ
         total_nfe += get_and_clear_nfe!(model) * size(x, ndims(x))
         total_loss += Flux.Losses.logitcrossentropy(ŷ, y) * size(x, ndims(x))
-        matches += sum(argmax.(eachcol(ŷ)) .== Flux.onecold(y |> cpu))
+        matches += sum(argmax.(eachcol(ŷ)) .== Flux.onecold(cpu(y)))
         total_datasize += size(x, ndims(x))
     end
-    return (
-        total_loss / total_datasize,
-        matches / total_datasize,
-        total_nfe / total_datasize,
-    )
+    return (total_loss / total_datasize, matches / total_datasize, total_nfe / total_datasize)
 end
-
 
 ## Training Function
 function train(config::Dict)
@@ -136,24 +72,10 @@ function train(config::Dict)
 
     ## Setup Logging & Experiment Configuration
     expt_name = "fastdeqjl-supervised_mnist_classication-mdeq-$(now())"
-    lg_wandb = WandbLoggerMPI(
-        project = "FastDEQ.jl",
-        name = expt_name,
-        config = config,
-    )
-    lg_term = PrettyTableLogger(
-        expt_name,
-        [
-            "Epoch Number",
-            "Train/NFE",
-            "Train/Accuracy",
-            "Train/Loss",
-            "Test/NFE",
-            "Test/Accuracy",
-            "Test/Loss",
-        ],
-        ["Train/Running/NFE", "Train/Running/Loss"],
-    )
+    lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, config=config)
+    lg_term = PrettyTableLogger(expt_name,
+                                ["Epoch Number", "Train/NFE", "Train/Accuracy", "Train/Loss", "Test/NFE",
+                                 "Test/Accuracy", "Test/Loss"], ["Train/Running/NFE", "Train/Running/Loss"])
 
     ## Reproducibility
     Random.seed!(get_config(lg_wandb, "seed"))
@@ -165,44 +87,24 @@ function train(config::Dict)
     _xs_train, _ys_train = MNIST.traindata(Float32)
     _xs_test, _ys_test = MNIST.testdata(Float32)
 
-    xs_train, ys_train =
-        Flux.unsqueeze(_xs_train, 3), Float32.(Flux.onehotbatch(_ys_train, 0:9))
-    xs_test, ys_test =
-        Flux.unsqueeze(_xs_test, 3), Float32.(Flux.onehotbatch(_ys_test, 0:9))
+    xs_train, ys_train = Flux.unsqueeze(_xs_train, 3), Float32.(Flux.onehotbatch(_ys_train, 0:9))
+    xs_test, ys_test = Flux.unsqueeze(_xs_test, 3), Float32.(Flux.onehotbatch(_ys_test, 0:9))
 
     traindata = (xs_train, ys_train)
-    trainiter = DataParallelDataLoader(
-        traindata;
-        batchsize = batch_size,
-        shuffle = true,
-    )
-    trainiter_test = DataParallelDataLoader(
-        traindata;
-        batchsize = eval_batch_size,
-        shuffle = false,
-    )
-    testiter = DataParallelDataLoader(
-        (xs_test, ys_test);
-        batchsize = eval_batch_size,
-        shuffle = false,
-    )
+    trainiter = DataParallelDataLoader(traindata; batchsize=batch_size, shuffle=true)
+    trainiter_test = DataParallelDataLoader(traindata; batchsize=eval_batch_size, shuffle=false)
+    testiter = DataParallelDataLoader((xs_test, ys_test); batchsize=eval_batch_size, shuffle=false)
 
     ## Model Setup
-    model = get_model(
-        get_config(lg_wandb, "maxiters"),
-        Float32(get_config(lg_wandb, "abstol")),
-        Float32(get_config(lg_wandb, "reltol")),
-        batch_size,
-        get_config(lg_wandb, "model_type"),
-        get_config(lg_wandb, "solver_type"),
-    )
+    model = get_model(get_config(lg_wandb, "maxiters"), Float32(get_config(lg_wandb, "abstol")),
+                      Float32(get_config(lg_wandb, "reltol")), batch_size, get_config(lg_wandb, "model_type"),
+                      get_config(lg_wandb, "solver_type"))
 
-    loss_function =
-        SupervisedLossContainer(Flux.Losses.logitcrossentropy, 5.0f0)
+    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 5.0f0)
 
     ## Warmup
-    __x = rand(28, 28, 1, 1) |> gpu
-    __y = Flux.onehotbatch([1], 0:9) |> gpu
+    __x = gpu(rand(28, 28, 1, 1))
+    __y = gpu(Flux.onehotbatch([1], 0:9))
     loss_function(model, __x, __y)
     @info "Rank $rank: Forward Pass Warmup Completed"
     Zygote.gradient(() -> loss_function(model, __x, __y), Flux.params(model))
@@ -213,14 +115,9 @@ function train(config::Dict)
 
     ## Training Loop
     ps = Flux.params(model)
-    opt = Scheduler(
-        Cos(
-            get_config(lg_wandb, "learning_rate"),
-            1e-6,
-            length(trainiter) * get_config(lg_wandb, "epochs"),
-        ),
-        ADAM(get_config(lg_wandb, "learning_rate"), (0.9, 0.999)),
-    )
+    opt = Scheduler(Cos(get_config(lg_wandb, "learning_rate"), 1e-6,
+                        length(trainiter) * get_config(lg_wandb, "epochs")),
+                    ADAM(get_config(lg_wandb, "learning_rate"), (0.9, 0.999)))
     step = 1
 
     train_vec = zeros(3)
@@ -233,11 +130,11 @@ function train(config::Dict)
 
     @info "Rank $rank: [ $datacount_trainiter / $datacount_trainiter_total ] Training Images | [ $datacount_testiter / $datacount_testiter_total ] Test Images"
 
-    for epoch = 1:get_config(lg_wandb, "epochs")
+    for epoch in 1:get_config(lg_wandb, "epochs")
         try
             for (x, y) in trainiter
-                x = x |> gpu
-                y = y |> gpu
+                x = gpu(x)
+                y = gpu(y)
 
                 _res = Zygote.withgradient(() -> loss_function(model, x, y), ps)
                 loss = _res.val
@@ -248,74 +145,39 @@ function train(config::Dict)
                 cb()
 
                 ### Log the losses
-                log(
-                    lg_wandb,
-                    Dict(
-                        "Training/Step/Loss" => loss,
-                        "Training/Step/NFE" => nfe_counts[end],
-                        "Training/Step/Count" => step,
-                    ),
-                )
-                lg_term(;
-                    records = Dict(
-                        "Train/Running/NFE" => nfe_counts[end],
-                        "Train/Running/Loss" => loss,
-                    ),
-                )
+                log(lg_wandb,
+                    Dict("Training/Step/Loss" => loss, "Training/Step/NFE" => nfe_counts[end],
+                         "Training/Step/Count" => step))
+                lg_term(; records=Dict("Train/Running/NFE" => nfe_counts[end], "Train/Running/Loss" => loss))
                 step += 1
             end
 
             ### Training Loss/Accuracy
-            train_loss, train_acc, train_nfe =
-                loss_and_accuracy(model, trainiter_test)
+            train_loss, train_acc, train_nfe = loss_and_accuracy(model, trainiter_test)
 
             if MPI_COMM_SIZE > 1
-                train_vec .=
-                    [train_loss, train_acc, train_nfe] .* datacount_trainiter
+                train_vec .= [train_loss, train_acc, train_nfe] .* datacount_trainiter
                 safe_reduce!(train_vec, +, 0, comm)
-                train_loss, train_acc, train_nfe =
-                    train_vec ./ datacount_trainiter_total
+                train_loss, train_acc, train_nfe = train_vec ./ datacount_trainiter_total
             end
 
-            log(
-                lg_wandb,
-                Dict(
-                    "Training/Epoch/Count" => epoch,
-                    "Training/Epoch/Loss" => train_loss,
-                    "Training/Epoch/NFE" => train_nfe,
-                    "Training/Epoch/Accuracy" => train_acc,
-                ),
-            )
+            log(lg_wandb,
+                Dict("Training/Epoch/Count" => epoch, "Training/Epoch/Loss" => train_loss,
+                     "Training/Epoch/NFE" => train_nfe, "Training/Epoch/Accuracy" => train_acc))
 
             ### Testing Loss/Accuracy
             test_loss, test_acc, test_nfe = loss_and_accuracy(model, testiter)
 
             if MPI_COMM_SIZE > 1
-                test_vec .=
-                    [test_loss, test_acc, test_nfe] .* datacount_trainiter
+                test_vec .= [test_loss, test_acc, test_nfe] .* datacount_trainiter
                 safe_reduce!(test_vec, +, 0, comm)
-                test_loss, test_acc, test_nfe =
-                    test_vec ./ datacount_trainiter_total
+                test_loss, test_acc, test_nfe = test_vec ./ datacount_trainiter_total
             end
 
-            log(
-                lg_wandb,
-                Dict(
-                    "Testing/Epoch/Count" => epoch,
-                    "Testing/Epoch/Loss" => test_loss,
-                    "Testing/Epoch/NFE" => test_nfe,
-                    "Testing/Epoch/Accuracy" => test_acc,
-                ),
-            )
-            lg_term(
-                epoch,
-                train_nfe,
-                train_acc,
-                train_loss,
-                test_nfe,
-                test_acc,
-                test_loss,
-            )
+            log(lg_wandb,
+                Dict("Testing/Epoch/Count" => epoch, "Testing/Epoch/Loss" => test_loss, "Testing/Epoch/NFE" => test_nfe,
+                     "Testing/Epoch/Accuracy" => test_acc))
+            lg_term(epoch, train_nfe, train_acc, train_loss, test_nfe, test_acc, test_loss)
 
             MPI.Barrier(comm)
         catch ex
@@ -336,23 +198,13 @@ function train(config::Dict)
 end
 
 ## Run Experiment
-nfe_count_dict =
-    Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [])
+nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [])
 
 for seed in [1, 11, 111]
     for model_type in ["skip", "skip_no_extra_params", "vanilla"]
-        config = Dict(
-            "seed" => seed,
-            "learning_rate" => 0.005,
-            "abstol" => 0.1f0,
-            "reltol" => 0.1f0,
-            "maxiters" => 15,
-            "epochs" => 10,
-            "batch_size" => 256,
-            "eval_batch_size" => 256,
-            "model_type" => model_type,
-            "solver_type" => "dynamicss",
-        )
+        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 0.1f0, "reltol" => 0.1f0, "maxiters" => 15,
+                      "epochs" => 10, "batch_size" => 128, "eval_batch_size" => 256, "model_type" => model_type,
+                      "solver_type" => "dynamicss")
 
         model, nfe_counts = train(config)
 
@@ -362,9 +214,6 @@ end
 
 if MPI.Comm_rank(MPI_COMM_WORLD) == 0
     filename = "fastdeqjl-supervised_mnist_classication-mdeq-$(now()).jl_serialized_file"
-    serialize(
-        joinpath("artifacts", filename),
-        nfe_count_dict
-    )
+    serialize(joinpath("artifacts", filename), nfe_count_dict)
     @info "Serialized NFE Counts to $filename"
 end

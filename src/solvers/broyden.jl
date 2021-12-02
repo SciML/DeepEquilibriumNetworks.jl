@@ -25,31 +25,18 @@ struct BroydenSolver{C<:BroydenCache,T<:Real}
     ϵ::T
 end
 
-function BroydenSolver(;
-    T = Float32,
-    device,
-    original_dims,
-    batch_size,
-    maxiters::Int = 50,
-    ϵ::Real = 1e-6,
-    abstol::Union{Real,Nothing} = nothing,
-    reltol::Union{Real,Nothing} = nothing,
-)
+function BroydenSolver(; T=Float32, device, original_dims, batch_size, maxiters::Int=50, ϵ::Real=1e-6,
+                       abstol::Union{Real,Nothing}=nothing, reltol::Union{Real,Nothing}=nothing)
     ϵ = abstol !== nothing ? abstol : ϵ
 
     if reltol !== nothing
         @warn maxlog = 1 "reltol is set to $reltol, but `limited_memory_broyden` ignores this value"
     end
 
-    x = zeros(T, prod(original_dims) * batch_size) |> device
+    x = device(zeros(T, prod(original_dims) * batch_size))
     cache = BroydenCache(x)
 
-    return BroydenSolver(
-        cache,
-        maxiters,
-        batch_size,
-        T(ϵ),
-    )
+    return BroydenSolver(cache, maxiters, batch_size, T(ϵ))
 end
 
 function (broyden::BroydenSolver{C,T})(f!, x_::AbstractVector{T}) where {C,T}
@@ -68,7 +55,7 @@ function (broyden::BroydenSolver{C,T})(f!, x_::AbstractVector{T}) where {C,T}
     max_resets = 3
     resets = 0
 
-    for i = 1:broyden.maxiters
+    for i in 1:(broyden.maxiters)
         x_old .= x
         fx_old .= fx
 
@@ -109,20 +96,10 @@ function (broyden::BroydenSolver{C,T})(f!, x_::AbstractVector{T}) where {C,T}
     return x
 end
 
-
 # https://doi.org/10.1080/10556780008805782
 # FIXME: We are dropping some robustness tests for now.
-function _approximate_norm_descent(
-    f!,
-    fx::AbstractArray{T,N},
-    x::AbstractArray{T,N},
-    p;
-    λ₀ = T(1),
-    β = T(0.5),
-    σ₁ = T(0.001),
-    η = T(0.1),
-    max_iter = 50,
-) where {T,N}
+function _approximate_norm_descent(f!, fx::AbstractArray{T,N}, x::AbstractArray{T,N}, p; λ₀=T(1), β=T(0.5), σ₁=T(0.001),
+                                   η=T(0.1), max_iter=50) where {T,N}
     λ₂, λ₁ = λ₀, λ₀
 
     f!(fx, x)
@@ -136,46 +113,18 @@ function _approximate_norm_descent(
     j = 0
 
     f!(fx, x .+ λ₂ .* p)
-    converged = _test_approximate_norm_descent_convergence(
-        f!,
-        fx,
-        x,
-        fx_norm,
-        p,
-        σ₁,
-        λ₂,
-        η,
-    )
+    converged = _test_approximate_norm_descent_convergence(f!, fx, x, fx_norm, p, σ₁, λ₂, η)
 
     while j < max_iter && !converged
         j += 1
         λ₁, λ₂ = λ₂, β * λ₂
-        converged = _test_approximate_norm_descent_convergence(
-            f!,
-            fx,
-            x,
-            fx_norm,
-            p,
-            σ₁,
-            λ₂,
-            η,
-        )
+        converged = _test_approximate_norm_descent_convergence(f!, fx, x, fx_norm, p, σ₁, λ₂, η)
     end
 
     return λ₂
 end
 
-
-function _test_approximate_norm_descent_convergence(
-    f!,
-    fx,
-    x,
-    fx_norm,
-    p,
-    σ₁,
-    λ₂,
-    η,
-)
+function _test_approximate_norm_descent_convergence(f!, fx, x, fx_norm, p, σ₁, λ₂, η)
     f!(fx, x .+ λ₂ .* p)
     n1 = norm(fx, 2)
 

@@ -6,13 +6,9 @@ using ChemistryFeaturization
 using Serialization
 using FastDEQ
 
-function train(;
-    num_pts = 133885,  # Total Pts = 133885
-    num_epochs = 100,
-    data_dir = joinpath(@__DIR__, "data"),
-    verbose = true,
-    batch_size = 128,
-)
+function train(; num_pts=133885,  # Total Pts = 133885
+               num_epochs=100, data_dir=joinpath(@__DIR__, "data"),
+               verbose=true, batch_size=128)
     verbose && println("Setting things up...")
 
     # data-related options
@@ -48,14 +44,14 @@ function train(;
 
     # pick out train/test sets
     verbose && println("Dividing into train/test sets...")
-    train_output = output[1:num_train] |> gpu
-    test_output = output[num_train+1:end] |> gpu
+    train_output = gpu(output[1:num_train])
+    test_output = gpu(output[(num_train + 1):end])
     train_input = inputs[1:num_train]
-    test_input = inputs[num_train+1:end]
+    test_input = inputs[(num_train + 1):end]
 
     # 2 gpu calls to remove sparsity (some bugs with sparse dense matmul)
-    train_input = BatchedAtomicGraph(batch_size, train_input) .|> gpu .|> gpu
-    test_input = BatchedAtomicGraph(batch_size, test_input) .|> gpu .|> gpu
+    train_input = gpu.(gpu.(BatchedAtomicGraph(batch_size, train_input)))
+    test_input = gpu.(gpu.(BatchedAtomicGraph(batch_size, test_input)))
 
     train_data = zip(train_input, Iterators.partition(train_output, batch_size))
     test_data = zip(test_input, Iterators.partition(test_output, batch_size))
@@ -63,13 +59,10 @@ function train(;
     # build the model
     verbose && println("Building the network...")
     num_features = size(inputs[1].encoded_features, 1)
-    model = CrystalGraphCNN(
-        num_features,
-        num_conv = num_conv,
-        atom_conv_feature_length = crys_fea_len,
-        pooled_feature_length = Int(crys_fea_len / 2),
-        num_hidden_layers = num_hidden_layers,
-    ) |> gpu
+    model = gpu(CrystalGraphCNN(num_features; num_conv=num_conv,
+                                atom_conv_feature_length=crys_fea_len,
+                                pooled_feature_length=Int(crys_fea_len / 2),
+                                num_hidden_layers=num_hidden_layers))
 
     # define loss function and a callback to monitor progress
     loss(x, y) = mean(abs, vec(model(x)) .- y)
@@ -81,13 +74,8 @@ function train(;
 
     # train
     verbose && println("Training!")
-    @epochs num_epochs Flux.train!(
-        loss,
-        Flux.params(model),
-        train_data,
-        opt,
-        cb = Flux.throttle(evalcb, 5),
-    )
+    @epochs num_epochs Flux.train!(loss, Flux.params(model), train_data, opt;
+                                   cb=Flux.throttle(evalcb, 5))
 
     return model
 end

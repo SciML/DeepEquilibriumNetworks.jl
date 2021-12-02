@@ -6,8 +6,7 @@ end
 
 Flux.trainable(::VariationalHiddenDropout) = ()
 
-Flux.gpu(hd::VariationalHiddenDropout) =
-    VariationalHiddenDropout(hd.p, hd.mask |> gpu, hd.active)
+Flux.@functor VariationalHiddenDropout
 
 function VariationalHiddenDropout(p, s)
     @assert 0 ≤ p ≤ 1
@@ -19,7 +18,7 @@ end
 
 function reset_mask!(a::VariationalHiddenDropout)
     Flux.rand!(a.mask)
-    a.mask .= Flux._dropout_kernel.(a.mask, a.p, 1 - a.p)
+    return a.mask .= Flux._dropout_kernel.(a.mask, a.p, 1 - a.p)
     # Sync the mask across all processes
     # if MPI.Initialized() && MPI.Comm_size(MPI.COMM_WORLD) > 1
     #     safe_bcast!(a.mask, 0, MPI.COMM_WORLD)
@@ -31,24 +30,25 @@ Zygote.@nograd reset_mask!
 function (a::VariationalHiddenDropout)(x)
     Flux._isactive(a) || return x
     is_mask_reset_allowed() && reset_mask!(a)
-    return variational_hidden_dropout(x, a.mask; active = true)
+    return variational_hidden_dropout(x, a.mask; active=true)
 end
 
-Flux.testmode!(m::VariationalHiddenDropout, mode = true) =
-    (m.active = (isnothing(mode) || mode == :auto) ? nothing : !mode; m)
+function Flux.testmode!(m::VariationalHiddenDropout, mode=true)
+    return (m.active = (isnothing(mode) || mode == :auto) ? nothing : !mode; m)
+end
 
 function Base.show(io::IO, d::VariationalHiddenDropout)
     print(io, "VariationalDropout(", d.p)
     print(io, ", size = $(repr(size(d.mask)))")
-    print(io, ")")
+    return print(io, ")")
 end
 
-function variational_hidden_dropout(x, mask; active::Bool = true)
+function variational_hidden_dropout(x, mask; active::Bool=true)
     active || return x
     return x .* mask
 end
 
-Zygote.@adjoint function variational_hidden_dropout(x, mask; active::Bool = true)
+Zygote.@adjoint function variational_hidden_dropout(x, mask; active::Bool=true)
     active || return x, Δ -> (Δ, nothing)
     return x .* mask, Δ -> (Δ .* mask, nothing)
 end

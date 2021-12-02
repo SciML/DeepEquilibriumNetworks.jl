@@ -23,47 +23,12 @@ end
 Flux.hasaffine(gn::GroupNormV2) = Flux.hasaffine(gn.attrs)
 Flux._isactive(gn::GroupNormV2) = Flux._isactive(gn.attrs)
 
-Flux.gpu(gn::GroupNormV2) = GroupNormV2(
-    gn.G,
-    gn.λ,
-    Flux.gpu(gn.β),
-    Flux.gpu(gn.γ),
-    Flux.gpu(gn.μ),
-    Flux.gpu(gn.σ²),
-    gn.ϵ,
-    gn.momentum,
-    gn.chs,
-    gn.attrs,
-)
-
-Flux.cpu(gn::GroupNormV2) = GroupNormV2(
-    gn.G,
-    gn.λ,
-    Flux.cpu(gn.β),
-    Flux.cpu(gn.γ),
-    Flux.cpu(gn.μ),
-    Flux.cpu(gn.σ²),
-    gn.ϵ,
-    gn.momentum,
-    gn.chs,
-    gn.attrs,
-)
-
-Flux.@functor GroupNormV2 (β, γ)
+Flux.@functor GroupNormV2
 
 Flux.trainable(gn::GroupNormV2) = hasaffine(gn) ? (gn.β, gn.γ) : ()
 
-function GroupNormV2(
-    chs::Int,
-    G::Int,
-    λ = identity;
-    initβ = zeros32,
-    initγ = ones32,
-    affine = true,
-    track_stats = false,
-    ϵ = 1f-5,
-    momentum = 0.1f0,
-)
+function GroupNormV2(chs::Int, G::Int, λ=identity; initβ=zeros32, initγ=ones32, affine=true, track_stats=false, ϵ=1f-5,
+                     momentum=0.1f0)
     @assert chs % G == 0 "The number of groups ($(G)) must divide the number of channels ($chs)"
 
     β = affine ? initβ(chs) : nothing
@@ -71,18 +36,7 @@ function GroupNormV2(
     μ = track_stats ? zeros32(G) : nothing
     σ² = track_stats ? ones32(G) : nothing
 
-    return GroupNormV2(
-        G,
-        λ,
-        β,
-        γ,
-        μ,
-        σ²,
-        ϵ,
-        momentum,
-        chs,
-        NormAttributes(affine, track_stats, nothing),
-    )
+    return GroupNormV2(G, λ, β, γ, μ, σ², ϵ, momentum, chs, NormAttributes(affine, track_stats, nothing))
 end
 
 function get_stats(::Val{true}, ::Val{false}, l::GroupNormV2, x::AbstractArray{T,N}, reduce_dims) where {T,N}
@@ -93,9 +47,9 @@ end
 
 function get_stats(::Val{false}, active, ::GroupNormV2, x, reduce_dims)
     # trainmode or testmode without tracked stats
-    μ = mean(x; dims = reduce_dims)
+    μ = mean(x; dims=reduce_dims)
     diff = x .- μ
-    return μ, mean(abs2, diff; dims = reduce_dims)
+    return μ, mean(abs2, diff; dims=reduce_dims)
 end
 
 function get_stats(::Val{true}, active::Val{true}, l::GroupNormV2, x::AbstractArray{T,N}, reduce_dims) where {T,N}
@@ -105,22 +59,15 @@ function get_stats(::Val{true}, active::Val{true}, l::GroupNormV2, x::AbstractAr
         # FIXME: Sync for FluxMPI
         mtm = l.momentum
         m = prod(size(x)[reduce_dims])  # needed for computing corrected var
-        μnew = vec(N ∈ reduce_dims ? μ : mean(μ, dims = N))
-        σ²new = vec(N ∈ reduce_dims ? σ² : mean(σ², dims = N))
+        μnew = vec(N ∈ reduce_dims ? μ : mean(μ; dims=N))
+        σ²new = vec(N ∈ reduce_dims ? σ² : mean(σ²; dims=N))
         l.μ .= (1 - mtm) .* l.μ .+ mtm .* μnew
-        l.σ² .=
-            (1 - mtm) .* l.σ² .+
-            mtm .* (m / (m - one(eltype(l.σ²)))) .* σ²new
+        return l.σ² .= (1 - mtm) .* l.σ² .+ mtm .* (m / (m - one(eltype(l.σ²)))) .* σ²new
     end
     return μ, σ²
 end
 
-function group_norm_forward(
-    l,
-    x::AbstractArray{T,N},
-    reduce_dims,
-    affine_shape,
-) where {T,N}
+function group_norm_forward(l, x::AbstractArray{T,N}, reduce_dims, affine_shape) where {T,N}
     μ, σ² = get_stats(Val(l.attrs.track_stats), Val(_isactive(l)), l, x, reduce_dims)
     if hasaffine(l)
         γ = reshape(l.γ, affine_shape)
@@ -149,10 +96,10 @@ Zygote.@adjoint function norm_forward(μ, σ², x, γ, β, ϵ)
         reduce_dims_stats = filter(i -> isone(size(σ², i)), 1:N)
 
         Δx = inv_deno .* Δ
-        Δμ = -sum(Δx; dims = reduce_dims_stats)
-        Δσ² = sum(-eltype(x)(0.5) .* res_2 .* Δ ./ σ²ϵ; dims = reduce_dims_stats)
-        Δγ = sum(res_1 .* Δ; dims = reduce_dims_affine)
-        Δβ = sum(Δ; dims = reduce_dims_affine)
+        Δμ = -sum(Δx; dims=reduce_dims_stats)
+        Δσ² = sum(-eltype(x)(0.5) .* res_2 .* Δ ./ σ²ϵ; dims=reduce_dims_stats)
+        Δγ = sum(res_1 .* Δ; dims=reduce_dims_affine)
+        Δβ = sum(Δ; dims=reduce_dims_affine)
 
         return (Δμ, Δσ², Δx, Δγ, Δβ, nothing)
     end
@@ -171,8 +118,8 @@ Zygote.@adjoint function norm_forward(μ, σ², x, ϵ)
         reduce_dims_stats = filter(i -> isone(size(σ², i)), 1:N)
 
         Δx = inv_deno .* Δ
-        Δμ = -sum(Δx; dims = reduce_dims_stats)
-        Δσ² = sum(-eltype(x)(0.5) .* res_2 .* Δ ./ σ²ϵ; dims = reduce_dims_stats)
+        Δμ = -sum(Δx; dims=reduce_dims_stats)
+        Δσ² = sum(-eltype(x)(0.5) .* res_2 .* Δ ./ σ²ϵ; dims=reduce_dims_stats)
 
         return (Δμ, Δσ², Δx, nothing)
     end
@@ -185,20 +132,21 @@ function (gn::GroupNormV2)(x::AbstractArray{T,N}) where {T,N}
     # @assert N > 2
     # @assert size(x, N - 1) == gn.chs
     sz = size(x)
-    x_2 = reshape(x, sz[1:N-2]..., sz[N-1] ÷ gn.G, gn.G, sz[N])
+    x_2 = reshape(x, sz[1:(N - 2)]..., sz[N - 1] ÷ gn.G, gn.G, sz[N])
     N_ = ndims(x_2)
-    reduce_dims = 1:N_-2
+    reduce_dims = 1:(N_ - 2)
     affine_shape = ntuple(i -> i ∈ (N_ - 1, N_ - 2) ? size(x_2, i) : 1, N_)
     x_3 = group_norm_forward(gn, x_2, reduce_dims, affine_shape)
     return reshape(x_3, sz)
 end
 
-testmode!(m::GroupNormV2, mode = true) =
-    (m.active = (isnothing(mode) || mode == :auto) ? nothing : !mode; m)
+function testmode!(m::GroupNormV2, mode=true)
+    return (m.active = (isnothing(mode) || mode == :auto) ? nothing : !mode; m)
+end
 
 function Base.show(io::IO, l::GroupNormV2)
     print(io, "GroupNormV2($(l.chs), $(l.G)")
     l.λ == identity || print(io, ", ", l.λ)
     hasaffine(l) || print(io, ", affine=false")
-    print(io, ")")
+    return print(io, ")")
 end
