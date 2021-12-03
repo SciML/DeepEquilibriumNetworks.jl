@@ -2,8 +2,8 @@ using ChemistryFeaturization, CSV, CUDA, DataFrames, Dates, FastDEQ, Flux, Rando
       SteadyStateDiffEq, Wandb, Zygote
 using ParameterSchedulers: Scheduler, Cos
 
-const DATA_PATH = "/mnt/research/ongoing/implicit_modeling/FastDEQ/data/qm9/" # joinpath(@__DIR__, "data", "qm9")
-# const CACHED_DATASET = Dict()
+const DATA_PATH = joinpath(@__DIR__, "data", "qm9")
+const CACHED_DATASET = Dict()
 
 function load_dataset(data_dir=DATA_PATH; num_data_points::Union{Int,Nothing}=nothing,
                       train_fraction::Float64=0.8, verbose::Bool=false, seed::Int=0)
