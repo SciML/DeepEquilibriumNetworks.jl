@@ -35,7 +35,7 @@ function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, mode
                                                     verbose=false) for i in 1:3],
                             [downsample_module(8, 32, 32, 8), downsample_module(16, 32, 16, 8),
                              expand_channels_module(32, 32)], (x...) -> foldl(+, x),
-                            Sequential(Flux.flatten, Dense(8 * 8 * 32, 10)))
+                            Chain(Flux.flatten, Dense(8 * 8 * 32, 10)))
     if MPI_COMM_SIZE > 1
         return DataParallelFluxModel(model, [i % length(CUDA.devices()) for i in 1:MPI.Comm_size(MPI.COMM_WORLD)])
     else

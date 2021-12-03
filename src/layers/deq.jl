@@ -25,12 +25,7 @@ function DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=fal
     return DeepEquilibriumNetwork(jacobian_regularization, model, p, re, args, kwargs, sensealg, stats)
 end
 
-function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p=deq.p; train_depth = nothing) where {T}
-    if train_depth !== nothing
-        # Treat the model like an explicit deep neural network
-        return solve_depth_k_neural_network(deq.re, p, x, zero(x), train_depth)
-    end
-
+function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p=deq.p) where {T}
     # Solving the equation f(u) - u = du = 0
     z = deq.re(p)(zero(x), x)::typeof(x)
     deq.stats.nfe += 1
@@ -39,10 +34,12 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p=deq.p; train_depth
                                       update_nfe=() -> (deq.stats.nfe += 1), deq.kwargs...)
 end
 
-function (deq::DeepEquilibriumNetwork)(inputs::Tuple, p=deq.p) where {T}
-    lapl, x = inputs
+function (deq::DeepEquilibriumNetwork)(inputs::Tuple, p=deq.p)
     # Atomic Graph Nets
-    u0 = zero(x)
+    lapl, x = inputs
+    # NOTE: encoded_features being 0 causes NaN gradients to propagate
+    u0 = deq.re(p)(lapl, zero(x) .+ eps(eltype(x)), x)[2]
+    deq.stats.nfe += 1
 
     function dudt(u, _p, t)
         deq.stats.nfe += 1

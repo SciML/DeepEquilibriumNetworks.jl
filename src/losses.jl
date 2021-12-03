@@ -3,17 +3,9 @@ Base.@kwdef struct SupervisedLossContainer{L,T}
     λ::T = 1.0f0
 end
 
-function (lc::SupervisedLossContainer)(model::DEQChain{Val(1)}, x, y; kwargs...)
-    return lc.loss_function(model(x; kwargs...), y)
-end
-
 function (lc::SupervisedLossContainer)(model::DEQChain{Val(2)}, x, y; kwargs...)
     ŷ, (ẑ, z) = model(x; kwargs...)
     return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- z)
-end
-
-function (lc::SupervisedLossContainer)(model::DEQChain{Val(3)}, x, y; kwargs...)
-    return lc.loss_function(model(x; kwargs...), y)
 end
 
 function (lc::SupervisedLossContainer)(model::DEQChain{Val(4)}, x, y; kwargs...)
@@ -26,19 +18,6 @@ function (lc::SupervisedLossContainer)(model::DEQChain{Val(4)}, x, y; kwargs...)
     return l1 + sum(lc.λ .* l2)
 end
 
-function (lc::SupervisedLossContainer)(model::WidthStackedDEQ{false}, x, y; kwargs...)
-    return lc.loss_function(model(x; kwargs...), y)
-end
-
-function (lc::SupervisedLossContainer)(model::DeepEquilibriumNetwork, x, y; kwargs...)
-    return lc.loss_function(model(x; kwargs...), y)
-end
-
-function (lc::SupervisedLossContainer)(model::SkipDeepEquilibriumNetwork, x, y; kwargs...)
-    ŷ, ẑ = model(x; kwargs...)
-    return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- ŷ)
-end
-
 function (lc::SupervisedLossContainer)(model::WidthStackedDEQ{true}, x, y; kwargs...)
     ŷ, guess_pairs = model(x; kwargs...)
     l1 = lc.loss_function(ŷ, y)
@@ -49,8 +28,9 @@ function (lc::SupervisedLossContainer)(model::WidthStackedDEQ{true}, x, y; kwarg
     return l1 + lc.λ * l2
 end
 
-function (lc::SupervisedLossContainer)(model::DataParallelFluxModel, args...; kwargs...)
-    return lc(model.model, args...; kwargs...)
+function (lc::SupervisedLossContainer)(model::SkipDeepEquilibriumNetwork, x, y; kwargs...)
+    ŷ, ẑ = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- ŷ)
 end
 
 function (lc::SupervisedLossContainer)(model::MultiScaleDeepEquilibriumNetwork, x, ys::Tuple; kwargs...)
@@ -66,4 +46,18 @@ function (lc::SupervisedLossContainer)(model::MultiScaleSkipDeepEquilibriumNetwo
     l1 = sum(ŷy -> lc.loss_function(ŷy[1], ŷy[2]), zip(ŷs, ys))
     l2 = sum(ŷy -> mean(abs, ŷy[1] .- ŷy[2]), zip(ŷs, guesses))
     return l1 + lc.λ * l2
+end
+
+function (lc::SupervisedLossContainer)(model::CrystalGraphCNN{Val(2)}, x, y; kwargs...)
+    ŷ, guess_pair = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc.λ * mean(abs, guess_pair[1] .- guess_pair[2])
+end
+
+function (lc::SupervisedLossContainer)(model::DataParallelFluxModel, args...; kwargs...)
+    return lc(model.model, args...; kwargs...)
+end
+
+# Default fallback
+function (lc::SupervisedLossContainer)(model, x, y; kwargs...)
+    return lc.loss_function(model(x; kwargs...), y)
 end

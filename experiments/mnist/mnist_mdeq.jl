@@ -73,7 +73,7 @@ function train(config::Dict)
     ## Setup Logging & Experiment Configuration
     expt_name = "fastdeqjl-supervised_mnist_classication-mdeq-$(now())"
     lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, config=config)
-    lg_term = PrettyTableLogger(expt_name,
+    lg_term = PrettyTableLogger("logs/" * expt_name * ".log",
                                 ["Epoch Number", "Train/NFE", "Train/Accuracy", "Train/Loss", "Test/NFE",
                                  "Test/Accuracy", "Test/Loss"], ["Train/Running/NFE", "Train/Running/Loss"])
 

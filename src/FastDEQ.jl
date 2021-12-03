@@ -2,7 +2,6 @@ module FastDEQ
 
 using ChemistryFeaturization
 using CUDA
-using DataDeps
 using DiffEqBase
 using DiffEqSensitivity
 using Flux
@@ -35,8 +34,7 @@ const allow_weightnorm_updates = Ref(false)
 end
 
 @inline function update_is_in_deq(val::Bool)
-    return Zygote.hook(Δ -> (_update_is_in_deq(!val); return Δ),
-                       _update_is_in_deq(val))
+    return Zygote.hook(Δ -> (_update_is_in_deq(!val); return Δ), _update_is_in_deq(val))
 end
 
 @inline function _update_is_mask_reset_allowed(val::Bool)
@@ -44,8 +42,7 @@ end
 end
 
 @inline function update_is_mask_reset_allowed(val::Bool)
-    return Zygote.hook(Δ -> (_update_is_mask_reset_allowed(!val); return Δ),
-                       _update_is_mask_reset_allowed(val))
+    return Zygote.hook(Δ -> (_update_is_mask_reset_allowed(!val); return Δ), _update_is_mask_reset_allowed(val))
 end
 
 @inline function _update_is_weightnorm_update_allowed(val::Bool)
@@ -63,8 +60,7 @@ function destructure end
 
 function Base.show(io::IO, l::AbstractDeepEquilibriumNetwork)
     p, _ = destructure(l)
-    return print(io, string(typeof(l).name.name), "() ", string(length(p)),
-                 " Trainable Parameters")
+    return print(io, string(typeof(l).name.name), "() ", string(length(p)), " Trainable Parameters")
 end
 
 Flux.trainable(d::AbstractDeepEquilibriumNetwork) = (d.p,)
@@ -97,28 +93,32 @@ include("models/cgcnn.jl")
 include("losses.jl")
 include("logger.jl")
 
-export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
-export MultiScaleDeepEquilibriumNetwork
-export MultiScaleSkipDeepEquilibriumNetwork
+# DEQ Layers
+export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork, MultiScaleDeepEquilibriumNetwork,
+       MultiScaleSkipDeepEquilibriumNetwork, WidthStackedDEQ
+# Atomic Graph Net Layers
 export AGNConv, AGNMaxPool, AGNMeanPool
+# General Purpose Layers (probably should be in Flux.jl)
 export VariationalHiddenDropout, GroupNormV2, WeightNorm
 
+# Compositional Layers
 export DEQChain
 export BasicResidualBlock, BranchNet, MultiParallelNet
-export downsample_module, upsample_module, expand_channels_module, conv3x3,
-       conv5x5
-export WidthStackedDEQ
+export downsample_module, upsample_module, expand_channels_module, conv3x3, conv5x5
 export CrystalGraphCNN
 
+# For the sanity of experiment code
 export batch_graph_data, BatchedAtomicGraph
-export reset_mask!, get_and_clear_nfe!, get_default_ssadjoint,
-       get_default_dynamicss_solver, get_default_ssrootfind_solver
+export reset_mask!, get_and_clear_nfe!, get_default_ssadjoint, get_default_dynamicss_solver,
+       get_default_ssrootfind_solver
 
+# Text Logging
 export PrettyTableLogger
 
+# Again experiment code sanity
 export SupervisedLossContainer
 
-export BroydenSolver, BroydenCache
-export LimitedMemoryBroydenSolver, LimitedMemoryBroydenCache
+# Non Linear Solvers (need to find time to move into a dedicated package with a proper API)
+export BroydenSolver, BroydenCache, LimitedMemoryBroydenSolver, LimitedMemoryBroydenCache
 
 end

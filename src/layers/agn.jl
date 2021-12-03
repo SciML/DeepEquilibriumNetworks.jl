@@ -120,16 +120,17 @@ Flux.@functor BatchedAtomicGraph (laplacians, encoded_features)
 batch_graph_data(t::Tuple) = batch_graph_data(t[1], t[2])
 
 function batch_graph_data(laplacians, encoded_features)
+    # Ideally should be sparse arrays but currently doesn't work well on GPUs
     _sizes = map(x -> size(x, 1), laplacians)
     total_nodes = sum(_sizes)
-    batched_laplacian = sparse(zeros(eltype(laplacians[1]), total_nodes, total_nodes))
+    batched_laplacian = zeros(eltype(laplacians[1]), total_nodes, total_nodes)
     idx = 1
     for i in 1:length(laplacians)
         batched_laplacian[idx:(idx + _sizes[i] - 1), idx:(idx + _sizes[i] - 1)] .= laplacians[i]
         idx += _sizes[i]
     end
     _sizes = vcat(0, cumsum(_sizes))
-    enc_feats = sparse(hcat(encoded_features...))
+    enc_feats = hcat(encoded_features...)
     return BatchedAtomicGraph(batched_laplacian, enc_feats, _sizes)
 end
 

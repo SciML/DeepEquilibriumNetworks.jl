@@ -50,12 +50,11 @@ function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(x::AbstractArray{T}, p=deq
                                        update_nfe=() -> (deq.stats.nfe += 1), deq.kwargs...), z)
 end
 
-function (deq::SkipDeepEquilibriumNetwork)(inputs::Tuple, p=deq.p) where {T}
-    lapl, x = inputs
+function (deq::SkipDeepEquilibriumNetwork)(inputs::Tuple, p=deq.p)
     # Atomic Graph Nets
+    lapl, x = inputs
     p1, p2 = p[1:(deq.split_idx)], p[(deq.split_idx + 1):end]
-    _, u0 = deq.re2(p2)(lapl, x)
-    deq.stats.nfe += 1
+    u0 = deq.re2(p2)(lapl, x)[2]
 
     function dudt(u, _p, t)
         deq.stats.nfe += 1
@@ -67,4 +66,22 @@ function (deq::SkipDeepEquilibriumNetwork)(inputs::Tuple, p=deq.p) where {T}
     deq.stats.nfe += 1
 
     return deq.re1(p1)(lapl, sol.u, x), u0
+end
+
+function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(inputs::Tuple, p=deq.p) where {M}
+    # Atomic Graph Nets
+    lapl, x = inputs
+    # NOTE: encoded_features being 0 causes NaN gradients to propagate
+    u0 = deq.re1(p)(lapl, zero(x) .+ eps(eltype(x)), x)[2]
+
+    function dudt(u, _p, t)
+        deq.stats.nfe += 1
+        return deq.re1(_p)(lapl, u, x)[2] .- u
+    end
+
+    ssprob = SteadyStateProblem(dudt, u0, p)
+    sol = solve(ssprob, deq.args...; u0=u0, sensealg=deq.sensealg, deq.kwargs...)
+    deq.stats.nfe += 1
+
+    return deq.re1(p)(lapl, sol.u, x), u0
 end
