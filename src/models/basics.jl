@@ -159,7 +159,7 @@ function downsample_module(in_channels::Int, out_channels::Int, in_resolution::I
                           track_stats=false))
     end
 
-    return Sequential(layers...)
+    return Chain(layers...)
 end
 
 # Upsample Module
@@ -169,13 +169,13 @@ function upsample_module(in_channels::Int, out_channels::Int, in_resolution::Int
     level_diff = Int(log2(out_resolution ÷ in_resolution))
     @assert ispow2(level_diff)
 
-    return Sequential(Conv((1, 1), in_channels => out_channels; bias=false),
-                      GroupNormV2(out_channels, num_groups, relu; affine=gn_affine, track_stats=false),
-                      Upsample(:nearest; scale=2^level_diff))
+    return Chain(Conv((1, 1), in_channels => out_channels; bias=false),
+                 GroupNormV2(out_channels, num_groups, relu; affine=gn_affine, track_stats=false),
+                 Upsample(:nearest; scale=2^level_diff))
 end
 
 # Mapping Module
 function expand_channels_module(in_channels::Int, out_channels::Int; num_groups::Int=4, gn_affine::Bool=true)
-    return Sequential(conv3x3(in_channels => out_channels; bias=false),
-                      GroupNormV2(out_channels, num_groups, relu; affine=gn_affine, track_stats=false))
+    return Chain(conv3x3(in_channels => out_channels; bias=false),
+                 GroupNormV2(out_channels, num_groups, relu; affine=gn_affine, track_stats=false))
 end

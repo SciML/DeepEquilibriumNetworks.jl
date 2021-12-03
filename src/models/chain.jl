@@ -64,29 +64,3 @@ function get_and_clear_nfe!(model::DEQChain)
     model.deq.stats.nfe = 0
     return nfe
 end
-
-# Clean Chain
-struct Sequential{C<:Chain}
-    flattened_chain::C
-    function Sequential(chain::Chain)
-        _chain = _recursively_flatten(chain)
-        return new{typeof(_chain)}(_chain)
-    end
-    function Sequential(layers...)
-        return Sequential(Chain(layers...))
-    end
-end
-
-Flux.@functor Sequential
-
-_recursively_flatten(x; kwargs...) = x
-
-function _recursively_flatten(c::Chain; depth::Int=0)
-    if depth > 0
-        return vcat(_recursively_flatten.(c.layers; depth=depth + 1)...)
-    else
-        return Chain(vcat(_recursively_flatten.(c.layers; depth=depth + 1)...)...)
-    end
-end
-
-(s::Sequential)(x) = s.flattened_chain(x)

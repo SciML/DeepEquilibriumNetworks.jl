@@ -4,20 +4,20 @@ Base.@kwdef struct SupervisedLossContainer{L,T}
 end
 
 function (lc::SupervisedLossContainer)(model::DEQChain{Val(1)}, x, y; kwargs...)
-    return lc.loss_function(model(x), y)
+    return lc.loss_function(model(x; kwargs...), y)
 end
 
 function (lc::SupervisedLossContainer)(model::DEQChain{Val(2)}, x, y; kwargs...)
-    ŷ, (ẑ, z) = model(x)
+    ŷ, (ẑ, z) = model(x; kwargs...)
     return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- z)
 end
 
 function (lc::SupervisedLossContainer)(model::DEQChain{Val(3)}, x, y; kwargs...)
-    return lc.loss_function(model(x), y)
+    return lc.loss_function(model(x; kwargs...), y)
 end
 
 function (lc::SupervisedLossContainer)(model::DEQChain{Val(4)}, x, y; kwargs...)
-    ŷ, guess_pairs = model(x)
+    ŷ, guess_pairs = model(x; kwargs...)
     l1 = lc.loss_function(ŷ, y)
     l2 = 0
     for i in 1:length(guess_pairs[1])
@@ -27,20 +27,20 @@ function (lc::SupervisedLossContainer)(model::DEQChain{Val(4)}, x, y; kwargs...)
 end
 
 function (lc::SupervisedLossContainer)(model::WidthStackedDEQ{false}, x, y; kwargs...)
-    return lc.loss_function(model(x), y)
+    return lc.loss_function(model(x; kwargs...), y)
 end
 
 function (lc::SupervisedLossContainer)(model::DeepEquilibriumNetwork, x, y; kwargs...)
-    return lc.loss_function(model(x), y)
+    return lc.loss_function(model(x; kwargs...), y)
 end
 
 function (lc::SupervisedLossContainer)(model::SkipDeepEquilibriumNetwork, x, y; kwargs...)
-    ŷ, ẑ = model(x)
+    ŷ, ẑ = model(x; kwargs...)
     return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- ŷ)
 end
 
 function (lc::SupervisedLossContainer)(model::WidthStackedDEQ{true}, x, y; kwargs...)
-    ŷ, guess_pairs = model(x)
+    ŷ, guess_pairs = model(x; kwargs...)
     l1 = lc.loss_function(ŷ, y)
     l2 = 0
     for (y, ŷ) in guess_pairs
@@ -54,15 +54,15 @@ function (lc::SupervisedLossContainer)(model::DataParallelFluxModel, args...; kw
 end
 
 function (lc::SupervisedLossContainer)(model::MultiScaleDeepEquilibriumNetwork, x, ys::Tuple; kwargs...)
-    return sum(ŷy -> lc.loss_function(ŷy[1], ŷy[2]), zip(model(x), ys))
+    return sum(ŷy -> lc.loss_function(ŷy[1], ŷy[2]), zip(model(x; kwargs...), ys))
 end
 
 function (lc::SupervisedLossContainer)(model::MultiScaleDeepEquilibriumNetwork, x, y; kwargs...)
-    return sum(ŷ -> lc.loss_function(ŷ, y), model(x))
+    return sum(ŷ -> lc.loss_function(ŷ, y), model(x; kwargs...))
 end
 
 function (lc::SupervisedLossContainer)(model::MultiScaleSkipDeepEquilibriumNetwork, x, ys::Tuple; kwargs...)
-    ŷs, guesses = model(x)
+    ŷs, guesses = model(x; kwargs...)
     l1 = sum(ŷy -> lc.loss_function(ŷy[1], ŷy[2]), zip(ŷs, ys))
     l2 = sum(ŷy -> mean(abs, ŷy[1] .- ŷy[2]), zip(ŷs, guesses))
     return l1 + lc.λ * l2

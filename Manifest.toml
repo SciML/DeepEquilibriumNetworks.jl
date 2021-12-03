@@ -153,9 +153,9 @@ version = "0.3.9"
 
 [[deps.ChainRules]]
 deps = ["ChainRulesCore", "Compat", "LinearAlgebra", "Random", "RealDot", "Statistics"]
-git-tree-sha1 = "65a0826ac25869556070076459925d1700316aab"
+git-tree-sha1 = "d9d08f88759465c7895db73d052c23e5c260f4a2"
 uuid = "082447d4-558c-5d27-93f4-14fc19e9eca2"
-version = "1.14.0"
+version = "1.15.0"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
@@ -248,10 +248,10 @@ uuid = "a33af91c-f02d-484b-be07-31d278c5ca2b"
 version = "0.1.1"
 
 [[deps.Conda]]
-deps = ["JSON", "VersionParsing"]
-git-tree-sha1 = "299304989a5e6473d985212c28928899c74e9421"
+deps = ["Downloads", "JSON", "VersionParsing"]
+git-tree-sha1 = "6cdc8832ba11c7695f494c9d9a1c31e90959ce0f"
 uuid = "8f4d0f93-b110-5947-807f-2305c1781a2d"
-version = "1.5.2"
+version = "1.6.0"
 
 [[deps.ConstructionBase]]
 deps = ["LinearAlgebra"]
@@ -366,10 +366,10 @@ uuid = "b552c78f-8df3-52c6-915a-8e097449b14b"
 version = "1.5.0"
 
 [[deps.Distances]]
-deps = ["LinearAlgebra", "Statistics", "StatsAPI"]
-git-tree-sha1 = "837c83e5574582e07662bbbba733964ff7c26b9d"
+deps = ["LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI"]
+git-tree-sha1 = "3258d0659f812acde79e8a74b11f17ac06d0ca04"
 uuid = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
-version = "0.10.6"
+version = "0.10.7"
 
 [[deps.Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
@@ -481,11 +481,11 @@ version = "0.12.8"
 
 [[deps.FluxMPI]]
 deps = ["CUDA", "Flux", "MPI", "Random", "Statistics", "Zygote"]
-git-tree-sha1 = "f0f8fb7ab7e5bc4bb0c8a0a0f8d059e8cb9b977e"
+git-tree-sha1 = "bc8d78ac340e1e1d4dcebe059fae05541ecfcafd"
 repo-rev = "main"
 repo-url = "https://github.com/avik-pal/FluxMPI.jl"
 uuid = "acf642fa-ee0e-513a-b9d5-bcd150f7ec3b"
-version = "0.0.1"
+version = "0.1.0"
 
 [[deps.Format]]
 git-tree-sha1 = "03bcdf8ab1a5b9e6455ccb45c30910d282aa09f4"
@@ -1183,10 +1183,10 @@ uuid = "ae5879a3-cd67-5da8-be7f-38c6eb64a37b"
 version = "1.1.1"
 
 [[deps.ReverseDiff]]
-deps = ["ChainRulesCore", "DiffResults", "DiffRules", "ForwardDiff", "FunctionWrappers", "LinearAlgebra", "MacroTools", "NaNMath", "Random", "SpecialFunctions", "StaticArrays", "Statistics"]
-git-tree-sha1 = "14b09b7d28378e6e8be334edc0ade781b5c65e85"
+deps = ["ChainRulesCore", "DiffResults", "DiffRules", "ForwardDiff", "FunctionWrappers", "LinearAlgebra", "LogExpFunctions", "MacroTools", "NaNMath", "Random", "SpecialFunctions", "StaticArrays", "Statistics"]
+git-tree-sha1 = "2c7abf1c7b4f9bbfb0e755cf74d4bf0e43431b9e"
 uuid = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
-version = "1.10.0"
+version = "1.11.0"
 
 [[deps.Rmath]]
 deps = ["Random", "Rmath_jll"]
@@ -1381,9 +1381,9 @@ version = "0.18.1"
 
 [[deps.Symbolics]]
 deps = ["ConstructionBase", "DataStructures", "DiffRules", "Distributions", "DocStringExtensions", "DomainSets", "IfElse", "Latexify", "Libdl", "LinearAlgebra", "MacroTools", "Metatheory", "NaNMath", "RecipesBase", "Reexport", "Requires", "RuntimeGeneratedFunctions", "SciMLBase", "Setfield", "SparseArrays", "SpecialFunctions", "StaticArrays", "SymbolicUtils", "TermInterface", "TreeViews"]
-git-tree-sha1 = "56272fc85e8d99332149fece99284ee31a9fa101"
+git-tree-sha1 = "1f738ebade1567d461c4db9ef15470a1fdf0b9b5"
 uuid = "0c5d862f-8b57-4792-8d23-62f2024744c7"
-version = "4.1.0"
+version = "4.1.1"
 
 [[deps.TOML]]
 deps = ["Dates"]
@@ -1530,11 +1530,11 @@ uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
 
 [[deps.Zygote]]
 deps = ["AbstractFFTs", "ChainRules", "ChainRulesCore", "DiffRules", "Distributed", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics", "ZygoteRules"]
-git-tree-sha1 = "2b8415fedafaa8a3263efdcd90a65b7b347b7955"
+git-tree-sha1 = "5fbb8b57c0bb9a9754e64a8d0106889970bbbf2d"
 repo-rev = "ap/fastdeq"
 repo-url = "https://github.com/avik-pal/Zygote.jl"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
-version = "0.6.30"
+version = "0.6.32"
 
 [[deps.ZygoteRules]]
 deps = ["MacroTools"]

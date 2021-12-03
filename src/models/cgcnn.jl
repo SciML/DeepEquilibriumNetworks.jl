@@ -32,9 +32,9 @@ function CrystalGraphCNN(input_feature_length::Int; num_conv::Int=2, conv_activa
 
     pool = AGNPool(pool_type, atom_conv_feature_length, pooled_feature_length, pool_width)
 
-    dense_chain = Sequential(Chain([Dense(pooled_feature_length, pooled_feature_length, hidden_layer_activation;
-                                          init=initW) for i in 1:(num_hidden_layers - 1)]...,
-                                   Dense(pooled_feature_length, output_length, output_layer_activation; init=initW)))
+    dense_chain = Chain([Dense(pooled_feature_length, pooled_feature_length, hidden_layer_activation; init=initW)
+                         for i in 1:(num_hidden_layers - 1)]...,
+                        Dense(pooled_feature_length, output_length, output_layer_activation; init=initW))
 
     return CrystalGraphCNN{modeltype_to_val(deq),typeof(pre_deq),typeof(deq),typeof(post_deq),typeof(pool),
                            typeof(dense_chain)}(pre_deq, deq, post_deq, pool, dense_chain)

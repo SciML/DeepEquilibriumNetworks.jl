@@ -103,7 +103,7 @@ export MultiScaleSkipDeepEquilibriumNetwork
 export AGNConv, AGNMaxPool, AGNMeanPool
 export VariationalHiddenDropout, GroupNormV2, WeightNorm
 
-export DEQChain, Sequential
+export DEQChain
 export BasicResidualBlock, BranchNet, MultiParallelNet
 export downsample_module, upsample_module, expand_channels_module, conv3x3,
        conv5x5
