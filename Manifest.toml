@@ -517,8 +517,6 @@ version = "0.12.8"
 [[deps.FluxMPI]]
 deps = ["CUDA", "Flux", "MPI", "Random", "Statistics", "Zygote"]
 git-tree-sha1 = "bc8d78ac340e1e1d4dcebe059fae05541ecfcafd"
-repo-rev = "main"
-repo-url = "https://github.com/avik-pal/FluxMPI.jl"
 uuid = "acf642fa-ee0e-513a-b9d5-bcd150f7ec3b"
 version = "0.1.0"
 
