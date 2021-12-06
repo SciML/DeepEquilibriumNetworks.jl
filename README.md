@@ -23,6 +23,6 @@
 
 ## TODOs
 
--[x] `Flux.@functor` messes up the parameters of models. The easiest fix is to manually define the parameters and device transfer functions (`cpu` / `gpu`). (We are using a custom `destructure` which only returns the parameters and not every array)
--[ ] `compute_deq_jacobian_loss` doesn't work with models which internally use `destructure`. *[Low Priority]*
--[ ] Update the DEQs to return the jacobian loss
+- [x] `Flux.@functor` messes up the parameters of models. The easiest fix is to manually define the parameters and device transfer functions (`cpu` / `gpu`). (We are using a custom `destructure` which only returns the parameters and not every array)
+- [ ] `compute_deq_jacobian_loss` doesn't work with models which internally use `destructure`. *[Low Priority]*
+- [ ] Update the DEQs to return the jacobian loss
