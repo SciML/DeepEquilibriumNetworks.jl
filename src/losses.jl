@@ -48,11 +48,6 @@ function (lc::SupervisedLossContainer)(model::MultiScaleSkipDeepEquilibriumNetwo
     return l1 + lc.λ * l2
 end
 
-function (lc::SupervisedLossContainer)(model::CrystalGraphCNN{Val(2)}, x, y; kwargs...)
-    ŷ, guess_pair = model(x; kwargs...)
-    return lc.loss_function(ŷ, y) + lc.λ * mean(abs, guess_pair[1] .- guess_pair[2])
-end
-
 function (lc::SupervisedLossContainer)(model::DataParallelFluxModel, args...; kwargs...)
     return lc(model.model, args...; kwargs...)
 end

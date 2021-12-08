@@ -120,3 +120,8 @@ end
 
 get_and_clear_nfe!(model::CrystalGraphCNN{Val(-1)}) = -1
 
+
+function (lc::SupervisedLossContainer)(model::CrystalGraphCNN{Val(2)}, x, y; kwargs...)
+    ŷ, guess_pair = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc.λ * mean(abs, guess_pair[1] .- guess_pair[2])
+end
