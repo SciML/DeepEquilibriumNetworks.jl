@@ -1,6 +1,6 @@
 # Load Packages
-using CUDA, Dates, DiffEqSensitivity, FastDEQ, Flux, FluxMPI, OrdinaryDiffEq, Serialization, Statistics, SteadyStateDiffEq, MLDatasets,
-      MPI, Plots, Random, ParameterSchedulers, Wandb, Zygote
+using CUDA, Dates, DiffEqSensitivity, FastDEQ, Flux, FluxMPI, OrdinaryDiffEq, Serialization, Statistics,
+      SteadyStateDiffEq, MLDatasets, MPI, Plots, Random, ParameterSchedulers, Wandb, Zygote
 using ParameterSchedulers: Scheduler, Cos
 using MLDataPattern: splitobs, shuffleobs
 
@@ -13,8 +13,9 @@ const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
 ## Models
 function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, model_type::String,
                    solver_type::String="dynamicss") where {T}
-    main_layers = (BasicResidualBlock((32, 32), 8, 8), BasicResidualBlock((16, 16), 16, 16),
-                   BasicResidualBlock((8, 8), 32, 32))
+    main_layers = (BasicResidualBlock((32, 32), 8, 8; dropout_rate=dropout_rate),
+                   BasicResidualBlock((16, 16), 16, 16; dropout_rate=dropout_rate),
+                   BasicResidualBlock((8, 8), 32, 32; dropout_rate=dropout_rate))
     mapping_layers = [identity downsample_module(8, 16, 32, 16) downsample_module(8, 32, 32, 8)
                       upsample_module(16, 8, 16, 32) identity downsample_module(16, 32, 16, 8)
                       upsample_module(32, 8, 8, 32) upsample_module(32, 16, 8, 16) identity]
@@ -26,14 +27,14 @@ function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, mode
     if model_type == "skip"
         deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers,
                                                    (BasicResidualBlock((32, 32), 8, 8),
-                                                   downsample_module(8, 16, 32, 16), downsample_module(8, 32, 32, 8)),
+                                                    downsample_module(8, 16, 32, 16), downsample_module(8, 32, 32, 8)),
                                                    solver; maxiters=maxiters,
                                                    sensealg=get_default_ssadjoint(abstol, reltol, maxiters),
                                                    verbose=false)
     else
         _deq = model_type == "vanilla" ? MultiScaleDeepEquilibriumNetwork : MultiScaleSkipDeepEquilibriumNetwork
         deq = _deq(main_layers, mapping_layers, solver; maxiters=maxiters,
-                    sensealg=get_default_ssadjoint(abstol, reltol, maxiters), verbose=false)
+                   sensealg=get_default_ssadjoint(abstol, reltol, maxiters), verbose=false)
     end
     model = DEQChain(expand_channels_module(3, 8), deq, t -> tuple(t...),
                      Parallel(+, downsample_module(8, 32, 32, 8), downsample_module(16, 32, 16, 8),
@@ -74,11 +75,10 @@ function train(config::Dict)
 
     ## Setup Logging & Experiment Configuration
     expt_name = "fastdeqjl-supervised_cifar10_classication-$(now())"
-    lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name,
-                              config=config)
-    lg_term = PrettyTableLogger("logs/" + expt_name + ".log",
+    lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, config=config)
+    lg_term = PrettyTableLogger("logs/" * expt_name * ".log",
                                 ["Epoch Number", "Train/NFE", "Train/Accuracy", "Train/Loss", "Test/NFE",
-                                "Test/Accuracy", "Test/Loss"], ["Train/Running/NFE", "Train/Running/Loss"])
+                                 "Test/Accuracy", "Test/Loss"], ["Train/Running/NFE", "Train/Running/Loss"])
 
     ## Reproducibility
     Random.seed!(get_config(lg_wandb, "seed"))
@@ -149,7 +149,7 @@ function train(config::Dict)
                 ### Log the losses
                 log(lg_wandb,
                     Dict("Training/Step/Loss" => loss, "Training/Step/NFE" => nfe_counts[end],
-                        "Training/Step/Count" => step))
+                         "Training/Step/Count" => step))
                 lg_term(; records=Dict("Train/Running/NFE" => nfe_counts[end], "Train/Running/Loss" => loss))
                 step += 1
             end
