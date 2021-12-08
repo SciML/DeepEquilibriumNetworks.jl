@@ -20,16 +20,6 @@ end
 
 Flux.@functor BasicResidualBlock
 
-function Flux.gpu(b::BasicResidualBlock)
-    return BasicResidualBlock(Flux.gpu(b.conv1), Flux.gpu(b.conv2), Flux.gpu(b.gn1), Flux.gpu(b.gn2), Flux.gpu(b.gn3),
-                              Flux.gpu(b.downsample), Flux.gpu(b.dropout))
-end
-
-function Flux.cpu(b::BasicResidualBlock)
-    return BasicResidualBlock(Flux.cpu(b.conv1), Flux.cpu(b.conv2), Flux.cpu(b.gn1), Flux.cpu(b.gn2), Flux.cpu(b.gn3),
-                              Flux.cpu(b.downsample), Flux.cpu(b.dropout))
-end
-
 function BasicResidualBlock(outdims::Tuple, inplanes::Int, planes::Int; deq_expand::Int=5, num_gn_groups::Int=4,
                             downsample=identity, n_big_kernels::Int=0, dropout_rate::Real=0.0f0, gn_affine::Bool=true,
                             weight_norm::Bool=true)
@@ -76,9 +66,6 @@ struct BranchNet{L}
     BranchNet(layers::Tuple) = new{typeof(layers)}(layers)
 end
 
-Flux.gpu(b::BranchNet) = BranchNet(gpu.(b.layers))
-Flux.cpu(b::BranchNet) = BranchNet(cpu.(b.layers))
-
 Flux.@functor BranchNet
 
 function (bn::BranchNet)(x::AbstractArray{T}, injection::AbstractArray{T}) where {T}
@@ -119,9 +106,6 @@ struct MultiParallelNet{L}
 
     MultiParallelNet(layers::Tuple) = new{typeof(layers)}(layers)
 end
-
-Flux.gpu(b::MultiParallelNet) = MultiParallelNet(gpu.(b.layers))
-Flux.cpu(b::MultiParallelNet) = MultiParallelNet(cpu.(b.layers))
 
 Flux.@functor MultiParallelNet
 

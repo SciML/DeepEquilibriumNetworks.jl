@@ -35,9 +35,6 @@ function flatten_merge(x::NTuple{N,T}, y::NTuple{N,T}) where {N,T<:AbstractArray
     return (x, y)
 end
 
-Flux.gpu(p::Parallel) = Parallel(gpu(p.connection), gpu.(p.layers))
-Flux.cpu(p::Parallel) = Parallel(cpu(p.connection), cpu.(p.layers))
-
 # General DEQ Utils
 function get_and_clear_nfe!(model::AbstractDeepEquilibriumNetwork)
     nfe = model.stats.nfe

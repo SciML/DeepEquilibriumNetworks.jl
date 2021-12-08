@@ -105,7 +105,7 @@ function train(config::Dict)
     ## Loss Function
     loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 2.5f0)
 
-    nfe_counts = Vector{Int64}[]
+    nfe_counts = []
     cb = register_nfe_counts(model, nfe_counts)
 
     ## Warmup with a smaller batch

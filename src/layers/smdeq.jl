@@ -12,6 +12,28 @@ struct MultiScaleSkipDeepEquilibriumNetwork{M3<:Union{Nothing,Parallel},N,M1<:Pa
     kwargs::K
     sensealg::S
     stats::DEQTrainingStats
+
+    function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Parallel, mapping_layers::MultiParallelNet,
+                                                  shortcut_layers::Union{Nothing,Parallel}, re1, re2, re3, p,
+                                                  ordered_split_idxs, args::A, kwargs::K, sensealg::S,
+                                                  stats) where {A,K,S}
+        p_main_layers, re_main_layers = destructure(main_layers)
+        p_mapping_layers, re_mapping_layers = destructure(mapping_layers)
+        p_shortcut_layers, re_shortcut_layers = shortcut_layers === nothing ? ([], nothing) :
+                                                destructure(shortcut_layers)
+
+        ordered_split_idxs = tuple(cumsum([0, length(p_main_layers), length(p_mapping_layers),
+                                           length(p_shortcut_layers)])...)
+
+        p = p === nothing ? vcat(p_main_layers, p_mapping_layers, p_shortcut_layers) : convert(typeof(p_main_layers), p)
+
+        return new{typeof.((shortcut_layers, ordered_split_idxs, main_layers, mapping_layers, re_main_layers,
+                            re_mapping_layers, re_shortcut_layers, p))...,A,K,S}(main_layers, mapping_layers,
+                                                                                 shortcut_layers, re_main_layers,
+                                                                                 re_mapping_layers, re_shortcut_layers,
+                                                                                 p, ordered_split_idxs, args, kwargs,
+                                                                                 sensealg, stats)
+    end
 end
 
 Flux.@functor MultiScaleSkipDeepEquilibriumNetwork
@@ -25,17 +47,8 @@ function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers
     mapping_layers = MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...)
     shortcut_layers = Parallel(flatten_merge, shortcut_layers...)
 
-    p_main_layers, re_main_layers = destructure(main_layers)
-    p_mapping_layers, re_mapping_layers = destructure(mapping_layers)
-    p_shortcut_layers, re_shortcut_layers = destructure(shortcut_layers)
-
-    ordered_split_idxs = tuple(cumsum([0, length(p_main_layers), length(p_mapping_layers), length(p_shortcut_layers)])...)
-
-    p = p === nothing ? vcat(p_main_layers, p_mapping_layers, p_shortcut_layers) : p
-
-    return MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, shortcut_layers, re_main_layers,
-                                                re_mapping_layers, re_shortcut_layers, p, ordered_split_idxs, (solver,),
-                                                kwargs, sensealg, DEQTrainingStats(0))
+    return MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, shortcut_layers, nothing, nothing, nothing,
+                                                p, nothing, (solver,), kwargs, sensealg, DEQTrainingStats(0))
 end
 
 function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix, solver; p=nothing,
@@ -45,16 +58,8 @@ function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers
     main_layers = Parallel(flatten_merge, main_layers...)
     mapping_layers = MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...)
 
-    p_main_layers, re_main_layers = destructure(main_layers)
-    p_mapping_layers, re_mapping_layers = destructure(mapping_layers)
-
-    ordered_split_idxs = tuple(cumsum([0, length(p_main_layers), length(p_mapping_layers)])...)
-
-    p = p === nothing ? vcat(p_main_layers, p_mapping_layers) : p
-
-    return MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, nothing, re_main_layers, re_mapping_layers,
-                                                nothing, p, ordered_split_idxs, (solver,), kwargs, sensealg,
-                                                DEQTrainingStats(0))
+    return MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, nothing, nothing, nothing, nothing, p,
+                                                nothing, (solver,), kwargs, sensealg, DEQTrainingStats(0))
 end
 
 function (mdeq::MultiScaleSkipDeepEquilibriumNetwork)(x::AbstractArray{T}, p=mdeq.p) where {T}

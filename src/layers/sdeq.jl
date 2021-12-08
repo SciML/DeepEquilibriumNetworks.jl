@@ -9,26 +9,30 @@ struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,Se,K} <: AbstractDeepEquilibri
     kwargs::K
     sensealg::Se
     stats::DEQTrainingStats
+
+    function SkipDeepEquilibriumNetwork(model, shortcut, p, re1, re2, split_idx, args, kwargs, sensealg, stats)
+        p1, re1 = destructure(model)
+        split_idx = length(p1)
+        p2, re2 = shortcut === nothing ? ([], nothing) : destructure(shortcut)
+
+        p = p === nothing ? vcat(p1, p2) : convert(typeof(p1), p)
+
+        return new{typeof(model),typeof(shortcut),typeof(p),typeof(re1),typeof(re2),typeof(args),typeof(sensealg),
+                   typeof(kwargs)}(model, shortcut, p, re1, re2, split_idx, args, kwargs, sensealg, stats)
+    end
 end
 
 Flux.@functor SkipDeepEquilibriumNetwork
 
 function SkipDeepEquilibriumNetwork(model, shortcut, solver; p=nothing,
                                     sensealg=get_default_ssadjoint(0.1f0, 0.1f0, 10), kwargs...)
-    p1, re1 = destructure(model)
-    p2, re2 = destructure(shortcut)
-    p = p === nothing ? vcat(p1, p2) : p
-    return SkipDeepEquilibriumNetwork(model, shortcut, p, re1, re2, length(p1), (solver,), kwargs, sensealg,
+    return SkipDeepEquilibriumNetwork(model, shortcut, p, nothing, nothing, 0, (solver,), kwargs, sensealg,
                                       DEQTrainingStats(0))
 end
 
-function SkipDeepEquilibriumNetwork(model, solver; p=nothing,
-                                    sensealg=SteadyStateAdjoint(; autodiff=false, autojacvec=ZygoteVJP(),
-                                                                linsolve=LinSolveKrylovJL(; rtol=0.1f0, atol=0.1f0)),
+function SkipDeepEquilibriumNetwork(model, solver; p=nothing, sensealg=get_default_ssadjoint(0.1f0, 0.1f0, 10),
                                     kwargs...)
-    p1, re1 = destructure(model)
-    p = p === nothing ? p1 : p
-    return SkipDeepEquilibriumNetwork(model, nothing, p, re1, nothing, length(p1), (solver,), kwargs, sensealg,
+    return SkipDeepEquilibriumNetwork(model, nothing, p, nothing, nothing, 0, (solver,), kwargs, sensealg,
                                       DEQTrainingStats(0))
 end
 

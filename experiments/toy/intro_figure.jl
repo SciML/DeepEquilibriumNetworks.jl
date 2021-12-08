@@ -25,7 +25,7 @@ end
 
 function get_model(hdims::Int, abstol::T, reltol::T, model_type::String) where {T}
     if model_type == "skip"
-        deq = SkipDeepEquilibriumNetwork(PolyFit(1, hdims), Chain(Dense(1, hdims, tanh_fast), Dense(hdims, 1)),
+        deq = SkipDeepEquilibriumNetwork(PolyFit(1, hdims), Chain(Dense(1, hdims, relu), Dense(hdims, 1)),
                                          get_default_dynamicss_solver(abstol, reltol, Tsit5());
                                          sensealg=get_default_ssadjoint(abstol, reltol, 20), maxiters=20, verbose=false)
     else
@@ -74,9 +74,9 @@ function train(model_type)
     y_val_data_partition = (y_val[:, i] for i in val_batch_idxs)
 
     ## Model Setup
-    model = get_model(50, 1f-5, 1f-5, model_type)
+    model = get_model(50, 1f-2, 1f-2, model_type)
 
-    loss_function = SupervisedLossContainer((y, ŷ) -> mean(abs, ŷ .- y), 1.0f-1)
+    loss_function = SupervisedLossContainer((y, ŷ) -> mean(abs2, ŷ .- y), 1.0f-1)
 
     nfe_counts = Int64[]
     cb = register_nfe_counts(model, nfe_counts)
@@ -84,7 +84,7 @@ function train(model_type)
     ## Training Loop
     ps = Flux.params(model)
     opt = ADAM(0.01)
-    for epoch in 1:250
+    for epoch in 1:1000
         try
             epoch_loss_train, epoch_nfe_train, epoch_loss_val, epoch_nfe_val = 0.0f0, 0, 0.0f0, 0
             for (x, y) in zip(x_train_data_partition, y_train_data_partition)
