@@ -27,12 +27,10 @@ struct MultiScaleSkipDeepEquilibriumNetwork{M3<:Union{Nothing,Parallel},N,M1<:Pa
 
         p = p === nothing ? vcat(p_main_layers, p_mapping_layers, p_shortcut_layers) : convert(typeof(p_main_layers), p)
 
-        return new{typeof.((shortcut_layers, ordered_split_idxs, main_layers, mapping_layers, re_main_layers,
-                            re_mapping_layers, re_shortcut_layers, p))...,A,K,S}(main_layers, mapping_layers,
-                                                                                 shortcut_layers, re_main_layers,
-                                                                                 re_mapping_layers, re_shortcut_layers,
-                                                                                 p, ordered_split_idxs, args, kwargs,
-                                                                                 sensealg, stats)
+        return new{typeof(shortcut_layers),length(ordered_split_idxs),
+                   typeof.((main_layers, mapping_layers, re_main_layers, re_mapping_layers, re_shortcut_layers, p))...,
+                   A,K,S}(main_layers, mapping_layers, shortcut_layers, re_main_layers, re_mapping_layers,
+                          re_shortcut_layers, p, ordered_split_idxs, args, kwargs, sensealg, stats)
     end
 end
 

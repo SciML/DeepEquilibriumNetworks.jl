@@ -1,6 +1,5 @@
 module FastDEQ
 
-using ChemistryFeaturization
 using CUDA
 using DiffEqBase
 using DiffEqSensitivity
@@ -12,6 +11,7 @@ using LinearAlgebra
 using LinearSolve
 using MPI
 using OrdinaryDiffEq
+using Requires
 using SciMLBase
 using SparseArrays
 using Statistics
@@ -20,6 +20,16 @@ using UnPack
 using Zygote
 
 using Flux: hasaffine, ones32, zeros32, _isactive
+
+function __init__()
+    @require ChemistryFeaturization="6c925690-434a-421d-aea7-51398c5b007a" begin
+        include("layers/agn.jl")
+        include("models/cgcnn.jl")
+        # Atomic Graph Net Layers
+        export AGNConv, AGNMaxPool, AGNMeanPool, batch_graph_data, BatchedAtomicGraph
+        export CrystalGraphCNN
+    end
+end
 
 const is_inside_deq = Ref(false)
 const allow_mask_reset = Ref(false)
@@ -75,7 +85,6 @@ include("solvers/limited_memory_broyden.jl")
 
 include("models/basics.jl")
 
-include("layers/agn.jl")
 include("layers/jacobian_stabilization.jl")
 include("layers/utils.jl")
 include("layers/deq.jl")
@@ -88,7 +97,6 @@ include("layers/weight_norm.jl")
 
 include("models/chain.jl")
 include("models/width_stacked_deq.jl")
-include("models/cgcnn.jl")
 
 include("losses.jl")
 include("logger.jl")
@@ -96,8 +104,6 @@ include("logger.jl")
 # DEQ Layers
 export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork, MultiScaleDeepEquilibriumNetwork,
        MultiScaleSkipDeepEquilibriumNetwork, WidthStackedDEQ
-# Atomic Graph Net Layers
-export AGNConv, AGNMaxPool, AGNMeanPool
 # General Purpose Layers (probably should be in Flux.jl)
 export VariationalHiddenDropout, GroupNormV2, WeightNorm
 
@@ -105,10 +111,8 @@ export VariationalHiddenDropout, GroupNormV2, WeightNorm
 export DEQChain
 export BasicResidualBlock, BranchNet, MultiParallelNet
 export downsample_module, upsample_module, expand_channels_module, conv3x3, conv5x5
-export CrystalGraphCNN
 
 # For the sanity of experiment code
-export batch_graph_data, BatchedAtomicGraph
 export reset_mask!, get_and_clear_nfe!, get_default_ssadjoint, get_default_dynamicss_solver,
        get_default_ssrootfind_solver
 
