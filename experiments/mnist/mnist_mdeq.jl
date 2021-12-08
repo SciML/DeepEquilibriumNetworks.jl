@@ -213,7 +213,7 @@ for seed in [1, 11, 111]
 end
 
 if MPI.Comm_rank(MPI_COMM_WORLD) == 0
-    filename = "fastdeqjl-supervised_mnist_classication-mdeq-$(now()).jl_serialized_file"
+    filename = "fastdeqjl-supervised_mnist_classication-mdeq-$(now()).jls"
     serialize(joinpath("artifacts", filename), nfe_count_dict)
     @info "Serialized NFE Counts to $filename"
 end

@@ -25,7 +25,12 @@ function DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=fal
     return DeepEquilibriumNetwork(jacobian_regularization, model, p, re, args, kwargs, sensealg, stats)
 end
 
-function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p=deq.p) where {T}
+function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p=deq.p; train_depth::Union{Int,Nothing} = nothing) where {T}
+    if train_depth !== nothing
+        # Treat like a parameter shared depth `k` neural network
+        return solve_depth_k_neural_network(deq.re, p, x, zero(x), train_depth)
+    end
+
     # Solving the equation f(u) - u = du = 0
     z = deq.re(p)(zero(x), x)::typeof(x)
     deq.stats.nfe += 1

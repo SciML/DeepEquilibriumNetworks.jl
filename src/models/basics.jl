@@ -51,12 +51,11 @@ end
 
 (b::BasicResidualBlock)(t::Tuple) = b(t...)
 
-function (b::BasicResidualBlock)(x::AbstractArray{T}, injection::Union{AbstractArray{T},T}=T(0)) where {T}
-    # WTF!!! Conv is not type stable
+function (b::BasicResidualBlock)(x::AbstractArray{T}, injection::Union{AbstractArray{V},T}=T(0)) where {T,V}
     x_ = x
-    x = b.conv1(x)::typeof(x)
-    x = b.conv2(b.gn1(x))::typeof(x)
-    residual = b.downsample(x_)::typeof(x)
+    x = b.conv1(x)
+    x = b.conv2(b.gn1(x))
+    residual = b.downsample(x_)
     return b.gn3(relu.(b.gn2(b.dropout(x) .+ injection) .+ residual))
 end
 

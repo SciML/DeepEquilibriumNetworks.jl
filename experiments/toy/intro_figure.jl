@@ -17,20 +17,20 @@ end
 Flux.@functor PolyFit
 
 function PolyFit(dims::Int, hdims::Int)
-    return PolyFit(rand(Float32, hdims, dims) .* 0.1f0, rand(Float32, dims, hdims) .* 0.1f0,
-                   rand(Float32, hdims, dims) .* 0.1f0, zeros(Float32, hdims, 1))
+    return PolyFit(randn(Float32, hdims, dims), randn(Float32, dims, hdims), randn(Float32, hdims, dims),
+                   rand(Float32, hdims, 1))
 end
 
-(p::PolyFit)(z, x) = p.W₂ * relu.(p.W₁ * z .+ p.U * x .+ p.b)
+(p::PolyFit)(z, x) = p.W₂ * tanh_fast.(p.W₁ * z .+ p.U * x .+ p.b)
 
 function get_model(hdims::Int, abstol::T, reltol::T, model_type::String) where {T}
     if model_type == "skip"
-        deq = SkipDeepEquilibriumNetwork(PolyFit(1, hdims), Chain(Dense(1, hdims, relu), Dense(hdims, 1)),
-                                         get_default_dynamicss_solver(abstol, reltol);
+        deq = SkipDeepEquilibriumNetwork(PolyFit(1, hdims), Chain(Dense(1, hdims, tanh_fast), Dense(hdims, 1)),
+                                         get_default_dynamicss_solver(abstol, reltol, Tsit5());
                                          sensealg=get_default_ssadjoint(abstol, reltol, 20), maxiters=20, verbose=false)
     else
         _deq = model_type == "vanilla" ? DeepEquilibriumNetwork : SkipDeepEquilibriumNetwork
-        deq = _deq(PolyFit(1, hdims), get_default_dynamicss_solver(abstol, reltol);
+        deq = _deq(PolyFit(1, hdims), get_default_dynamicss_solver(abstol, reltol, Tsit5());
                    sensealg=get_default_ssadjoint(abstol, reltol, 20), maxiters=20, verbose=false)
     end
     return gpu(deq)
@@ -74,21 +74,21 @@ function train(model_type)
     y_val_data_partition = (y_val[:, i] for i in val_batch_idxs)
 
     ## Model Setup
-    model = get_model(50, 1f-3, 1f-3, model_type)
+    model = get_model(50, 1f-5, 1f-5, model_type)
 
-    loss_function = SupervisedLossContainer(Flux.Losses.mse, 1.0f-2)
+    loss_function = SupervisedLossContainer((y, ŷ) -> mean(abs, ŷ .- y), 1.0f-1)
 
     nfe_counts = Int64[]
     cb = register_nfe_counts(model, nfe_counts)
 
     ## Training Loop
     ps = Flux.params(model)
-    opt = ADAMW(0.01, (0.9, 0.999), 0.000005)
-    for epoch in 1:1000
+    opt = ADAM(0.01)
+    for epoch in 1:250
         try
             epoch_loss_train, epoch_nfe_train, epoch_loss_val, epoch_nfe_val = 0.0f0, 0, 0.0f0, 0
             for (x, y) in zip(x_train_data_partition, y_train_data_partition)
-                loss, back = Zygote.pullback(() -> loss_function(model, x, y; train_depth=epoch <= 10 ? 15 : nothing),
+                loss, back = Zygote.pullback(() -> loss_function(model, x, y; train_depth=epoch > 50 ? nothing : 5),
                                              ps)
                 gs = back(one(loss))
                 Flux.Optimise.update!(opt, ps, gs)
@@ -146,7 +146,7 @@ models = Dict()
 datas = Dict()
 nfe_counts = Dict()
 
-for model_type in ["vanilla", "skip", "skip_no_extra_params"]
+for model_type in ["skip", "skip_no_extra_params", "vanilla"]
     model, nfe_count, x_data, y_data = train(model_type)
     models[model_type] = model
     datas[model_type] = (x_data, y_data)

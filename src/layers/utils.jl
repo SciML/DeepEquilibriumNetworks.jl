@@ -23,9 +23,11 @@ function solve_steady_state_problem(re, p, x, u0, sensealg, args...; dudt=nothin
 end
 
 function solve_depth_k_neural_network(re, p, x, u0, depth)
+    update_is_mask_reset_allowed(false)
     model = re(p)
     for _ in 1:depth
         u0 = model(u0, x)
     end
+    update_is_mask_reset_allowed(true)
     return u0
 end

@@ -32,19 +32,31 @@ function SkipDeepEquilibriumNetwork(model, solver; p=nothing,
                                       DEQTrainingStats(0))
 end
 
-function (deq::SkipDeepEquilibriumNetwork)(x::AbstractArray{T}, p=deq.p) where {T}
+function (deq::SkipDeepEquilibriumNetwork)(x::AbstractArray{T}, p=deq.p;
+                                           train_depth::Union{Int,Nothing}=nothing) where {T}
     p1, p2 = p[1:(deq.split_idx)], p[(deq.split_idx + 1):end]
     z = deq.re2(p2)(x)::typeof(x)
 
+    if train_depth !== nothing
+        # Treat like a parameter shared depth `k` neural network
+        return solve_depth_k_neural_network(deq.re1, p1, x, z, train_depth), z
+    end
+
     # Dummy call to ensure that mask is generated
-    Zygote.@ignore _ = deq.re1(p1)(x, x)
+    Zygote.@ignore _ = deq.re1(p1)(z, x)
 
     return (solve_steady_state_problem(deq.re1, p1, x, z, deq.sensealg, deq.args...; dudt=nothing,
                                        update_nfe=() -> (deq.stats.nfe += 1), deq.kwargs...), z)
 end
 
-function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(x::AbstractArray{T}, p=deq.p) where {M,T}
+function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(x::AbstractArray{T}, p=deq.p;
+                                                      train_depth::Union{Int,Nothing}=nothing) where {M,T}
     z = deq.re1(p)(zero(x), x)::typeof(x)
+
+    if train_depth !== nothing
+        # Treat like a parameter shared depth `k` neural network
+        return solve_depth_k_neural_network(deq.re1, p, x, z, train_depth), z
+    end
 
     return (solve_steady_state_problem(deq.re1, p, x, z, deq.sensealg, deq.args...; dudt=nothing,
                                        update_nfe=() -> (deq.stats.nfe += 1), deq.kwargs...), z)
