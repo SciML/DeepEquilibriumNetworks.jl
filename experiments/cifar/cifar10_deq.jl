@@ -77,8 +77,9 @@ function train(config::Dict)
     expt_name = "fastdeqjl-supervised_cifar10_classication-$(now())"
     lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, config=config)
     lg_term = PrettyTableLogger("logs/" * expt_name * ".log",
-                                ["Epoch Number", "Train/NFE", "Train/Accuracy", "Train/Loss", "Test/NFE",
-                                 "Test/Accuracy", "Test/Loss"], ["Train/Running/NFE", "Train/Running/Loss"])
+                                ["Epoch Number", "Train/NFE", "Train/Accuracy", "Train/Loss", "Train/Time", "Test/NFE",
+                                 "Test/Accuracy", "Test/Loss", "Test/Time"],
+                                ["Train/Running/NFE", "Train/Running/Loss"])
 
     ## Reproducibility
     Random.seed!(get_config(lg_wandb, "seed"))
@@ -133,6 +134,7 @@ function train(config::Dict)
 
     for epoch in 1:get_config(lg_wandb, "epochs")
         try
+            epoch_start_time = time()
             for (x, y) in trainiter
                 x = gpu(x)
                 y = gpu(y)
@@ -153,6 +155,7 @@ function train(config::Dict)
                 lg_term(; records=Dict("Train/Running/NFE" => nfe_counts[end], "Train/Running/Loss" => loss))
                 step += 1
             end
+            epoch_end_time = time()
 
             ### Training Loss/Accuracy
             train_loss, train_acc, train_nfe = loss_and_accuracy(model, trainiter)
@@ -168,7 +171,9 @@ function train(config::Dict)
                      "Training/Epoch/NFE" => train_nfe, "Training/Epoch/Accuracy" => train_acc))
 
             ### Testing Loss/Accuracy
+            test_start_time = time()
             test_loss, test_acc, test_nfe = loss_and_accuracy(model, testiter)
+            test_end_time = time()
 
             if MPI_COMM_SIZE > 1
                 test_vec .= [test_loss, test_acc, test_nfe] .* datacount_trainiter
@@ -179,7 +184,8 @@ function train(config::Dict)
             log(lg_wandb,
                 Dict("Testing/Epoch/Count" => epoch, "Testing/Epoch/Loss" => test_loss, "Testing/Epoch/NFE" => test_nfe,
                      "Testing/Epoch/Accuracy" => test_acc))
-            lg_term(epoch, train_nfe, train_acc, train_loss, test_nfe, test_acc, test_loss)
+            lg_term(epoch, train_nfe, train_acc, train_loss, epoch_end_time - epoch_start_time, test_nfe, test_acc,
+                    test_loss, test_end_time - test_start_time)
 
             MPI.Barrier(comm)
         catch ex
@@ -203,9 +209,9 @@ end
 nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [])
 
 for seed in [1, 11, 111]
-    for model_type in ["skip", "skip_no_extra_params", "vanilla"]
+    for model_type in ["skip_no_extra_params", "vanilla", "skip"]
         config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1f-1, "reltol" => 1f-1, "maxiters" => 20,
-                      "epochs" => 50, "dropout_rate" => 0.10, "batch_size" => 32, "eval_batch_size" => 64,
+                      "epochs" => 50, "dropout_rate" => 0.10, "batch_size" => 256, "eval_batch_size" => 256,
                       "model_type" => model_type, "solver_type" => "dynamicss")
 
         model, nfe_counts = train(config)
