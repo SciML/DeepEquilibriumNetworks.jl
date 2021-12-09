@@ -195,6 +195,12 @@ function generate_trajectory(model::SkipDeepEquilibriumNetwork, x::AbstractArray
     return traj
 end
 
+function load_models()
+    weights = deserialize("intro_figure_weights.jls")
+    models = last.(FastDEQ.destructure.(get_model.(50, 1f-2, 1f-2, ["skip", "skip_no_extra_params", "vanilla"])))
+    return Dict([m => re(weights[m]) for (re, m) in zip(models, ["skip", "skip_no_extra_params", "vanilla"])])
+end
+
 # N = 5
 # x_data_vanilla = gpu(reshape(collect(LinRange(-2.0f0, 2.0f0, N)), (1, N)));
 # x_data_skip = x_data_vanilla;

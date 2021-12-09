@@ -489,7 +489,7 @@ uuid = "9aa1b823-49e4-5ca5-8b0f-3971ec8bab6a"
 version = "0.3.2"
 
 [[deps.FastDEQ]]
-deps = ["CUDA", "ChemistryFeaturization", "DiffEqBase", "DiffEqSensitivity", "Flux", "FluxMPI", "Format", "Functors", "LinearAlgebra", "LinearSolve", "MPI", "OrdinaryDiffEq", "SciMLBase", "Serialization", "SparseArrays", "Statistics", "SteadyStateDiffEq", "UnPack", "Zygote"]
+deps = ["CUDA", "DiffEqBase", "DiffEqSensitivity", "Flux", "FluxMPI", "Format", "Functors", "LinearAlgebra", "LinearSolve", "MPI", "OrdinaryDiffEq", "Requires", "SciMLBase", "Serialization", "SparseArrays", "Statistics", "SteadyStateDiffEq", "UnPack", "Zygote"]
 path = "../.."
 uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 version = "0.1.0"

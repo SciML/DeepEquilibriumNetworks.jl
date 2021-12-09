@@ -11,7 +11,7 @@ const MPI_COMM_WORLD = MPI.COMM_WORLD
 const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
 
 ## Models
-function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, model_type::String,
+function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, model_type::String, batch_size::Int,
                    solver_type::String="dynamicss") where {T}
     main_layers = (BasicResidualBlock((32, 32), 8, 8; dropout_rate=dropout_rate),
                    BasicResidualBlock((16, 16), 16, 16; dropout_rate=dropout_rate),
@@ -87,7 +87,8 @@ function train(config::Dict)
     ## Model Setup
     model = get_model(get_config(lg_wandb, "maxiters"), Float32(get_config(lg_wandb, "abstol")),
                       Float32(get_config(lg_wandb, "reltol")), Float64(get_config(lg_wandb, "dropout_rate")),
-                      get_config(lg_wandb, "model_type"), get_config(lg_wandb, "solver_type"))
+                      get_config(lg_wandb, "model_type"), get_config(lg_wandb, "batch_size"),
+                      get_config(lg_wandb, "solver_type"))
 
     ## Dataset
     batch_size = get_config(lg_wandb, "batch_size")
