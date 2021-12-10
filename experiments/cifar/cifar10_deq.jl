@@ -94,8 +94,14 @@ function train(config::Dict)
     batch_size = get_config(lg_wandb, "batch_size")
     eval_batch_size = get_config(lg_wandb, "eval_batch_size")
 
+    ### CIFAR 10 Normalization Stats
+    μ = reshape([0.4914, 0.4822, 0.4465], 1, 1, :, 1)
+    σ² = reshape([0.2023, 0.1994, 0.2010], 1, 1, :, 1)
+
     _xs_train, _ys_train = CIFAR10.traindata(Float32)
+    _xs_train = (_xs_train .- μ) ./ σ²
     _xs_test, _ys_test = CIFAR10.testdata(Float32)
+    _xs_test = (_xs_test .- μ) ./ σ²
 
     xs_train, ys_train = _xs_train, Float32.(Flux.onehotbatch(_ys_train, 0:9))
     xs_test, ys_test = _xs_test, Float32.(Flux.onehotbatch(_ys_test, 0:9))
@@ -105,7 +111,7 @@ function train(config::Dict)
     testiter = DataParallelDataLoader((xs_test, ys_test); batchsize=eval_batch_size, shuffle=false)
 
     ## Loss Function
-    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 2.5f0)
+    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f-1)
 
     nfe_counts = []
     cb = register_nfe_counts(model, nfe_counts)
@@ -212,7 +218,7 @@ nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [
 for seed in [1, 11, 111]
     for model_type in ["skip_no_extra_params", "vanilla", "skip"]
         config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1f-1, "reltol" => 1f-1, "maxiters" => 20,
-                      "epochs" => 50, "dropout_rate" => 0.10, "batch_size" => 256, "eval_batch_size" => 256,
+                      "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 256, "eval_batch_size" => 256,
                       "model_type" => model_type, "solver_type" => "dynamicss")
 
         model, nfe_counts = train(config)

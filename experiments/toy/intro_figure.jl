@@ -88,8 +88,7 @@ function train(model_type)
         try
             epoch_loss_train, epoch_nfe_train, epoch_loss_val, epoch_nfe_val = 0.0f0, 0, 0.0f0, 0
             for (x, y) in zip(x_train_data_partition, y_train_data_partition)
-                loss, back = Zygote.pullback(() -> loss_function(model, x, y; train_depth=epoch > 50 ? nothing : 5),
-                                             ps)
+                loss, back = Zygote.pullback(() -> loss_function(model, x, y; train_depth=epoch > 50 ? nothing : 5), ps)
                 gs = back(one(loss))
                 Flux.Optimise.update!(opt, ps, gs)
 
@@ -201,135 +200,76 @@ function load_models()
     return Dict([m => re(weights[m]) for (re, m) in zip(models, ["skip", "skip_no_extra_params", "vanilla"])])
 end
 
-# N = 5
-# x_data_vanilla = gpu(reshape(collect(LinRange(-2.0f0, 2.0f0, N)), (1, N)));
-# x_data_skip = x_data_vanilla;
-# x_data_skip_no_extra_params = x_data_vanilla;
+N = 50
+x_data_vanilla = gpu(reshape(collect(LinRange(-2.0f0, 2.0f0, N)), (1, N)));
+x_data_skip = x_data_vanilla;
+x_data_skip_no_extra_params = x_data_vanilla;
 
-# traj_vanilla = generate_trajectory(models["vanilla"], x_data_vanilla);
-# traj_skip = generate_trajectory(models["skip"], x_data_skip);
-# traj_skip_no_extra_params = generate_trajectory(models["skip_no_extra_params"], x_data_skip_no_extra_params);
+traj_vanilla = generate_trajectory(models["vanilla"], x_data_vanilla, 15);
+traj_skip = generate_trajectory(models["skip"], x_data_skip, 15);
+traj_skip_no_extra_params = generate_trajectory(models["skip_no_extra_params"], x_data_skip_no_extra_params, 15);
 
-# function get_plottable_values(traj, x_data)
-#     x_data = vec(x_data) |> cpu
-#     gt = h.(x_data)
+function get_plottable_values(traj, x_data)
+    x_data = cpu(vec(x_data))
+    gt = h.(x_data)
 
-#     x = vec(hcat(repeat(reshape(x_data, (:, 1)), 1, length(traj) - 1),
-#                  [NaN for _ in 1:length(traj[1])])')
-#     y = vec(hcat(vcat(traj[1:(end - 1)]...)',
-#                  [NaN for _ in 1:length(traj[1])])')
-#     z = vec(hcat(vcat(traj[2:end]...)', [NaN for _ in 1:length(traj[1])])')
+    x = vec(hcat(repeat(reshape(x_data, (:, 1)), 1, length(traj) - 1), [NaN for _ in 1:length(traj[1])])')
+    y = cpu(vec(hcat(vcat(traj[1:(end - 1)]...)', [NaN for _ in 1:length(traj[1])])'))
+    z = cpu(vec(hcat(vcat(traj[2:end]...)', [NaN for _ in 1:length(traj[1])])'))
 
-#     return (x, y, z), (x_data, gt)
-# end
+    return (x, y, z), (x_data, gt)
+end
 
-# func = (x, y) -> first(models["skip"].re1(models["skip"].p[1:models["skip"].split_idx])(reshape(gpu([y]), 1, 1), reshape(gpu([x]), 1, 1)))
-# surface!(range(-2, stop = 2, length = 100), range(-6, stop = 6, length = 100), func)
+(x_1, y_1, z_1), (x__1, gt_1) = get_plottable_values(traj_skip_no_extra_params, x_data_skip_no_extra_params)
+(x_2, y_2, z_2), (x__2, gt_2) = get_plottable_values(traj_skip, x_data_skip)
+(x_3, y_3, z_3), (x__3, gt_3) = get_plottable_values(traj_vanilla, x_data_vanilla)
 
-# (x, y, z), (x_, gt) = get_plottable_values(traj_skip_no_extra_params, x_data_skip_no_extra_params)
+get_alphas(N::Int) = cumsum(collect(1:N) ./ sum(1:N))
+get_alphas2(N::Int) = (cumsum(collect(1:N) ./ sum(1:N)) .+ 0.5) ./ 1.5
 
-# plot3d(x_, gt, gt, label = "Ground Truth", xlabel = L"$x$", ylabel = L"$z$", zlabel = L"$z_{out} = f_\theta(z, x)$", marker = :circle, markersize = 2, legendfontsize = 5, color = :red)
-# surface!(range(-2, stop = 2, length = 100), range(-6, stop = 6, length = 100), (x, y) -> y)
+function plot_all_at_and_before(i, x, y, z, x_, gt, xlabel, ylabel, zlabel, legend, fix_color=false,
+                                get_alphas=get_alphas)
+    alphas = get_alphas(i)
+    p = fix_color ? plot3d(x[1, :], y[1, :], z[1, :]; label=nothing, alpha=alphas[1], markersize=3, marker=:circle) :
+        plot3d(x_, gt, gt; label=L"$h(x) = \frac{3}{2}x^3 + x^2 - 5x + 2sin(x) - 3$", xlabel=xlabel, ylabel=ylabel,
+               zlabel=zlabel, marker=:circle, markersize=fix_color ? 5 : 3, legendfontsize=5, color=:red, legend=legend,
+               alpha=0.5)
+    for _i in (fix_color ? 2 : 1):i
+        if !fix_color
+            plot3d!(p, x[_i, :], y[_i, :], z[_i, :]; label=nothing, alpha=alphas[_i], markersize=3, marker=:circle)
+        else
+            plot3d!(p, x[_i, :], y[_i, :], z[_i, :]; label=nothing, alpha=alphas[_i], markersize=3, marker=:circle,
+                    color=:blue)
+        end
+    end
+    if fix_color
+        plot3d!(p, x_, gt, gt; label=L"$h(x) = \frac{3}{2}x^3 + x^2 - 5x + 2sin(x) - 3$", xlabel=xlabel, ylabel=ylabel,
+               zlabel=zlabel, marker=:circle, markersize=fix_color ? 5 : 3, legendfontsize=10, color=:red, legend=legend,
+               alpha=0.5)
+    end
+    return p
+end
 
-# plot3d(x, y, z)
-# plot3d!(x_, gt, gt, label = "Ground Truth", xlabel = L"$x$", ylabel = L"$z$", zlabel = L"$z_{out} = f_\theta(z, x)$", marker = :circle, markersize = 2, legendfontsize = 5, color = :red)
+# Fancy Graphics (for Twitter and Presentations)
+_x_1, _y_1, _z_1 = reshape(x_1, :, N), reshape(y_1, :, N), reshape(z_1, :, N)
+_x_2, _y_2, _z_2 = reshape(x_2, :, N), reshape(y_2, :, N), reshape(z_2, :, N)
+_x_3, _y_3, _z_3 = reshape(x_3, :, N), reshape(y_3, :, N), reshape(z_3, :, N)
+anim = @animate for i in 1:size(_x_3, 1)
+    p3 = plot_all_at_and_before(i, _x_1, _y_1, _z_1, x__1, gt_1, L"$x$", L"$z$", "", false)
+    p2 = plot_all_at_and_before(i, _x_2, _y_2, _z_2, x__2, gt_2, L"$x$", "", "", false)
+    p1 = plot_all_at_and_before(i, _x_3, _y_3, _z_3, x__3, gt_3, L"$x$", "", L"$z_{out} = f_\theta(z, x)$", :topleft)
+    plot(p1, p2, p3; layout=(1, 3), title=["Vanilla DEQ" "Skip DEQ" "Skip DEQ with No Extra Parameters"],
+         titlefontsize=15, size=(1600, 600), margin=15Plots.mm)
+end
+gif(anim, "assets/dynamics_overview.gif"; fps=5)
 
-# function plot_trajectories(traj_1, x_data_1, traj_2, x_data_2)
-#     fig = Figure(; resolution=(900, 600))
-
-#     ga = fig[1, 1:2] = GridLayout()
-#     gb = fig[2, 1:2] = GridLayout()
-#     gaa = ga[1, 1] = GridLayout()
-#     gab = ga[1, 2] = GridLayout()
-#     gba = gb[1, 1] = GridLayout()
-#     gbb = gb[1, 2] = GridLayout()
-
-#     get_axis(sc; kwargs...) = Axis3(sc; perspectiveness=0.5, kwargs...)
-
-#     ax = get_axis(gaa[1, 1]; xlabel="x", ylabel="z", zlabel="f(z, x)",
-#                   title="Vanilla DEQ")
-
-#     x_data = cpu(vec(x_data_1))
-#     gt = h.(x_data)
-
-#     CairoMakie.scatterlines!(ax, x_data, gt, gt; color=:red, marker=:x,
-#                              markersize=10, markercolor=:red, linewidth=0.25)
-
-#     x = vec(hcat(repeat(reshape(x_data, (:, 1)), 1, length(traj_1) - 1),
-#                  [NaN for _ in 1:length(traj_1[1])])')
-#     y = vec(hcat(vcat(traj_1[1:(end - 1)]...)',
-#                  [NaN for _ in 1:length(traj_1[1])])')
-#     z = vec(hcat(vcat(traj_1[2:end]...)', [NaN for _ in 1:length(traj_1[1])])')
-#     c = vcat(0, 0.5, 0.75, 0.9, LinRange(0.95, 1.0, length(traj_1) - 4))
-#     c = repeat(c, length(traj_1[1]))
-
-#     CairoMakie.scatterlines!(ax, x, y, z; colormap=:batlow, markersize=2,
-#                              color=c, markercolor=c, linewidth=0.25)
-
-#     CairoMakie.ylims!(ax; low=-6, high=6)
-#     CairoMakie.zlims!(ax; low=-6, high=6)
-
-#     ax = get_axis(gba[1, 1]; azimuth=0.65π, xlabel="x", ylabel="Depth",
-#                   zlabel="Residual")
-
-#     CairoMakie.zlims!(ax; high=8)
-
-#     x_ = vec(vcat(reshape(x, :, length(traj_1))[1:9, :],
-#                   reshape([NaN for _ in 1:length(traj_1)], 1, :)))
-#     residuals = vec(vcat(reshape(abs.(z .- y), :, length(traj_1))[1:9, :],
-#                          reshape([NaN for _ in 1:length(traj_1)], 1, :)))
-#     depths = Float32.(repeat(vcat(1:9, NaN), length(traj_1)))
-
-#     CairoMakie.scatterlines!(ax, x_, depths, residuals; colormap=:batlow,
-#                              markersize=2, color=depths, markercolor=depths,
-#                              linewidth=0.25)
-
-#     ax = get_axis(gab[1, 1]; xlabel="x", ylabel="z", zlabel="f(z, x)",
-#                   title="Skip DEQ")
-
-#     x_data = cpu(vec(x_data_2))
-#     gt = h.(x_data)
-
-#     CairoMakie.scatterlines!(ax, x_data, gt, gt; color=:red, marker=:x,
-#                              markersize=10, markercolor=:red, linewidth=0.25)
-
-#     x = vec(hcat(repeat(reshape(x_data, (:, 1)), 1, length(traj_2) - 1),
-#                  [NaN for _ in 1:length(traj_2[1])])')
-#     y = vec(hcat(vcat(traj_2[1:(end - 1)]...)',
-#                  [NaN for _ in 1:length(traj_2[1])])')
-#     z = vec(hcat(vcat(traj_2[2:end]...)', [NaN for _ in 1:length(traj_2[1])])')
-#     c = vcat(0, 0.5, 0.75, 0.9, LinRange(0.95, 1.0, length(traj_2) - 4))
-#     c = repeat(c, length(traj_2[1]))
-
-#     CairoMakie.scatterlines!(ax, x, y, z; colormap=:batlow, markersize=2,
-#                              color=c, markercolor=c, linewidth=0.25)
-
-#     CairoMakie.ylims!(ax; low=-6, high=6)
-#     CairoMakie.zlims!(ax; low=-6, high=6)
-
-#     ax = get_axis(gbb[1, 1]; azimuth=0.65π, xlabel="x", ylabel="Depth",
-#                   zlabel="Residual")
-
-#     CairoMakie.zlims!(ax; high=8)
-
-#     x_ = vec(vcat(reshape(x, :, length(traj_2))[1:9, :],
-#                   reshape([NaN for _ in 1:length(traj_2)], 1, :)))
-#     residuals = vec(vcat(reshape(abs.(z .- y), :, length(traj_2))[1:9, :],
-#                          reshape([NaN for _ in 1:length(traj_2)], 1, :)))
-#     depths = Float32.(repeat(vcat(1:9, NaN), length(traj_2)))
-
-#     CairoMakie.scatterlines!(ax, x_, depths, residuals; colormap=:batlow,
-#                              markersize=2, color=depths, markercolor=depths,
-#                              linewidth=0.25)
-
-#     # trim!(fig.layout)
-#     # rowsize!(fig.layout, 1, Auto(0.5))
-#     # colsize!(fig.layout, 1, Auto(0.5))
-#     return fig
-# end
-
-# fig = plot_trajectories(traj_vanilla, x_data_vanilla, traj_skip, x_data_skip)
-
-# save("intro_fig.pdf", fig; pt_per_unit=1)
-
-# fig
+# Intro Figure
+begin
+    p3 = plot_all_at_and_before(15, _x_1, _y_1, _z_1, x__1, gt_1, L"$x$", L"$z$", "", false, true, get_alphas2)
+    p2 = plot_all_at_and_before(15, _x_2, _y_2, _z_2, x__2, gt_2, L"$x$", "", "", false, true, get_alphas2)
+    p1 = plot_all_at_and_before(15, _x_3, _y_3, _z_3, x__3, gt_3, L"$x$", "", L"$z_{out} = f_\theta(z, x)$", :topleft,
+                                true, get_alphas2)
+    plot(p1, p2, p3; layout=(1, 3), title=["Vanilla DEQ" "Skip DEQ" "Skip DEQ with No Extra Parameters"],
+         titlefontsize=15, size=(1600, 600), margin=15Plots.mm)
+    savefig("assets/dynamics_overview.pdf")
+end
