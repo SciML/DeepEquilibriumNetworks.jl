@@ -21,7 +21,7 @@ function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, mode
                       upsample_module(32, 8, 8, 32) upsample_module(32, 16, 8, 16) identity]
     solver = solver_type == "dynamicss" ? get_default_dynamicss_solver(abstol, reltol) :
              get_default_ssrootfind_solver(abstol, reltol, LimitedMemoryBroydenSolver; device=gpu,
-                                           original_dims=(1, (28 * 28 * 8) + (14 * 14 * 16) + (7 * 7 * 32)),
+                                           original_dims=(1, (32 * 32 * 8) + (16 * 16 * 16) + (8 * 8 * 32)),
                                            batch_size=batch_size, maxiters=maxiters)
 
     if model_type == "skip"
