@@ -153,7 +153,7 @@ for model_type in ["skip", "skip_no_extra_params", "vanilla"]
 end
 
 serialize("intro_figure_dump.jls", (models, datas, nfe_counts))
-serialize("intro_figure_weights.jls", Dict(k => FastDEQ.destructure(v)[1] for (k, v) in models))
+serialize("intro_figure_weights.jls", Dict(k => FastDEQ.destructure_parameters(v)[1] for (k, v) in models))
 
 CUDA.allowscalar(true)
 

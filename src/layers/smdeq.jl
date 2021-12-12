@@ -17,10 +17,10 @@ struct MultiScaleSkipDeepEquilibriumNetwork{M3<:Union{Nothing,Parallel},N,M1<:Pa
                                                   shortcut_layers::Union{Nothing,Parallel}, re1, re2, re3, p,
                                                   ordered_split_idxs, args::A, kwargs::K, sensealg::S,
                                                   stats) where {A,K,S}
-        p_main_layers, re_main_layers = destructure(main_layers)
-        p_mapping_layers, re_mapping_layers = destructure(mapping_layers)
+        p_main_layers, re_main_layers = destructure_parameters(main_layers)
+        p_mapping_layers, re_mapping_layers = destructure_parameters(mapping_layers)
         p_shortcut_layers, re_shortcut_layers = shortcut_layers === nothing ? ([], nothing) :
-                                                destructure(shortcut_layers)
+                                                destructure_parameters(shortcut_layers)
 
         ordered_split_idxs = tuple(cumsum([0, length(p_main_layers), length(p_mapping_layers),
                                            length(p_shortcut_layers)])...)

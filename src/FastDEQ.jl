@@ -4,6 +4,7 @@ using CUDA
 using DiffEqBase
 using DiffEqSensitivity
 using Flux
+using FluxExperimental
 using FluxMPI
 using Format
 using Functors
@@ -66,10 +67,8 @@ end
 
 abstract type AbstractDeepEquilibriumNetwork end
 
-function destructure end
-
 function Base.show(io::IO, l::AbstractDeepEquilibriumNetwork)
-    p, _ = destructure(l)
+    p, _ = destructure_parameters(l)
     return print(io, string(typeof(l).name.name), "() ", string(length(p)), " Trainable Parameters")
 end
 
@@ -78,7 +77,6 @@ Flux.trainable(d::AbstractDeepEquilibriumNetwork) = (d.p,)
 abstract type IterativeDEQSolver end
 
 include("utils.jl")
-include("destructure.jl")
 
 include("solvers/broyden.jl")
 include("solvers/limited_memory_broyden.jl")

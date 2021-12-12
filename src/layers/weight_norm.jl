@@ -19,7 +19,7 @@ function WeightNorm(layer, dim::Union{Tuple,Vector,Int,Nothing}=nothing)
     ps = Flux.params(layer)
     dim = dim === nothing ? [ndims(p) for p in ps] : (dim isa Int ? [dim for _ in 1:length(ps)] : dim)
 
-    p_, layer_re = destructure(layer)
+    p_, layer_re = destructure_parameters(layer)
 
     parameters = []
     for (i, p) in enumerate(ps)

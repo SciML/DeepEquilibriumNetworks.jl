@@ -14,8 +14,8 @@ struct MultiScaleDeepEquilibriumNetwork{N,M1<:Parallel,M2<:MultiParallelNet,RE1,
     function MultiScaleDeepEquilibriumNetwork(main_layers::Parallel, mapping_layers::MultiParallelNet, re1, re2, p,
                                               ordered_split_idxs, args::A, kwargs::K, sensealg::S,
                                               stats) where {A,K,S}
-        p_main_layers, re_main_layers = destructure(main_layers)
-        p_mapping_layers, re_mapping_layers = destructure(mapping_layers)
+        p_main_layers, re_main_layers = destructure_parameters(main_layers)
+        p_mapping_layers, re_mapping_layers = destructure_parameters(mapping_layers)
 
         ordered_split_idxs = tuple(cumsum([0, length(p_main_layers), length(p_mapping_layers)])...)
 

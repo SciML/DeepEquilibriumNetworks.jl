@@ -11,9 +11,9 @@ struct SkipDeepEquilibriumNetwork{M,S,P,RE1,RE2,A,Se,K} <: AbstractDeepEquilibri
     stats::DEQTrainingStats
 
     function SkipDeepEquilibriumNetwork(model, shortcut, p, re1, re2, split_idx, args, kwargs, sensealg, stats)
-        p1, re1 = destructure(model)
+        p1, re1 = destructure_parameters(model)
         split_idx = length(p1)
-        p2, re2 = shortcut === nothing ? ([], nothing) : destructure(shortcut)
+        p2, re2 = shortcut === nothing ? ([], nothing) : destructure_parameters(shortcut)
 
         p = p === nothing ? vcat(p1, p2) : convert(typeof(p1), p)
 

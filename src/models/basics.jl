@@ -50,7 +50,7 @@ function (b::BasicResidualBlock)(x::AbstractArray{T}, injection::Union{AbstractA
 end
 
 function Base.show(io::IO, l::BasicResidualBlock)
-    p, _ = destructure(l)
+    p, _ = destructure_parameters(l)
     return print(io, string(typeof(l).name.name), "() ", string(length(p)), " Trainable Parameters")
 end
 
@@ -105,6 +105,8 @@ struct MultiParallelNet{L}
     end
 
     MultiParallelNet(layers::Tuple) = new{typeof(layers)}(layers)
+
+    MultiParallelNet(layers::Vector) = MultiParallelNet(layers...)
 end
 
 Flux.@functor MultiParallelNet

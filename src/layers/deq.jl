@@ -9,7 +9,7 @@ struct DeepEquilibriumNetwork{J,M,P,RE,A,S,K} <: AbstractDeepEquilibriumNetwork
     stats::DEQTrainingStats
 
     function DeepEquilibriumNetwork(jacobian_regularization, model, p, re, args, kwargs, sensealg, stats)
-        _p, re = destructure(model)
+        _p, re = destructure_parameters(model)
         p = p === nothing ? _p : convert(typeof(_p), p)
 
         return new{jacobian_regularization,typeof(model),typeof(p),typeof(re),typeof(args),typeof(sensealg),
