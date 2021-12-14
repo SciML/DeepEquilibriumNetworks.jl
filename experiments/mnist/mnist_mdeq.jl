@@ -77,8 +77,9 @@ function train(config::Dict)
     expt_name = "fastdeqjl-supervised_mnist_classication-mdeq-$(now())"
     lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, config=config)
     lg_term = PrettyTableLogger("logs/" * expt_name * ".log",
-                                ["Epoch Number", "Train/NFE", "Train/Accuracy", "Train/Loss", "Test/NFE",
-                                 "Test/Accuracy", "Test/Loss"], ["Train/Running/NFE", "Train/Running/Loss"])
+                                ["Epoch Number", "Train/NFE", "Train/Accuracy", "Train/Loss", "Train/Time", "Test/NFE",
+                                 "Test/Accuracy", "Test/Loss", "Test/Time"],
+                                ["Train/Running/NFE", "Train/Running/Loss"])
 
     ## Reproducibility
     Random.seed!(get_config(lg_wandb, "seed"))
@@ -135,14 +136,17 @@ function train(config::Dict)
 
     for epoch in 1:get_config(lg_wandb, "epochs")
         try
+            train_time = 0
             for (x, y) in trainiter
                 x = gpu(x)
                 y = gpu(y)
 
+                train_start_time = time()
                 _res = Zygote.withgradient(() -> loss_function(model, x, y), ps)
                 loss = _res.val
                 gs = _res.grad
                 Flux.Optimise.update!(opt, ps, gs)
+                train_time += time() - train_start_time
 
                 ### Store the NFE Count
                 cb()
@@ -169,7 +173,9 @@ function train(config::Dict)
                      "Training/Epoch/NFE" => train_nfe, "Training/Epoch/Accuracy" => train_acc))
 
             ### Testing Loss/Accuracy
+            test_time = time()
             test_loss, test_acc, test_nfe = loss_and_accuracy(model, testiter)
+            test_time = time() - test_time
 
             if MPI_COMM_SIZE > 1
                 test_vec .= [test_loss, test_acc, test_nfe] .* datacount_trainiter
@@ -180,7 +186,7 @@ function train(config::Dict)
             log(lg_wandb,
                 Dict("Testing/Epoch/Count" => epoch, "Testing/Epoch/Loss" => test_loss, "Testing/Epoch/NFE" => test_nfe,
                      "Testing/Epoch/Accuracy" => test_acc))
-            lg_term(epoch, train_nfe, train_acc, train_loss, test_nfe, test_acc, test_loss)
+            lg_term(epoch, train_nfe, train_acc, train_loss, train_time, test_nfe, test_acc, test_loss, test_time)
 
             MPI.Barrier(comm)
         catch ex
