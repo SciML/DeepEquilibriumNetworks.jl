@@ -559,12 +559,6 @@ git-tree-sha1 = "8b3c09b56acaf3c0e581c66638b85c8650ee9dca"
 uuid = "6a86dc24-6348-571c-b903-95158fe2bd41"
 version = "2.8.1"
 
-[[deps.FiniteDifferences]]
-deps = ["ChainRulesCore", "LinearAlgebra", "Printf", "Random", "Richardson", "StaticArrays"]
-git-tree-sha1 = "ebebaefe1f42864f26e50ea1fa54a8e4cadb5992"
-uuid = "26cc04aa-876d-5657-8c51-4c34ba976000"
-version = "0.12.20"
-
 [[deps.FixedPointNumbers]]
 deps = ["Statistics"]
 git-tree-sha1 = "335bfdceacc84c5cdf16aadc768aa5ddfc5383cc"
@@ -1649,12 +1643,6 @@ git-tree-sha1 = "2c7abf1c7b4f9bbfb0e755cf74d4bf0e43431b9e"
 uuid = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 version = "1.11.0"
 
-[[deps.Richardson]]
-deps = ["LinearAlgebra"]
-git-tree-sha1 = "e03ca566bec93f8a3aeb059c8ef102f268a38949"
-uuid = "708f8203-808e-40c0-ba2d-98a6953ed40d"
-version = "1.4.0"
-
 [[deps.Rmath]]
 deps = ["Random", "Rmath_jll"]
 git-tree-sha1 = "bf3188feca147ce108c76ad82c2792c57abe7b1f"
@@ -2227,8 +2215,10 @@ uuid = "3161d3a3-bdf6-5164-811a-617609db77b4"
 version = "1.5.0+0"
 
 [[deps.Zygote]]
-deps = ["AbstractFFTs", "ChainRules", "ChainRulesCore", "DiffRules", "Distances", "Distributed", "FFTW", "FillArrays", "FiniteDifferences", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics", "ZygoteRules"]
-path = "../../../patches/Zygote.jl"
+deps = ["AbstractFFTs", "ChainRules", "ChainRulesCore", "DiffRules", "Distributed", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics", "ZygoteRules"]
+git-tree-sha1 = "9a51c95524d949bb462183e8daea3a439e91f67d"
+repo-rev = "ap/fastdeq"
+repo-url = "https://github.com/avik-pal/Zygote.jl"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
 version = "0.6.32"
 
