@@ -25,23 +25,16 @@ function DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=fal
                                   DEQTrainingStats(0))
 end
 
-function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p=deq.p; train_depth::Union{Int,Nothing}=nothing) where {T}
-    if train_depth !== nothing
-        # Treat like a parameter shared depth `k` neural network
-        return solve_depth_k_neural_network(deq.re, p, x, zero(x), train_depth)
-    end
-
+function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}, p=deq.p) where {T}
     # Solving the equation f(u) - u = du = 0
-    z = deq.re(p)(zero(x), x)::typeof(x)
-    deq.stats.nfe += 1
+    z = zero(x)
+    Zygote.@ignore deq.re(p)(z, x)
 
-    return solve_steady_state_problem(deq.re, p, x, z, deq.sensealg, deq.args...; dudt=nothing,
+    return solve_steady_state_problem(deq.re, deq.p, x, z, deq.sensealg, deq.args...; dudt=nothing,
                                       update_nfe=() -> (deq.stats.nfe += 1), deq.kwargs...)
 end
 
-function (deq::DeepEquilibriumNetwork)(inputs::Tuple, p=deq.p)
-    # Atomic Graph Nets
-    lapl, x = inputs
+function (deq::DeepEquilibriumNetwork)(lapl::AbstractMatrix, x::AbstractMatrix)
     # NOTE: encoded_features being 0 causes NaN gradients to propagate
     u0 = deq.re(p)(lapl, zero(x) .+ eps(eltype(x)), x)[2]
     deq.stats.nfe += 1

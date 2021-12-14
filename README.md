@@ -1,15 +1,16 @@
 # FastDEQ
 
-![](assets/dynamics_overview.gif)
-
+![Dynamics Overview](assets/dynamics_overview.gif)
 
 ## Installation
 
 This package relies on some unreleased packages which need to be manually installed
 
 ```julia
-] add git@github.com:avik-pal/FluxHelpers.jl.git # https://github.com/avik-pal/FluxHelpers.jl.git
-] add git@github.com:avik-pal/FastDEQ.jl.git # https://github.com/avik-pal/FastDEQ.jl
+] add https://github.com/avik-pal/FluxExperimental.jl.git
+] add DiffEqSensitivity#ap/fastdeq
+] add https://github.com/avik-pal/Zygote.jl.git#ap/fastdeq
+] add https://github.com/avik-pal/FastDEQ.jl
 ```
 
 ## Implemented Models

@@ -1,3 +1,6 @@
+## NOTE: THIS FILE HAS NOT BEEN UPDATED TO THE LATEST VERSIONS OF THE PACKAGE AND WILL MOST LIKELY NOT WORK
+##       USE `mnist_mdeq.jl`
+
 # Load Packages
 using CUDA, Dates, DiffEqSensitivity, FastDEQ, Flux, OrdinaryDiffEq, Statistics, SteadyStateDiffEq, Plots, Random,
       Wandb, Zygote

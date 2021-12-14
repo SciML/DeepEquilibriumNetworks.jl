@@ -41,15 +41,15 @@ function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Ma
                                             kwargs, sensealg, DEQTrainingStats(0))
 end
 
-function (mdeq::MultiScaleDeepEquilibriumNetwork)(x::AbstractArray{T}, p=mdeq.p) where {T}
+function (mdeq::MultiScaleDeepEquilibriumNetwork)(x::AbstractArray{T}) where {T}
     z = zero(x)
     initial_conditions = Zygote.@ignore map(l -> l(z), map(l -> l.layers[1], mdeq.mapping_layers.layers))
-    u_sizes = size.(initial_conditions)
-    u_split_idxs = vcat(0, cumsum(length.(initial_conditions) .÷ size(x, ndims(x)))...)
-    u0 = vcat(Flux.flatten.(initial_conditions)...)
+    u_sizes = Zygote.@ignore size.(initial_conditions)
+    u_split_idxs = Zygote.@ignore vcat(0, cumsum(length.(initial_conditions) .÷ size(x, ndims(x)))...)
+    u0 = Zygote.@ignore vcat(Flux.flatten.(initial_conditions)...)
 
     N = length(u_sizes)
-    update_is_mask_reset_allowed(false)
+    update_is_variational_hidden_dropout_mask_reset_allowed(false)
 
     function dudt_(u, _p)
         mdeq.stats.nfe += 1
@@ -61,15 +61,16 @@ function (mdeq::MultiScaleDeepEquilibriumNetwork)(x::AbstractArray{T}, p=mdeq.p)
 
         main_layers_output = mdeq.main_layers_re(p1)((u_reshaped[1], x), u_reshaped[2:end]...)
 
-        return vcat(Flux.flatten.(mdeq.mapping_layers_re(p2)(main_layers_output))...)
+        return mdeq.mapping_layers_re(p2)(main_layers_output)
     end
 
-    dudt(u, _p, t) = dudt_(u, _p) .- u
+    dudt(u, _p, t) = vcat(Flux.flatten.(dudt_(u, _p))...)
 
-    ssprob = SteadyStateProblem(dudt, u0, p)
+    ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
     res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
-    x_ = map(xs -> reshape(xs[1], xs[2]), zip(split_array_by_indices(dudt_(res, p), u_split_idxs), u_sizes))
-    update_is_mask_reset_allowed(true)
+
+    x_ = dudt_(res, mdeq.p)
+    update_is_variational_hidden_dropout_mask_reset_allowed(true)
 
     return x_
 end

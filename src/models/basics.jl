@@ -1,12 +1,3 @@
-# Functions
-function conv3x3(mapping; stride::Int=1, bias::Bool=false)
-    return Conv((3, 3), mapping; stride=stride, pad=1, bias=bias)
-end
-
-function conv5x5(mapping; stride::Int=1, bias::Bool=false)
-    return Conv((5, 5), mapping; stride=stride, pad=2, bias=bias)
-end
-
 # Basic Residual Block
 struct BasicResidualBlock{C1,C2,GN1,GN2,GN3,DO,DR}
     conv1::C1
@@ -27,10 +18,10 @@ function BasicResidualBlock(outdims::Tuple, inplanes::Int, planes::Int; deq_expa
 
     inner_planes = planes * deq_expand
     conv1 = wn_layer((n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; stride=1, bias=false))
-    gn1 = GroupNormV2(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=false)
+    gn1 = GroupNormV2(inner_planes, num_gn_groups, gelu; affine=gn_affine, track_stats=false)
 
     conv2 = wn_layer((n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => planes; stride=1, bias=false))
-    gn2 = GroupNormV2(planes, num_gn_groups, relu; affine=gn_affine, track_stats=false)
+    gn2 = GroupNormV2(planes, num_gn_groups, gelu; affine=gn_affine, track_stats=false)
 
     gn3 = GroupNormV2(planes, num_gn_groups; affine=gn_affine, track_stats=false)
 
@@ -69,28 +60,28 @@ end
 Flux.@functor BranchNet
 
 function (bn::BranchNet)(x::AbstractArray{T}, injection::AbstractArray{T}) where {T}
-    buf = Zygote.Buffer(typeof(x)[])
-    push!(buf, bn.layers[1](x, injection))
+    buf = Zygote.Buffer(Vector{typeof(x)}(undef, length(bn.layers)))
+    buf[1] = bn.layers[1](x, injection)
     for (i, l) in enumerate(bn.layers[2:end])
-        push!(buf, l(buf[i]))
+        buf[i + 1] = l(buf[i])
     end
     return copy(buf)
 end
 
 function (bn::BranchNet)(x::AbstractArray{T}, injection::AbstractArray{T}, injections...) where {T}
-    buf = Zygote.Buffer(typeof(x)[])
-    push!(buf, bn.layers[1](x, injection))
+    buf = Zygote.Buffer(Vector{typeof(x)}(undef, length(bn.layers)))
+    buf[1] = bn.layers[1](x, injection)
     for (i, l) in enumerate(bn.layers[2:end])
-        push!(buf, l(buf[i], injections[i]))
+        buf[i + 1] = l(buf[i], injections[i])
     end
     return copy(buf)
 end
 
 function (bn::BranchNet)(x::AbstractArray{T}, injection::T=T(0)) where {T}
-    buf = Zygote.Buffer(typeof(x)[])
-    push!(buf, bn.layers[1](x))
+    buf = Zygote.Buffer(Vector{typeof(x)}(undef, length(bn.layers)))
+    buf[1] = bn.layers[1](x)
     for (i, l) in enumerate(bn.layers[2:end])
-        push!(buf, l(buf[i]))
+        buf[i + 1] = l(buf[i])
     end
     return copy(buf)
 end
@@ -112,55 +103,17 @@ end
 Flux.@functor MultiParallelNet
 
 function (mpn::MultiParallelNet)(x::Union{Tuple,Vector})
-    buf = Zygote.Buffer([])
-    for l in mpn.layers
-        push!(buf, l(x...))
+    buf = Zygote.Buffer(Vector{Any}(undef, length(mpn.layers)))
+    for (i, l) in enumerate(mpn.layers)
+        buf[i] = l(x...)
     end
     return copy(buf)
 end
 
 function (mpn::MultiParallelNet)(args...)
-    buf = Zygote.Buffer([])
-    for l in mpn.layers
-        push!(buf, l(args...))
+    buf = Zygote.Buffer(Vector{Any}(undef, length(mpn.layers)))
+    for (i, l) in enumerate(mpn.layers)
+        buf[i] = l(args...)
     end
     return copy(buf)
-end
-
-# Downsample Module
-function downsample_module(in_channels::Int, out_channels::Int, in_resolution::Int, out_resolution::Int;
-                           num_groups::Int=4, gn_affine::Bool=true)
-    @assert in_resolution > out_resolution
-    level_diff = Int(log2(in_resolution ÷ out_resolution))
-    @assert ispow2(level_diff)
-
-    layers = []
-
-    for i in 1:level_diff
-        intermediate_channels = i == level_diff ? out_channels : in_channels
-        push!(layers, Conv((3, 3), in_channels => intermediate_channels; stride=2, pad=1, bias=false))
-        push!(layers,
-              GroupNormV2(intermediate_channels, num_groups, i == level_diff ? identity : relu; affine=gn_affine,
-                          track_stats=false))
-    end
-
-    return Chain(layers...)
-end
-
-# Upsample Module
-function upsample_module(in_channels::Int, out_channels::Int, in_resolution::Int, out_resolution::Int;
-                         num_groups::Int=4, gn_affine::Bool=true)
-    @assert in_resolution < out_resolution
-    level_diff = Int(log2(out_resolution ÷ in_resolution))
-    @assert ispow2(level_diff)
-
-    return Chain(Conv((1, 1), in_channels => out_channels; bias=false),
-                 GroupNormV2(out_channels, num_groups, relu; affine=gn_affine, track_stats=false),
-                 Upsample(:nearest; scale=2^level_diff))
-end
-
-# Mapping Module
-function expand_channels_module(in_channels::Int, out_channels::Int; num_groups::Int=4, gn_affine::Bool=true)
-    return Chain(conv3x3(in_channels => out_channels; bias=false),
-                 GroupNormV2(out_channels, num_groups, relu; affine=gn_affine, track_stats=false))
 end

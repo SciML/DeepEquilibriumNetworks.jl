@@ -1,100 +1,32 @@
 # Comparing SkipDEQ and DEQ on a Polynomial Fitting Problem
 
 ## Load Packages
-using CUDA, Dates, DiffEqSensitivity, FastDEQ, Flux, OrdinaryDiffEq, Statistics,
-      SteadyStateDiffEq, Plots, Random, Wandb, Zygote
+using Dates, FastDEQ, Statistics, Plots, Random, Wandb
 
 CUDA.allowscalar(false)
-
-## Model Defination
-struct BranchAndMerge{B1,B2,F}
-    branch_1::B1
-    branch_2::B2
-    final::F
-end
-
-Flux.@functor BranchAndMerge
-
-function (bam::BranchAndMerge)(x, y)
-    return bam.final(softplus.(bam.branch_1(x) .+ bam.branch_2(y)))
-end
-
-(bam::BranchAndMerge)(x) = bam.final(softplus.(bam.branch_1(x)))
+enable_fast_mode!()
 
 ## Model and Loss Function
-function get_model(hdims::Int, abstol::T, reltol::T,
-                   model_type::String) where {T}
-    if model_type == "vanilla"
-        model = gpu(DEQChain(Dense(1, hdims, softplus),
-                             DeepEquilibriumNetwork(BranchAndMerge(Dense(hdims,
-                                                                         hdims *
-                                                                         2),
-                                                                   Dense(hdims,
-                                                                         hdims *
-                                                                         2),
-                                                                   Dense(hdims *
-                                                                         2,
-                                                                         hdims)),
-                                                    DynamicSS(Tsit5();
-                                                              abstol=abstol,
-                                                              reltol=reltol);
-                                                    sensealg=SteadyStateAdjoint(;
-                                                                                autodiff=true,
-                                                                                autojacvec=ZygoteVJP(),
-                                                                                linsolve=LinSolveKrylovJL()),
-                                                    maxiters=50),
-                             Dense(hdims, 1)))
-    elseif model_type == "skip"
-        inner_block = BranchAndMerge(Dense(hdims, hdims * 2),
-                                     Dense(hdims, hdims * 2),
-                                     Dense(hdims * 2, hdims))
-        approx_block = Chain(Dense(hdims, hdims * 5, softplus),
-                             Dense(hdims * 5, hdims))
-        model = gpu(DEQChain(Dense(1, hdims, softplus),
-                             SkipDeepEquilibriumNetwork(inner_block,
-                                                        approx_block,
-                                                        DynamicSS(Tsit5();
-                                                                  abstol=abstol,
-                                                                  reltol=reltol);
-                                                        sensealg=SteadyStateAdjoint(;
-                                                                                    autodiff=true,
-                                                                                    autojacvec=ZygoteVJP(),
-                                                                                    linsolve=LinSolveKrylovJL()),
-                                                        maxiters=50),
-                             Dense(hdims, 1)))
-    elseif model_type == "skip_no_extra_param"
-        inner_block = BranchAndMerge(Dense(hdims, hdims * 2),
-                                     Dense(hdims, hdims * 2),
-                                     Dense(hdims * 2, hdims))
-        model = gpu(DEQChain(Dense(1, hdims, softplus),
-                             SkipDeepEquilibriumNetwork(inner_block,
-                                                        DynamicSS(Tsit5();
-                                                                  abstol=abstol,
-                                                                  reltol=reltol);
-                                                        sensealg=SteadyStateAdjoint(;
-                                                                                    autodiff=true,
-                                                                                    autojacvec=ZygoteVJP(),
-                                                                                    linsolve=LinSolveKrylovJL()),
-                                                        maxiters=50),
-                             Dense(hdims, 1)))
-    else
-        throw(ArgumentError("$model_type must be either `vanilla` or `skip` or `skip_no_extra_param`"))
-    end
-    return model
+function get_model(hdims::Int, abstol::T, reltol::T, model_type::String) where {T}
+    main_model = Chain(Parallel((x₁, x₂) -> gelu.(x₁ .+ x₂), Dense(hdims, hdims * 2), Dense(hdims, hdims * 2)),
+                       Dense(hdims * 2, hdims))
+    aux_model = Chain(Dense(hdims, hdims * 5, gelu), Dense(hdims * 5, hdims))
+    args = model_type == "vanilla" ? (main_model,) : (model_type == "skip" ? (main_model, aux_model) : (main_model,))
+    _deq = model_type == "vanilla" ? DeepEquilibriumNetwork : SkipDeepEquilibriumNetwork
+
+    return gpu(DEQChain(Dense(1, hdims, gelu),
+                        _deq(args..., get_default_dynamicss_solver(Float32(abstol), Float32(reltol));
+                             sensealg=get_default_ssadjoint(Float32(abstol), Float32(reltol), 50), maxiters=50,
+                             verbose=false), Dense(hdims, 1)))
 end
 
 ## Utilities
-function register_nfe_counts(deq, buffer)
-    callback() = push!(buffer, get_and_clear_nfe!(deq))
-    return callback
-end
+register_nfe_counts(deq, buffer) = () -> push!(buffer, get_and_clear_nfe!(deq))
 
 ## Training Function
 function train(config::Dict)
     ## Setup Logging & Experiment Configuration
-    lg = WandbLogger(; project="FastDEQ.jl",
-                     name="fastdeqjl-polynomial_fitting-$(now())",
-                     config=config)
+    lg = WandbLogger(; project="FastDEQ.jl", name="fastdeqjl-polynomial_fitting-$(now())", config=config)
 
     ## Reproducibility
     Random.seed!(get_config(lg, "seed"))
@@ -104,15 +36,15 @@ function train(config::Dict)
     x_data = gpu(rand(Float32, 1, get_config(lg, "data_size")) .* 2 .- 1)
     y_data = gpu(x_data .^ 2)
 
-    x_data_partition = (x_data[:, ((i - 1) * batch_size + 1):(i * batch_size)] for i in 1:(size(x_data, 2) ÷ batch_size))
-    y_data_partition = (y_data[:, ((i - 1) * batch_size + 1):(i * batch_size)] for i in 1:(size(y_data, 2) ÷ batch_size))
+    batch_idxs = Iterators.partition(1:size(x_data, 2), batch_size)
+    x_data_partition = (x_data[:, i] for i in batch_idxs)
+    y_data_partition = (y_data[:, i] for i in batch_idxs)
 
     ## Model Setup
-    model = get_model(get_config(lg, "hidden_dims"), get_config(lg, "abstol"),
-                      get_config(lg, "reltol"), get_config(lg, "model_type"))
+    model = get_model(get_config(lg, "hidden_dims"), get_config(lg, "abstol"), get_config(lg, "reltol"),
+                      get_config(lg, "model_type"))
 
-    loss_function = SupervisedLossContainer((ŷ, y) -> mean(abs2, ŷ .- y),
-                                            1.0f-2)
+    loss_function = SupervisedLossContainer(Flux.Losses.mse, 1.0f-2)
 
     nfe_counts = Int64[]
     cb = register_nfe_counts(model, nfe_counts)
@@ -126,8 +58,7 @@ function train(config::Dict)
             epoch_loss = 0.0f0
             epoch_nfe = 0
             for (x, y) in zip(x_data_partition, y_data_partition)
-                loss, back = Zygote.pullback(() -> loss_function(model, x, y),
-                                             ps)
+                loss, back = Zygote.pullback(() -> loss_function(model, x, y), ps)
                 gs = back(one(loss))
                 Flux.Optimise.update!(opt, ps, gs)
 
@@ -140,8 +71,7 @@ function train(config::Dict)
                 cb()
 
                 log(lg,
-                    Dict("Training/Step/Loss" => loss,
-                         "Training/Step/NFE" => nfe_counts[end],
+                    Dict("Training/Step/Loss" => loss, "Training/Step/NFE" => nfe_counts[end],
                          "Training/Step/Count" => step))
                 step += 1
                 epoch_nfe += nfe_counts[end] * size(x, ndims(x))
@@ -151,8 +81,7 @@ function train(config::Dict)
             epoch_loss /= size(x_data, ndims(x_data))
             epoch_nfe /= size(x_data, ndims(x_data))
             log(lg,
-                Dict("Training/Epoch/Loss" => epoch_loss,
-                     "Training/Epoch/NFE" => epoch_nfe,
+                Dict("Training/Epoch/Loss" => epoch_loss, "Training/Epoch/NFE" => epoch_nfe,
                      "Training/Epoch/Count" => epoch))
         catch ex
             if ex isa Flux.Optimise.StopException
@@ -170,31 +99,13 @@ function train(config::Dict)
     return model, nfe_counts, x_data, y_data
 end
 
-## Plotting
-function plot_nfe_counts(nfe_counts_1, nfe_counts_2)
-    p = plot(nfe_counts_1; label="Vanilla DEQ")
-    plot!(p, nfe_counts_2; label="Skip DEQ")
-    xlabel!(p, "Training Iteration")
-    ylabel!(p, "NFE Count")
-    title!(p, "NFE over Training Iterations of DEQ vs SkipDEQ")
-    return p
-end
-
-## Run Experiment
-nfe_count_dict = Dict("vanilla" => [], "skip" => [])
-
+## Run the experiment
 for seed in [1, 11, 111]
-    for model_type in ["skip", "vanilla", "skip_no_extra_param"]
-        config = Dict("seed" => seed, "learning_rate" => 1f-4, "abstol" => 1f-3,
-                      "reltol" => 1f-3, "epochs" => 250, "batch_size" => 128,
-                      "data_size" => 512, "hidden_dims" => 50,
+    for model_type in ["vanilla", "skip", "skip_no_extra_param"]
+        config = Dict("seed" => seed, "learning_rate" => 1.0f-4, "abstol" => 1.0f-3, "reltol" => 1.0f-3,
+                      "epochs" => 250, "batch_size" => 128, "data_size" => 512, "hidden_dims" => 50,
                       "model_type" => model_type)
 
         model, nfe_counts, x_data, y_data = train(config)
-
-        push!(nfe_count_dict[model_type], nfe_counts)
     end
 end
-
-plot_nfe_counts(vec(mean(hcat(nfe_count_dict["vanilla"]...); dims=2)),
-                vec(mean(hcat(nfe_count_dict["skip"]...); dims=2)))

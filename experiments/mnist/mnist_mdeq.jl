@@ -1,9 +1,9 @@
 # Load Packages
-using CUDA, Dates, DiffEqSensitivity, FastDEQ, Flux, FluxMPI, MLDatasets, MPI, OrdinaryDiffEq, Serialization,
-      Statistics, SteadyStateDiffEq, Plots, Random, Wandb, Zygote
+using Dates, FastDEQ, MLDatasets, MPI, Serialization, Statistics, Plots, Random, Wandb
 using ParameterSchedulers: Scheduler, Cos
 
-MPI.Init()
+FluxMPI.Init()
+enable_fast_mode!()
 CUDA.allowscalar(false)
 
 const MPI_COMM_WORLD = MPI.COMM_WORLD
@@ -12,20 +12,26 @@ const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
 ## Models
 function get_model(maxiters::Int, abstol::T, reltol::T, batch_size::Int, model_type::String,
                    solver_type::String) where {T}
+    layer_kwargs = Dict(:norm_layer => GroupNormV2, :group_count => 4, :conv_kwargs => Dict{Symbol,Any}(:bias => false),
+                        :norm_kwargs => Dict{Symbol,Any}(:affine => true, :track_stats => false))
+
     main_layers = (BasicResidualBlock((28, 28), 8, 8), BasicResidualBlock((14, 14), 16, 16),
                    BasicResidualBlock((7, 7), 32, 32))
-    mapping_layers = [identity downsample_module(8, 16, 28, 14) downsample_module(8, 32, 28, 7)
-                      upsample_module(16, 8, 14, 28) identity downsample_module(16, 32, 14, 7)
-                      upsample_module(32, 8, 7, 28) upsample_module(32, 16, 7, 14) identity]
+    mapping_layers = [identity downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...) downsample_module(8 => 32, 28 => 7, gelu; layer_kwargs...);
+                      upsample_module(16 => 8, 14 => 28, gelu; layer_kwargs...) identity downsample_module(16 => 32, 14 => 7, gelu; layer_kwargs...);
+                      upsample_module(32 => 8, 7 => 28, gelu; layer_kwargs...) upsample_module(32 => 16, 7 => 14, gelu; layer_kwargs...) identity]
+
     solver = solver_type == "dynamicss" ? get_default_dynamicss_solver(abstol, reltol) :
              get_default_ssrootfind_solver(abstol, reltol, LimitedMemoryBroydenSolver; device=gpu,
                                            original_dims=(1, (28 * 28 * 8) + (14 * 14 * 16) + (7 * 7 * 32)),
                                            batch_size=batch_size, maxiters=maxiters)
+
     if model_type == "skip"
         deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers,
                                                    (BasicResidualBlock((28, 28), 8, 8),
-                                                    downsample_module(8, 16, 28, 14), downsample_module(8, 32, 28, 7)),
-                                                   solver; maxiters=maxiters,
+                                                    downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...),
+                                                    downsample_module(8 => 32, 28 => 7, gelu; layer_kwargs...)), solver;
+                                                   maxiters=maxiters,
                                                    sensealg=get_default_ssadjoint(abstol, reltol, maxiters),
                                                    verbose=false)
     else
@@ -33,21 +39,18 @@ function get_model(maxiters::Int, abstol::T, reltol::T, batch_size::Int, model_t
         deq = _deq(main_layers, mapping_layers, solver; maxiters=maxiters,
                    sensealg=get_default_ssadjoint(abstol, reltol, maxiters), verbose=false)
     end
-    model = DEQChain(expand_channels_module(1, 8), deq, t -> tuple(t...),
-                     Parallel(+, downsample_module(8, 32, 28, 7), downsample_module(16, 32, 14, 7),
-                              expand_channels_module(32, 32)), Flux.flatten, Dense(7 * 7 * 32, 10; bias=true))
-    if MPI_COMM_SIZE > 1
-        return DataParallelFluxModel(model, [i % length(CUDA.devices()) for i in 1:MPI_COMM_SIZE])
-    else
-        return gpu(model)
-    end
+
+    model = DEQChain(conv1x1_norm(1 => 8, gelu; layer_kwargs...), deq, t -> tuple(t...),
+                     Parallel(+, downsample_module(8 => 32, 28 => 7, gelu; layer_kwargs...),
+                              downsample_module(16 => 32, 14 => 7, gelu; layer_kwargs...),
+                              conv1x1_norm(32 => 32, gelu; layer_kwargs...)), Flux.flatten,
+                     Dense(7 * 7 * 32, 10; bias=true))
+
+    return (MPI_COMM_SIZE > 1 ? DataParallelFluxModel : gpu)(model)
 end
 
 ## Utilities
-function register_nfe_counts(model, buffer)
-    callback() = push!(buffer, get_and_clear_nfe!(model))
-    return callback
-end
+register_nfe_counts(deq, buffer) = () -> push!(buffer, get_and_clear_nfe!(deq))
 
 function loss_and_accuracy(model, dataloader)
     matches, total_loss, total_datasize, total_nfe = 0, 0, 0, 0

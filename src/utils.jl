@@ -69,6 +69,12 @@ function split_array_by_indices(x::AbstractMatrix, idxs)
     return collect((x[(i + 1):j, :] for (i, j) in zip(idxs[1:(end - 1)], idxs[2:end])))
 end
 
+Zygote.@adjoint function split_array_by_indices(x, idxs)
+    res = split_array_by_indices(x, idxs)
+    split_array_by_indices_sensitivity(Δ) = (vcat(Δ...), nothing)
+    return res, split_array_by_indices_sensitivity
+end
+
 # Zygote Fix
 function Zygote.accum(x::NTuple{N,T}, y::AbstractVector{T}) where {N,T<:AbstractArray}
     return Zygote.accum.(x, y)
