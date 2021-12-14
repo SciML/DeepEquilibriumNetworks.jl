@@ -21,7 +21,7 @@ function get_model(maxiters::Int, abstol::T, reltol::T, batch_size::Int, model_t
                       upsample_module(16 => 8, 14 => 28, gelu; layer_kwargs...) identity downsample_module(16 => 32, 14 => 7, gelu; layer_kwargs...);
                       upsample_module(32 => 8, 7 => 28, gelu; layer_kwargs...) upsample_module(32 => 16, 7 => 14, gelu; layer_kwargs...) identity]
 
-    solver = solver_type == "dynamicss" ? get_default_dynamicss_solver(abstol, reltol) :
+    solver = solver_type == "dynamicss" ? get_default_dynamicss_solver(abstol, reltol, BS3()) :
              get_default_ssrootfind_solver(abstol, reltol, LimitedMemoryBroydenSolver; device=gpu,
                                            original_dims=(1, (28 * 28 * 8) + (14 * 14 * 16) + (7 * 7 * 32)),
                                            batch_size=batch_size, maxiters=maxiters)
