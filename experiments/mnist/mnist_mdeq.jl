@@ -2,6 +2,8 @@
 using Dates, FastDEQ, MLDatasets, MPI, Serialization, Statistics, Plots, Random, Wandb
 using ParameterSchedulers: Scheduler, Cos
 
+CUDA.versioninfo()
+
 FluxMPI.Init()
 enable_fast_mode!()
 CUDA.allowscalar(false)
