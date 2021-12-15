@@ -85,9 +85,9 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork)(x::AbstractArray{T}) where
 
     dudt(u, _p, t) = dudt_(u, _p) .- u
 
-    ssprob = SteadyStateProblem(dudt, u0, p)
+    ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
     sol = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
-    res = map(xs -> reshape(xs[1], xs[2]), zip(split_array_by_indices(dudt_(sol, p), u_split_idxs), u_sizes))
+    res = map(xs -> reshape(xs[1], xs[2]), zip(split_array_by_indices(dudt_(sol, mdeq.p), u_split_idxs), u_sizes))
     update_is_variational_hidden_dropout_mask_reset_allowed(true)
 
     return res, initial_conditions
@@ -122,9 +122,9 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{Nothing})(x::AbstractArray{
 
     dudt(u, _p, t) = dudt_(u, _p) .- u
 
-    ssprob = SteadyStateProblem(dudt, u0, p)
+    ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
     sol = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
-    res = map(xs -> reshape(xs[1], xs[2]), zip(split_array_by_indices(dudt_(sol, p), u_split_idxs), u_sizes))
+    res = map(xs -> reshape(xs[1], xs[2]), zip(split_array_by_indices(dudt_(sol, mdeq.p), u_split_idxs), u_sizes))
     update_is_variational_hidden_dropout_mask_reset_allowed(true)
 
     return res, initial_conditions

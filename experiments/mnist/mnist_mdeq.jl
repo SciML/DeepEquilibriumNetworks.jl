@@ -212,8 +212,8 @@ end
 nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [])
 
 for seed in [1, 11, 111]
-    for model_type in ["skip", "skip_no_extra_params", "vanilla"]
-        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 0.1f0, "reltol" => 0.1f0, "maxiters" => 15,
+    for model_type in ["vanilla"]
+        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 0.1f0, "reltol" => 0.1f0, "maxiters" => 50,
                       "epochs" => 10, "batch_size" => 128, "eval_batch_size" => 256, "model_type" => model_type,
                       "solver_type" => "dynamicss")
 
