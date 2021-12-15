@@ -71,7 +71,13 @@ end
 
 Zygote.@adjoint function split_array_by_indices(x, idxs)
     res = split_array_by_indices(x, idxs)
-    split_array_by_indices_sensitivity(Δ) = (vcat(Δ...), nothing)
+    function split_array_by_indices_sensitivity(Δ)
+        is_nothings = Δ .=== nothing
+        if any(is_nothings)
+            Δ[is_nothings] .= zero.(res[is_nothings])
+        end
+        return (vcat(Δ...), nothing)
+    end
     return res, split_array_by_indices_sensitivity
 end
 
@@ -81,5 +87,9 @@ function Zygote.accum(x::NTuple{N,T}, y::AbstractVector{T}) where {N,T<:Abstract
 end
 
 function Zygote.accum(x::AbstractVector{T}, y::NTuple{N,T}) where {N,T<:AbstractArray}
+    return Zygote.accum.(x, y)
+end
+
+function Zygote.accum(x::AbstractVector{T}, y::NTuple{N,Nothing}) where {N,T<:AbstractArray}
     return Zygote.accum.(x, y)
 end

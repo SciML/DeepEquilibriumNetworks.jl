@@ -15,7 +15,7 @@ function (lc::SupervisedLossContainer)(model::DEQChain{Val(4)}, x, y; kwargs...)
     for i in 1:length(guess_pairs[1])
         l2 += mean(abs, guess_pairs[1][i] .- guess_pairs[2][i])
     end
-    return l1 + sum(lc.λ .* l2)
+    return l1 + lc.λ * l2
 end
 
 function (lc::SupervisedLossContainer)(model::WidthStackedDEQ{true}, x, y; kwargs...)

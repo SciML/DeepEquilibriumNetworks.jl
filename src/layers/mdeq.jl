@@ -64,7 +64,7 @@ function (mdeq::MultiScaleDeepEquilibriumNetwork)(x::AbstractArray{T}) where {T}
         return mdeq.mapping_layers_re(p2)(main_layers_output)
     end
 
-    dudt(u, _p, t) = vcat(Flux.flatten.(dudt_(u, _p))...)
+    dudt(u, _p, t) = vcat(Flux.flatten.(dudt_(u, _p))...) .- u
 
     ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
     res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u

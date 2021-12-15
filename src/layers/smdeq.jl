@@ -65,7 +65,7 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork)(x::AbstractArray{T}) where
     initial_conditions = mdeq.shortcut_layers_re(p3)(x)
     u_sizes = size.(initial_conditions)
     u_split_idxs = vcat(0, cumsum(length.(initial_conditions) .÷ size(x, ndims(x)))...)
-    u0 = vcat(Flux.flatten.(initial_conditions)...)
+    u0 = Zygote.@ignore vcat(Flux.flatten.(initial_conditions)...)
 
     N = length(u_sizes)
     update_is_variational_hidden_dropout_mask_reset_allowed(false)
@@ -74,23 +74,24 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork)(x::AbstractArray{T}) where
         mdeq.stats.nfe += 1
 
         uₛ = split_array_by_indices(u, u_split_idxs)
-        p1, p2, p3 = split_array_by_indices(_p, mdeq.ordered_split_idxs)
+        p1, p2, _ = split_array_by_indices(_p, mdeq.ordered_split_idxs)
 
         u_reshaped = ntuple(i -> reshape(uₛ[i], u_sizes[i]), N)
 
         main_layers_output = mdeq.main_layers_re(p1)((u_reshaped[1], x), u_reshaped[2:end]...)
-
-        return vcat(Flux.flatten.(mdeq.mapping_layers_re(p2)(main_layers_output))...)
+    
+        return mdeq.mapping_layers_re(p2)(main_layers_output)
     end
 
-    dudt(u, _p, t) = dudt_(u, _p) .- u
+    dudt(u, _p, t) = vcat(Flux.flatten.(dudt_(u, _p))...) .- u
 
     ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
-    sol = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
-    res = map(xs -> reshape(xs[1], xs[2]), zip(split_array_by_indices(dudt_(sol, mdeq.p), u_split_idxs), u_sizes))
+    res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
+
+    x_ = dudt_(res, mdeq.p)
     update_is_variational_hidden_dropout_mask_reset_allowed(true)
 
-    return res, initial_conditions
+    return x_, initial_conditions
 end
 
 function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{Nothing})(x::AbstractArray{T}) where {T}
@@ -111,21 +112,22 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{Nothing})(x::AbstractArray{
         mdeq.stats.nfe += 1
 
         uₛ = split_array_by_indices(u, u_split_idxs)
-        p1, p2 = split_array_by_indices(_p, mdeq.ordered_split_idxs)
+        p1, p2, _ = split_array_by_indices(_p, mdeq.ordered_split_idxs)
 
         u_reshaped = ntuple(i -> reshape(uₛ[i], u_sizes[i]), N)
 
         main_layers_output = mdeq.main_layers_re(p1)((u_reshaped[1], x), u_reshaped[2:end]...)
-
-        return vcat(Flux.flatten.(mdeq.mapping_layers_re(p2)(main_layers_output))...)
+    
+        return mdeq.mapping_layers_re(p2)(main_layers_output)
     end
 
-    dudt(u, _p, t) = dudt_(u, _p) .- u
+    dudt(u, _p, t) = vcat(Flux.flatten.(dudt_(u, _p))...) .- u
 
     ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
-    sol = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
-    res = map(xs -> reshape(xs[1], xs[2]), zip(split_array_by_indices(dudt_(sol, mdeq.p), u_split_idxs), u_sizes))
+    res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
+
+    x_ = dudt_(res, mdeq.p)
     update_is_variational_hidden_dropout_mask_reset_allowed(true)
 
-    return res, initial_conditions
+    return x_, initial_conditions
 end

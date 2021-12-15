@@ -92,9 +92,13 @@ function train(config::Dict)
 
     _xs_train, _ys_train = MNIST.traindata(Float32)
     _xs_test, _ys_test = MNIST.testdata(Float32)
+    μ = reshape([0.1307], 1, 1, 1, 1)
+    σ² = reshape([0.3081], 1, 1, 1, 1)
 
     xs_train, ys_train = Flux.unsqueeze(_xs_train, 3), Float32.(Flux.onehotbatch(_ys_train, 0:9))
+    _xs_train = (_xs_train .- μ) ./ σ²
     xs_test, ys_test = Flux.unsqueeze(_xs_test, 3), Float32.(Flux.onehotbatch(_ys_test, 0:9))
+    _xs_test = (_xs_test .- μ) ./ σ²
 
     traindata = (xs_train, ys_train)
     trainiter = DataParallelDataLoader(traindata; batchsize=batch_size, shuffle=true)
@@ -212,9 +216,9 @@ end
 nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [])
 
 for seed in [1, 11, 111]
-    for model_type in ["vanilla"]
-        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 0.1f0, "reltol" => 0.1f0, "maxiters" => 50,
-                      "epochs" => 10, "batch_size" => 128, "eval_batch_size" => 256, "model_type" => model_type,
+    for model_type in ["skip", "skip_no_extra_params", "vanilla"]
+        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-3, "reltol" => 1.0f-3, "maxiters" => 20,
+                      "epochs" => 10, "batch_size" => 256, "eval_batch_size" => 256, "model_type" => model_type,
                       "solver_type" => "dynamicss")
 
         model, nfe_counts = train(config)
