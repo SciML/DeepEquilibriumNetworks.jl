@@ -1,10 +1,12 @@
 # Load Packages
-using CUDA, Dates, DiffEqSensitivity, FastDEQ, Flux, FluxMPI, OrdinaryDiffEq, Serialization, Statistics,
-      SteadyStateDiffEq, MLDatasets, MPI, Plots, Random, ParameterSchedulers, Wandb, Zygote
+using Dates, FastDEQ, MLDatasets, MPI, Serialization, Statistics, ParameterSchedulers, Plots, Random, Wandb
 using ParameterSchedulers: Scheduler, Cos
 using MLDataPattern: splitobs, shuffleobs
 
-MPI.Init()
+CUDA.versioninfo()
+
+FluxMPI.Init()
+enable_fast_mode!()
 CUDA.allowscalar(false)
 
 const MPI_COMM_WORLD = MPI.COMM_WORLD
@@ -13,44 +15,57 @@ const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
 ## Models
 function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, model_type::String, batch_size::Int,
                    solver_type::String="dynamicss") where {T}
-    main_layers = (BasicResidualBlock((32, 32), 8, 8; dropout_rate=dropout_rate),
-                   BasicResidualBlock((16, 16), 16, 16; dropout_rate=dropout_rate),
-                   BasicResidualBlock((8, 8), 32, 32; dropout_rate=dropout_rate))
-    mapping_layers = [identity downsample_module(8, 16, 32, 16) downsample_module(8, 32, 32, 8)
-                      upsample_module(16, 8, 16, 32) identity downsample_module(16, 32, 16, 8)
-                      upsample_module(32, 8, 8, 32) upsample_module(32, 16, 8, 16) identity]
-    solver = solver_type == "dynamicss" ? get_default_dynamicss_solver(abstol, reltol) :
+    layer_kwargs = Dict(:norm_layer => GroupNormV2, :group_count => 8, :conv_kwargs => Dict{Symbol,Any}(:bias => false),
+                        :norm_kwargs => Dict{Symbol,Any}(:affine => true, :track_stats => false))
+
+    initial_layers = Chain(conv3x3_norm(3 => 24, gelu; norm_layer=BatchNormV2,
+                                        norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true)).layers...,
+                           conv3x3_norm(24 => 24, gelu; norm_layer=BatchNormV2,
+                                        norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true)).layers...)
+
+    main_layers = (BasicResidualBlock((32, 32), 24, 24; dropout_rate=dropout_rate, num_gn_groups=8),
+                   BasicResidualBlock((16, 16), 24, 24; dropout_rate=dropout_rate, num_gn_groups=8))
+
+    mapping_layers = [identity downsample_module(24 => 24, 32 => 16, gelu; layer_kwargs...);
+                      upsample_module(24 => 24, 16 => 32, gelu; layer_kwargs...) identity]
+
+    post_fuse_layers = (Chain(x -> gelu.(x), conv1x1(24 => 24; bias=false),
+                              GroupNormV2(24, 4; affine=true, track_stats=false)),
+                        Chain(x -> gelu.(x), conv1x1(24 => 24; bias=false),
+                              GroupNormV2(24, 4; affine=true, track_stats=false)))
+
+    final_layers = Chain(Parallel(+,
+                                  Chain(BasicBottleneckBlock(24 => 8), conv3x3(8 * 4 => 16 * 4; stride=2, bias=true),
+                                        BatchNormV2(16 * 4, relu; track_stats=false, affine=true)),
+                                  BasicBottleneckBlock(24 => 16)),
+                         conv1x1_norm(16 * 4 => 200, gelu; norm_layer=BatchNormV2,
+                                      norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true)).layers...,
+                         GlobalMeanPool(), Flux.flatten, Dense(200, 10))
+
+    solver = solver_type == "dynamicss" ? get_default_dynamicss_solver(abstol, reltol, BS3()) :
              get_default_ssrootfind_solver(abstol, reltol, LimitedMemoryBroydenSolver; device=gpu,
-                                           original_dims=(1, (32 * 32 * 8) + (16 * 16 * 16) + (8 * 8 * 32)),
-                                           batch_size=batch_size, maxiters=maxiters)
+                                           original_dims=(1, (32 * 32 * 24) + (16 * 16 * 24)), batch_size=batch_size,
+                                           maxiters=maxiters)
 
     if model_type == "skip"
         deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers,
-                                                   (BasicResidualBlock((32, 32), 8, 8),
-                                                    downsample_module(8, 16, 32, 16), downsample_module(8, 32, 32, 8)),
-                                                   solver; maxiters=maxiters,
+                                                   (BasicResidualBlock((32, 32), 24, 24; num_gn_groups=8),
+                                                    downsample_module(24 => 24, 32 => 16; layer_kwargs...)),
+                                                   solver; post_fuse_layers=post_fuse_layers, maxiters=maxiters,
                                                    sensealg=get_default_ssadjoint(abstol, reltol, maxiters),
                                                    verbose=false)
     else
         _deq = model_type == "vanilla" ? MultiScaleDeepEquilibriumNetwork : MultiScaleSkipDeepEquilibriumNetwork
-        deq = _deq(main_layers, mapping_layers, solver; maxiters=maxiters,
+        deq = _deq(main_layers, mapping_layers, solver; post_fuse_layers=post_fuse_layers, maxiters=maxiters,
                    sensealg=get_default_ssadjoint(abstol, reltol, maxiters), verbose=false)
     end
-    model = DEQChain(expand_channels_module(3, 8), deq, t -> tuple(t...),
-                     Parallel(+, downsample_module(8, 32, 32, 8), downsample_module(16, 32, 16, 8),
-                              expand_channels_module(32, 32)), Flux.flatten, Dense(8 * 8 * 32, 10; bias=true))
-    if MPI_COMM_SIZE > 1
-        return DataParallelFluxModel(model, [i % length(CUDA.devices()) for i in 1:MPI_COMM_SIZE])
-    else
-        return gpu(model)
-    end
+    model = DEQChain(initial_layers, deq, final_layers)
+
+    return (MPI_COMM_SIZE > 1 ? DataParallelFluxModel : gpu)(model)
 end
 
 ## Utilities
-function register_nfe_counts(model, buffer)
-    callback() = push!(buffer, get_and_clear_nfe!(model))
-    return callback
-end
+register_nfe_counts(deq, buffer) = () -> push!(buffer, get_and_clear_nfe!(deq))
 
 function loss_and_accuracy(model, dataloader)
     matches, total_loss, total_datasize, total_nfe = 0, 0, 0, 0
@@ -122,6 +137,7 @@ function train(config::Dict)
     @info "Rank $rank: Forward Pass Warmup Completed"
     Zygote.gradient(() -> loss_function(model, _x_warmup, _y_warmup), Flux.params(model))
     @info "Rank $rank: Warmup Completed"
+    get_and_clear_nfe!(model)
 
     ## Training Loop
     ps = Flux.params(model)
@@ -141,16 +157,20 @@ function train(config::Dict)
 
     for epoch in 1:get_config(lg_wandb, "epochs")
         try
-            epoch_start_time = time()
+            epoch_end_time = 0
             for (x, y) in trainiter
                 x = gpu(x)
                 y = gpu(y)
+
+                start_time = time()
 
                 _res = Zygote.withgradient(() -> loss_function(model, x, y), ps)
                 loss = _res.val
                 gs = _res.grad
 
                 Flux.Optimise.update!(opt, ps, gs)
+
+                epoch_end_time += time() - start_time
 
                 ### Store the NFE Count
                 cb()
@@ -162,7 +182,6 @@ function train(config::Dict)
                 lg_term(; records=Dict("Train/Running/NFE" => nfe_counts[end], "Train/Running/Loss" => loss))
                 step += 1
             end
-            epoch_end_time = time()
 
             ### Training Loss/Accuracy
             train_loss, train_acc, train_nfe = loss_and_accuracy(model, trainiter)
@@ -175,7 +194,8 @@ function train(config::Dict)
 
             log(lg_wandb,
                 Dict("Training/Epoch/Count" => epoch, "Training/Epoch/Loss" => train_loss,
-                     "Training/Epoch/NFE" => train_nfe, "Training/Epoch/Accuracy" => train_acc))
+                     "Training/Epoch/NFE" => train_nfe, "Training/Epoch/Accuracy" => train_acc,
+                     "Training/Epoch/Time" => epoch_end_time))
 
             ### Testing Loss/Accuracy
             test_start_time = time()
@@ -190,8 +210,8 @@ function train(config::Dict)
 
             log(lg_wandb,
                 Dict("Testing/Epoch/Count" => epoch, "Testing/Epoch/Loss" => test_loss, "Testing/Epoch/NFE" => test_nfe,
-                     "Testing/Epoch/Accuracy" => test_acc))
-            lg_term(epoch, train_nfe, train_acc, train_loss, epoch_end_time - epoch_start_time, test_nfe, test_acc,
+                     "Testing/Epoch/Accuracy" => test_acc, "Testing/Epoch/Time" => test_end_time - test_start_time))
+            lg_term(epoch, train_nfe, train_acc, train_loss, epoch_end_time, test_nfe, test_acc,
                     test_loss, test_end_time - test_start_time)
 
             MPI.Barrier(comm)
@@ -216,10 +236,11 @@ end
 nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [])
 
 for seed in [1, 11, 111]
-    for model_type in ["skip_no_extra_params", "vanilla", "skip"]
-        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1f-1, "reltol" => 1f-1, "maxiters" => 20,
-                      "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 256, "eval_batch_size" => 256,
-                      "model_type" => model_type, "solver_type" => "dynamicss")
+    # We will do the skip_no_extra_params experiments later.
+    for model_type in ["skip", "vanilla"] #, "skip_no_extra_params"]
+        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-1, "reltol" => 1.0f-1,
+                      "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 128,
+                      "eval_batch_size" => 128, "model_type" => model_type, "solver_type" => "dynamicss")
 
         model, nfe_counts = train(config)
 

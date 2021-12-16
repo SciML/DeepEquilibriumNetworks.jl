@@ -65,7 +65,7 @@ function (bn::BranchNet)(x::AbstractArray{T}, injection::AbstractArray{T}) where
     for (i, l) in enumerate(bn.layers[2:end])
         buf[i + 1] = l(buf[i])
     end
-    return copy(buf)
+    return Tuple(copy(buf))
 end
 
 function (bn::BranchNet)(x::AbstractArray{T}, injection::AbstractArray{T}, injections...) where {T}
@@ -74,7 +74,7 @@ function (bn::BranchNet)(x::AbstractArray{T}, injection::AbstractArray{T}, injec
     for (i, l) in enumerate(bn.layers[2:end])
         buf[i + 1] = l(buf[i], injections[i])
     end
-    return copy(buf)
+    return Tuple(copy(buf))
 end
 
 function (bn::BranchNet)(x::AbstractArray{T}, injection::T=T(0)) where {T}
@@ -83,7 +83,7 @@ function (bn::BranchNet)(x::AbstractArray{T}, injection::T=T(0)) where {T}
     for (i, l) in enumerate(bn.layers[2:end])
         buf[i + 1] = l(buf[i])
     end
-    return copy(buf)
+    return Tuple(copy(buf))
 end
 
 # Multi Parallel Net
@@ -107,7 +107,7 @@ function (mpn::MultiParallelNet)(x::Union{Tuple,Vector})
     for (i, l) in enumerate(mpn.layers)
         buf[i] = l(x...)
     end
-    return copy(buf)
+    return Tuple(copy(buf))
 end
 
 function (mpn::MultiParallelNet)(args...)
@@ -115,5 +115,43 @@ function (mpn::MultiParallelNet)(args...)
     for (i, l) in enumerate(mpn.layers)
         buf[i] = l(args...)
     end
-    return copy(buf)
+    return Tuple(copy(buf))
+end
+
+# Bottleneck Layer
+struct BasicBottleneckBlock{C1,C2,D}
+    conv1::C1
+    chain::C2
+    downsample::D
+end
+
+function Base.show(io::IO, l::BasicBottleneckBlock)
+    p, _ = destructure_parameters(l)
+    return print(io, string(typeof(l).name.name), "() ", string(length(p)), " Trainable Parameters")
+end
+
+Flux.@functor BasicBottleneckBlock
+
+function BasicBottleneckBlock(mapping::Pair, expansion::Int=4)
+    downsample = if first(mapping) != last(mapping) * expansion
+        conv1x1_norm(first(mapping) => last(mapping) * expansion, identity; norm_layer=BatchNormV2,
+                     norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true),
+                     conv_kwargs=Dict{Symbol,Any}(:bias => false))
+    else
+        identity
+    end
+    conv1 = conv1x1(mapping; bias=false)
+    chain = Chain(BatchNormV2(last(mapping), gelu; affine=true, track_stats=false),
+                  conv3x3_norm(last(mapping) => last(mapping) * expansion, gelu; norm_layer=BatchNormV2,
+                               conv_kwargs=Dict{Symbol,Any}(:bias => false),
+                               norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true)).layers...,
+                  conv1x1_norm(last(mapping) * expansion => last(mapping) * expansion; norm_layer=BatchNormV2,
+                               conv_kwargs=Dict{Symbol,Any}(:bias => false),
+                               norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true)).layers...)
+
+    return BasicBottleneckBlock(conv1, chain, downsample)
+end
+
+function (bl::BasicBottleneckBlock)(x::AbstractArray{T}, injection::Union{AbstractArray{T},T}=T(0)) where {T}
+    return gelu.(bl.chain(bl.conv1(x) .+ injection) .+ bl.downsample(x))
 end

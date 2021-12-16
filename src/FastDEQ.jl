@@ -37,6 +37,8 @@ end
 
 Flux.trainable(d::AbstractDeepEquilibriumNetwork) = (d.p,)
 
+Base.deepcopy(op::DiffEqSensitivity.ZygotePullbackMultiplyOperator) = op
+
 abstract type IterativeDEQSolver end
 
 include("utils.jl")
@@ -65,7 +67,7 @@ export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork, MultiScaleDeepEquilib
 
 # Compositional Layers
 export DEQChain
-export BasicResidualBlock, BranchNet, MultiParallelNet
+export BasicResidualBlock, BranchNet, MultiParallelNet, BasicBottleneckBlock
 
 # For the sanity of experiment code
 export get_and_clear_nfe!, get_default_ssadjoint, get_default_dynamicss_solver, get_default_ssrootfind_solver

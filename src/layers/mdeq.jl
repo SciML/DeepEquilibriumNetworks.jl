@@ -1,4 +1,4 @@
-struct MultiScaleDeepEquilibriumNetwork{N,M1<:Parallel,M2<:MultiParallelNet,RE1,RE2,P,A,K,S} <:
+struct MultiScaleDeepEquilibriumNetwork{N,M1<:Parallel,M2<:Chain,RE1,RE2,P,A,K,S} <:
        AbstractDeepEquilibriumNetwork
     main_layers::M1
     mapping_layers::M2
@@ -11,9 +11,14 @@ struct MultiScaleDeepEquilibriumNetwork{N,M1<:Parallel,M2<:MultiParallelNet,RE1,
     sensealg::S
     stats::DEQTrainingStats
 
-    function MultiScaleDeepEquilibriumNetwork(main_layers::Parallel, mapping_layers::MultiParallelNet, re1, re2, p,
-                                              ordered_split_idxs, args::A, kwargs::K, sensealg::S,
-                                              stats) where {A,K,S}
+    function MultiScaleDeepEquilibriumNetwork(main_layers::Parallel, mapping_layers::Chain, re1, re2, p,
+                                              ordered_split_idxs, args::A, kwargs::K, sensealg::S, stats) where {A,K,S}
+        @assert 1 <= length(mapping_layers) <= 2
+        @assert mapping_layers[1] isa MultiParallelNet
+        if length(mapping_layers) == 2
+            @assert mapping_layers[2] isa Parallel
+        end
+
         p_main_layers, re_main_layers = destructure_parameters(main_layers)
         p_mapping_layers, re_mapping_layers = destructure_parameters(mapping_layers)
 
@@ -21,29 +26,42 @@ struct MultiScaleDeepEquilibriumNetwork{N,M1<:Parallel,M2<:MultiParallelNet,RE1,
 
         p = p === nothing ? vcat(p_main_layers, p_mapping_layers) : convert(typeof(p_main_layers), p)
 
-        return new{length(ordered_split_idxs),typeof(main_layers),typeof(mapping_layers),typeof(re_main_layers),
-                   typeof(re_mapping_layers),typeof(p),A,K,S}(main_layers, mapping_layers, re_main_layers,
-                                                              re_mapping_layers, p, ordered_split_idxs, args, kwargs,
-                                                              sensealg, stats)
+        return new{length(ordered_split_idxs),
+                   typeof.((main_layers, mapping_layers, re_main_layers, re_mapping_layers, p))...,A,K,S}(main_layers,
+                                                                                                          mapping_layers,
+                                                                                                          re_main_layers,
+                                                                                                          re_mapping_layers,
+                                                                                                          p,
+                                                                                                          ordered_split_idxs,
+                                                                                                          args, kwargs,
+                                                                                                          sensealg,
+                                                                                                          stats)
     end
 end
 
 Flux.@functor MultiScaleDeepEquilibriumNetwork
 
-function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix, solver; p=nothing,
+function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix, solver;
+                                          post_fuse_layers::Union{Tuple,Nothing}=nothing, p=nothing,
                                           sensealg=get_default_ssadjoint(0.1f0, 0.1f0, 10), kwargs...)
-    @assert size(mapping_layers, 1) == size(mapping_layers, 2) == length(main_layers)
+    mapping_layers = if post_fuse_layers === nothing
+        @assert size(mapping_layers, 1) == size(mapping_layers, 2) == length(main_layers)
+        Chain(MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...))
+    else
+        @assert size(mapping_layers, 1) == size(mapping_layers, 2) == length(main_layers) == length(post_fuse_layers)
+        Chain(MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...),
+              Parallel(flatten_merge, post_fuse_layers...))
+    end
 
     main_layers = Parallel(flatten_merge, main_layers...)
-    mapping_layers = MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...)
 
-    return MultiScaleDeepEquilibriumNetwork(main_layers, mapping_layers, nothing, nothing, p, nothing, (solver,),
-                                            kwargs, sensealg, DEQTrainingStats(0))
+    return MultiScaleDeepEquilibriumNetwork(main_layers, mapping_layers, nothing, nothing, p,
+                                            nothing, (solver,), kwargs, sensealg, DEQTrainingStats(0))
 end
 
 function (mdeq::MultiScaleDeepEquilibriumNetwork)(x::AbstractArray{T}) where {T}
     z = zero(x)
-    initial_conditions = Zygote.@ignore map(l -> l(z), map(l -> l.layers[1], mdeq.mapping_layers.layers))
+    initial_conditions = Zygote.@ignore map(l -> l(z), map(l -> l.layers[1], mdeq.mapping_layers[1].layers))
     u_sizes = Zygote.@ignore size.(initial_conditions)
     u_split_idxs = Zygote.@ignore vcat(0, cumsum(length.(initial_conditions) .÷ size(x, ndims(x)))...)
     u0 = Zygote.@ignore vcat(Flux.flatten.(initial_conditions)...)

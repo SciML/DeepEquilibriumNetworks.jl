@@ -142,7 +142,7 @@ version = "3.3.0"
 
 [[deps.CUDA]]
 deps = ["AbstractFFTs", "Adapt", "BFloat16s", "CEnum", "CompilerSupportLibraries_jll", "ExprTools", "GPUArrays", "GPUCompiler", "LLVM", "LazyArtifacts", "Libdl", "LinearAlgebra", "Logging", "Printf", "Random", "Random123", "RandomNumbers", "Reexport", "Requires", "SparseArrays", "SpecialFunctions", "TimerOutputs"]
-git-tree-sha1 = "640746592bdf3623692d88448da819420798c60f"
+git-tree-sha1 = "432c7eedafc98cc36bb9c34c87aeffb7cbdc7311"
 repo-rev = "master"
 repo-url = "https://github.com/JuliaGPU/CUDA.jl.git"
 uuid = "052768ef-5323-5732-b1bb-66c8b64840ba"
@@ -208,9 +208,9 @@ version = "1.0.2"
 
 [[deps.CommonMark]]
 deps = ["Crayons", "JSON", "URIs"]
-git-tree-sha1 = "7a0d74b8b007c8170dd48166fdc4be049bf68f70"
+git-tree-sha1 = "4aff51293dbdbd268df314827b7f409ea57f5b70"
 uuid = "a80b9123-70ca-4bc0-993e-6e3bcb318db6"
-version = "0.8.4"
+version = "0.8.5"
 
 [[deps.CommonSolve]]
 git-tree-sha1 = "68a0743f578349ada8bc911a5cbd5a2ef6ed6d1f"
@@ -472,8 +472,8 @@ uuid = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 version = "0.12.8"
 
 [[deps.FluxExperimental]]
-deps = ["CUDA", "FileIO", "Flux", "FluxTraining", "Functors", "JLD2", "Optimisers", "Requires", "Serialization", "Statistics", "Zygote"]
-git-tree-sha1 = "e0b65a7c9f309999bf97d9dd4a01c40ec3fe36f9"
+deps = ["CUDA", "FileIO", "Flux", "FluxTraining", "Functors", "JLD2", "NNlibCUDA", "Optimisers", "Requires", "Serialization", "Statistics", "Zygote"]
+git-tree-sha1 = "3cdbe30e1229fab748b871b7420eb3b89fad6966"
 repo-rev = "main"
 repo-url = "git@github.com:avik-pal/FluxExperimental.jl.git"
 uuid = "c0d22e4d-7f3e-44a4-9c97-37045f84daf2"
@@ -678,9 +678,9 @@ version = "0.8.4"
 
 [[deps.KLU]]
 deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse_jll"]
-git-tree-sha1 = "13731c274693007168ac89b399222cd8488ed8a3"
+git-tree-sha1 = "fb02b90c27b006c2cd763852284d0b716c83ea62"
 uuid = "ef3ab10e-7fda-4108-b977-705223b18434"
-version = "0.2.1"
+version = "0.2.2"
 
 [[deps.KernelDensity]]
 deps = ["Distributions", "DocStringExtensions", "FFTW", "Interpolations", "StatsBase"]
@@ -799,16 +799,16 @@ deps = ["Libdl", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[deps.LinearSolve]]
-deps = ["ArrayInterface", "IterativeSolvers", "KLU", "Krylov", "KrylovKit", "LinearAlgebra", "RecursiveFactorization", "Reexport", "Requires", "SciMLBase", "Setfield", "SparseArrays", "SuiteSparse", "UnPack"]
-git-tree-sha1 = "4350d5b33f2b9a1fb1cf1121bad696b2504f17df"
+deps = ["ArrayInterface", "DocStringExtensions", "IterativeSolvers", "KLU", "Krylov", "KrylovKit", "LinearAlgebra", "RecursiveFactorization", "Reexport", "Requires", "SciMLBase", "Setfield", "SparseArrays", "SuiteSparse", "UnPack"]
+git-tree-sha1 = "1eb877c08bde4f9663a588352578d821899fd4b7"
 uuid = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
-version = "0.1.6"
+version = "0.1.8"
 
 [[deps.LogExpFunctions]]
 deps = ["ChainRulesCore", "ChangesOfVariables", "DocStringExtensions", "InverseFunctions", "IrrationalConstants", "LinearAlgebra"]
-git-tree-sha1 = "be9eef9f9d78cecb6f262f3c10da151a6c5ab827"
+git-tree-sha1 = "e5718a00af0ab9756305a0392832c8952c7426c1"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.3.5"
+version = "0.3.6"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -957,9 +957,9 @@ uuid = "a00861dc-f156-4864-bf3c-e6376f28a68d"
 version = "0.1.11"
 
 [[deps.NaNMath]]
-git-tree-sha1 = "bfe47e760d60b82b66b61d2d44128b62e3a369fb"
+git-tree-sha1 = "f755f36b19a5116bb580de457cda0c140153f283"
 uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
-version = "0.3.5"
+version = "0.3.6"
 
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
@@ -1033,9 +1033,9 @@ version = "1.4.1"
 
 [[deps.OrdinaryDiffEq]]
 deps = ["Adapt", "ArrayInterface", "DataStructures", "DiffEqBase", "DocStringExtensions", "ExponentialUtilities", "FastClosures", "FiniteDiff", "ForwardDiff", "LinearAlgebra", "Logging", "LoopVectorization", "MacroTools", "MuladdMacro", "NLsolve", "Polyester", "PreallocationTools", "RecursiveArrayTools", "Reexport", "SparseArrays", "SparseDiffTools", "StaticArrays", "UnPack"]
-git-tree-sha1 = "b06e9a7fb60c70f244f71e0667359af890a0bbc2"
+git-tree-sha1 = "aab86872f5dccb1a6251ae7935b286e784dadba0"
 uuid = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
-version = "5.70.1"
+version = "5.71.0"
 
 [[deps.PDMats]]
 deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
@@ -1213,9 +1213,9 @@ version = "1.1.1"
 
 [[deps.ReverseDiff]]
 deps = ["ChainRulesCore", "DiffResults", "DiffRules", "ForwardDiff", "FunctionWrappers", "LinearAlgebra", "LogExpFunctions", "MacroTools", "NaNMath", "Random", "SpecialFunctions", "StaticArrays", "Statistics"]
-git-tree-sha1 = "2c7abf1c7b4f9bbfb0e755cf74d4bf0e43431b9e"
+git-tree-sha1 = "8d85c98fc33d4d37d88c8f9ccee4f1f3f98e56f4"
 uuid = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
-version = "1.11.0"
+version = "1.12.0"
 
 [[deps.Rmath]]
 deps = ["Random", "Rmath_jll"]
@@ -1307,9 +1307,9 @@ uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[deps.SparseDiffTools]]
 deps = ["Adapt", "ArrayInterface", "Compat", "DataStructures", "FiniteDiff", "ForwardDiff", "Graphs", "LinearAlgebra", "Requires", "SparseArrays", "StaticArrays", "VertexSafeGraphs"]
-git-tree-sha1 = "5e86e10d8a833e792d27c5db9a172d002cb4c4e2"
+git-tree-sha1 = "f33a0f6721b270cdf417f0c986e93c973e5913c8"
 uuid = "47a9eef4-7e08-11e9-0b38-333d64bd3804"
-version = "1.18.3"
+version = "1.19.1"
 
 [[deps.SpecialFunctions]]
 deps = ["ChainRulesCore", "IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
