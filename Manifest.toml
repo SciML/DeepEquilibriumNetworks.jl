@@ -142,11 +142,11 @@ version = "3.3.0"
 
 [[deps.CUDA]]
 deps = ["AbstractFFTs", "Adapt", "BFloat16s", "CEnum", "CompilerSupportLibraries_jll", "ExprTools", "GPUArrays", "GPUCompiler", "LLVM", "LazyArtifacts", "Libdl", "LinearAlgebra", "Logging", "Printf", "Random", "Random123", "RandomNumbers", "Reexport", "Requires", "SparseArrays", "SpecialFunctions", "TimerOutputs"]
-git-tree-sha1 = "432c7eedafc98cc36bb9c34c87aeffb7cbdc7311"
+git-tree-sha1 = "de0269e2c51b006caf9686101ff03718c4e7fb56"
 repo-rev = "master"
 repo-url = "https://github.com/JuliaGPU/CUDA.jl.git"
 uuid = "052768ef-5323-5732-b1bb-66c8b64840ba"
-version = "3.5.0"
+version = "3.6.0"
 
 [[deps.Cassette]]
 git-tree-sha1 = "6ce3cd755d4130d43bab24ea5181e77b89b51839"
@@ -473,7 +473,7 @@ version = "0.12.8"
 
 [[deps.FluxExperimental]]
 deps = ["CUDA", "FileIO", "Flux", "FluxTraining", "Functors", "JLD2", "NNlibCUDA", "Optimisers", "Requires", "Serialization", "Statistics", "Zygote"]
-git-tree-sha1 = "3cdbe30e1229fab748b871b7420eb3b89fad6966"
+git-tree-sha1 = "af7f2e4d22305ef8b69ba79c0160f07f917eacf7"
 repo-rev = "main"
 repo-url = "git@github.com:avik-pal/FluxExperimental.jl.git"
 uuid = "c0d22e4d-7f3e-44a4-9c97-37045f84daf2"
@@ -833,9 +833,9 @@ version = "0.19.2"
 
 [[deps.MPICH_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "480a8be51647c9dec19ff2211e26c9f30787840b"
+git-tree-sha1 = "4d16537497fcde67c4640b7ac14346d90accad32"
 uuid = "7cb0a576-ebde-5e09-9194-50597f1243b4"
-version = "3.4.2+2"
+version = "3.4.3+0"
 
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
@@ -1570,7 +1570,7 @@ uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
 
 [[deps.Zygote]]
 deps = ["AbstractFFTs", "ChainRules", "ChainRulesCore", "DiffRules", "Distributed", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics", "ZygoteRules"]
-git-tree-sha1 = "9a51c95524d949bb462183e8daea3a439e91f67d"
+git-tree-sha1 = "0d1e2ddaa67d65d2b7c67fc54a6e4b70897dc6fd"
 repo-rev = "ap/fastdeq"
 repo-url = "https://github.com/avik-pal/Zygote.jl"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"

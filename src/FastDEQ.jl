@@ -70,7 +70,7 @@ export DEQChain
 export BasicResidualBlock, BranchNet, MultiParallelNet, BasicBottleneckBlock
 
 # For the sanity of experiment code
-export get_and_clear_nfe!, get_default_ssadjoint, get_default_dynamicss_solver, get_default_ssrootfind_solver
+export get_and_clear_nfe!, get_default_ssadjoint, get_default_dynamicss_solver, get_default_ssrootfind_solver, normal_init
 
 # Text Logging
 export PrettyTableLogger

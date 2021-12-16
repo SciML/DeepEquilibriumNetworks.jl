@@ -93,3 +93,8 @@ end
 function Zygote.accum(x::AbstractVector{T}, y::NTuple{N,Nothing}) where {N,T<:AbstractArray}
     return Zygote.accum.(x, y)
 end
+
+# Initialization
+function normal_init(μ = 0.0f0, σ² = 0.01f0)
+    return (dims...) -> randn(dims...) .* σ² .+ μ
+end

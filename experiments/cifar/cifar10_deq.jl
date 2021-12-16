@@ -15,13 +15,18 @@ const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
 ## Models
 function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, model_type::String, batch_size::Int,
                    solver_type::String="dynamicss") where {T}
-    layer_kwargs = Dict(:norm_layer => GroupNormV2, :group_count => 8, :conv_kwargs => Dict{Symbol,Any}(:bias => false),
+    layer_kwargs = Dict(:norm_layer => GroupNormV2, :group_count => 8,
+                        :conv_kwargs => Dict{Symbol,Any}(:bias => false, :init => normal_init()),
                         :norm_kwargs => Dict{Symbol,Any}(:affine => true, :track_stats => false))
 
     initial_layers = Chain(conv3x3_norm(3 => 24, gelu; norm_layer=BatchNormV2,
-                                        norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true)).layers...,
+                                        norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true),
+                                        conv_kwargs=Dict{Symbol,Any}(:init => normal_init(),
+                                                                     :bias => normal_init()(24))).layers...,
                            conv3x3_norm(24 => 24, gelu; norm_layer=BatchNormV2,
-                                        norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true)).layers...)
+                                        norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true),
+                                        conv_kwargs=Dict{Symbol,Any}(:init => normal_init(),
+                                                                     :bias => normal_init()(24))).layers...)
 
     main_layers = (BasicResidualBlock((32, 32), 24, 24; dropout_rate=dropout_rate, num_gn_groups=8),
                    BasicResidualBlock((16, 16), 24, 24; dropout_rate=dropout_rate, num_gn_groups=8))
@@ -29,17 +34,20 @@ function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, mode
     mapping_layers = [identity downsample_module(24 => 24, 32 => 16, gelu; layer_kwargs...);
                       upsample_module(24 => 24, 16 => 32, gelu; layer_kwargs...) identity]
 
-    post_fuse_layers = (Chain(x -> gelu.(x), conv1x1(24 => 24; bias=false),
+    post_fuse_layers = (Chain(x -> gelu.(x), conv1x1(24 => 24; bias=false, init=normal_init()),
                               GroupNormV2(24, 4; affine=true, track_stats=false)),
-                        Chain(x -> gelu.(x), conv1x1(24 => 24; bias=false),
+                        Chain(x -> gelu.(x), conv1x1(24 => 24; bias=false, init=normal_init()),
                               GroupNormV2(24, 4; affine=true, track_stats=false)))
 
     final_layers = Chain(Parallel(+,
-                                  Chain(BasicBottleneckBlock(24 => 8), conv3x3(8 * 4 => 16 * 4; stride=2, bias=true),
+                                  Chain(BasicBottleneckBlock(24 => 8),
+                                        conv3x3(8 * 4 => 16 * 4; stride=2, bias=normal_init()(16 * 4),
+                                                init=normal_init()),
                                         BatchNormV2(16 * 4, relu; track_stats=false, affine=true)),
                                   BasicBottleneckBlock(24 => 16)),
                          conv1x1_norm(16 * 4 => 200, gelu; norm_layer=BatchNormV2,
-                                      norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true)).layers...,
+                                      norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true),
+                                      conv_kwargs=Dict{Symbol,Any}(:init => normal_init(), :bias => normal_init()(200))).layers...,
                          GlobalMeanPool(), Flux.flatten, Dense(200, 10))
 
     solver = solver_type == "dynamicss" ? get_default_dynamicss_solver(abstol, reltol, BS3()) :
@@ -50,8 +58,8 @@ function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, mode
     if model_type == "skip"
         deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers,
                                                    (BasicResidualBlock((32, 32), 24, 24; num_gn_groups=8),
-                                                    downsample_module(24 => 24, 32 => 16; layer_kwargs...)),
-                                                   solver; post_fuse_layers=post_fuse_layers, maxiters=maxiters,
+                                                    downsample_module(24 => 24, 32 => 16; layer_kwargs...)), solver;
+                                                   post_fuse_layers=post_fuse_layers, maxiters=maxiters,
                                                    sensealg=get_default_ssadjoint(abstol, reltol, maxiters),
                                                    verbose=false)
     else
@@ -211,8 +219,8 @@ function train(config::Dict)
             log(lg_wandb,
                 Dict("Testing/Epoch/Count" => epoch, "Testing/Epoch/Loss" => test_loss, "Testing/Epoch/NFE" => test_nfe,
                      "Testing/Epoch/Accuracy" => test_acc, "Testing/Epoch/Time" => test_end_time - test_start_time))
-            lg_term(epoch, train_nfe, train_acc, train_loss, epoch_end_time, test_nfe, test_acc,
-                    test_loss, test_end_time - test_start_time)
+            lg_term(epoch, train_nfe, train_acc, train_loss, epoch_end_time, test_nfe, test_acc, test_loss,
+                    test_end_time - test_start_time)
 
             MPI.Barrier(comm)
         catch ex
@@ -237,10 +245,10 @@ nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [
 
 for seed in [1, 11, 111]
     # We will do the skip_no_extra_params experiments later.
-    for model_type in ["skip", "vanilla"] #, "skip_no_extra_params"]
+    for model_type in ["vanilla", "skip"] #, "skip_no_extra_params"]
         config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-1, "reltol" => 1.0f-1,
-                      "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 128,
-                      "eval_batch_size" => 128, "model_type" => model_type, "solver_type" => "dynamicss")
+                      "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 256,
+                      "eval_batch_size" => 256, "model_type" => model_type, "solver_type" => "dynamicss")
 
         model, nfe_counts = train(config)
 

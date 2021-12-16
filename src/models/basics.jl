@@ -17,10 +17,10 @@ function BasicResidualBlock(outdims::Tuple, inplanes::Int, planes::Int; deq_expa
     wn_layer = weight_norm ? WeightNorm : identity
 
     inner_planes = planes * deq_expand
-    conv1 = wn_layer((n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; stride=1, bias=false))
+    conv1 = wn_layer((n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; stride=1, bias=false, init=normal_init()))
     gn1 = GroupNormV2(inner_planes, num_gn_groups, gelu; affine=gn_affine, track_stats=false)
 
-    conv2 = wn_layer((n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => planes; stride=1, bias=false))
+    conv2 = wn_layer((n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => planes; stride=1, bias=false, init=normal_init()))
     gn2 = GroupNormV2(planes, num_gn_groups, gelu; affine=gn_affine, track_stats=false)
 
     gn3 = GroupNormV2(planes, num_gn_groups; affine=gn_affine, track_stats=false)
@@ -140,13 +140,13 @@ function BasicBottleneckBlock(mapping::Pair, expansion::Int=4)
     else
         identity
     end
-    conv1 = conv1x1(mapping; bias=false)
+    conv1 = conv1x1(mapping; bias=false, init=normal_init())
     chain = Chain(BatchNormV2(last(mapping), gelu; affine=true, track_stats=false),
                   conv3x3_norm(last(mapping) => last(mapping) * expansion, gelu; norm_layer=BatchNormV2,
-                               conv_kwargs=Dict{Symbol,Any}(:bias => false),
+                               conv_kwargs=Dict{Symbol,Any}(:bias => false, :init => normal_init()),
                                norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true)).layers...,
                   conv1x1_norm(last(mapping) * expansion => last(mapping) * expansion; norm_layer=BatchNormV2,
-                               conv_kwargs=Dict{Symbol,Any}(:bias => false),
+                               conv_kwargs=Dict{Symbol,Any}(:bias => false, :init => normal_init()),
                                norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true)).layers...)
 
     return BasicBottleneckBlock(conv1, chain, downsample)
