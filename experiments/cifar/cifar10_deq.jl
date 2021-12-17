@@ -1,6 +1,6 @@
 # Load Packages
 using Dates, FastDEQ, MLDatasets, MPI, Serialization, Statistics, ParameterSchedulers, Plots, Random, Wandb
-using ParameterSchedulers: Scheduler, Cos
+using ParameterSchedulers: Stateful, Scheduler, Cos
 using MLDataPattern: splitobs, shuffleobs
 
 CUDA.versioninfo()
@@ -20,11 +20,11 @@ function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, mode
                         :norm_kwargs => Dict{Symbol,Any}(:affine => true, :track_stats => false))
 
     initial_layers = Chain(conv3x3_norm(3 => 24, gelu; norm_layer=BatchNormV2,
-                                        norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true),
+                                        norm_kwargs=Dict{Symbol,Any}(:track_stats => true, :affine => true),
                                         conv_kwargs=Dict{Symbol,Any}(:init => normal_init(),
                                                                      :bias => normal_init()(24))).layers...,
                            conv3x3_norm(24 => 24, gelu; norm_layer=BatchNormV2,
-                                        norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true),
+                                        norm_kwargs=Dict{Symbol,Any}(:track_stats => true, :affine => true),
                                         conv_kwargs=Dict{Symbol,Any}(:init => normal_init(),
                                                                      :bias => normal_init()(24))).layers...)
 
@@ -43,10 +43,10 @@ function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, mode
                                   Chain(BasicBottleneckBlock(24 => 8),
                                         conv3x3(8 * 4 => 16 * 4; stride=2, bias=normal_init()(16 * 4),
                                                 init=normal_init()),
-                                        BatchNormV2(16 * 4, relu; track_stats=false, affine=true)),
+                                        BatchNormV2(16 * 4, relu; track_stats=true, affine=true)),
                                   BasicBottleneckBlock(24 => 16)),
                          conv1x1_norm(16 * 4 => 200, gelu; norm_layer=BatchNormV2,
-                                      norm_kwargs=Dict{Symbol,Any}(:track_stats => false, :affine => true),
+                                      norm_kwargs=Dict{Symbol,Any}(:track_stats => true, :affine => true),
                                       conv_kwargs=Dict{Symbol,Any}(:init => normal_init(), :bias => normal_init()(200))).layers...,
                          GlobalMeanPool(), Flux.flatten, Dense(200, 10))
 
@@ -75,6 +75,11 @@ end
 ## Utilities
 register_nfe_counts(deq, buffer) = () -> push!(buffer, get_and_clear_nfe!(deq))
 
+function invoke_gc()
+    GC.gc(true)
+    CUDA.reclaim()
+end
+
 function loss_and_accuracy(model, dataloader)
     matches, total_loss, total_datasize, total_nfe = 0, 0, 0, 0
     for (x, y) in dataloader
@@ -97,8 +102,9 @@ function train(config::Dict)
     rank = MPI.Comm_rank(comm)
 
     ## Setup Logging & Experiment Configuration
-    expt_name = "fastdeqjl-supervised_cifar10_classication-$(now())"
-    lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, config=config)
+    t = MPI.Bcast!([now()], 0, comm)[1]
+    expt_name = "fastdeqjl-supervised_cifar10_classification-$(t)"
+    lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, group="cifar-10-mdeq-$(t)", config=config)
     lg_term = PrettyTableLogger("logs/" * expt_name * ".log",
                                 ["Epoch Number", "Train/NFE", "Train/Accuracy", "Train/Loss", "Train/Time", "Test/NFE",
                                  "Test/Accuracy", "Test/Loss", "Test/Time"],
@@ -149,9 +155,13 @@ function train(config::Dict)
 
     ## Training Loop
     ps = Flux.params(model)
-    opt = Scheduler(Cos(get_config(lg_wandb, "learning_rate"), 1e-5,
-                        length(trainiter) * get_config(lg_wandb, "epochs")),
-                    ADAM(get_config(lg_wandb, "learning_rate"), (0.9, 0.999)))
+
+    sched = Stateful(Cos(get_config(lg_wandb, "learning_rate"), 1e-6,
+                         length(trainiter) * get_config(lg_wandb, "epochs")))
+    opt = ADAMW(get_config(lg_wandb, "learning_rate"), (0.9, 0.999), get_config(lg_wandb, "weight_decay"))
+
+    watch = ParameterStateGradientWatcher(model, :mdeq)
+
     step = 1
     train_vec = zeros(3)
     test_vec = zeros(3)
@@ -166,6 +176,7 @@ function train(config::Dict)
     for epoch in 1:get_config(lg_wandb, "epochs")
         try
             epoch_end_time = 0
+            invoke_gc()
             for (x, y) in trainiter
                 x = gpu(x)
                 y = gpu(y)
@@ -177,6 +188,7 @@ function train(config::Dict)
                 gs = _res.grad
 
                 Flux.Optimise.update!(opt, ps, gs)
+                opt[3].eta = ParameterSchedulers.next!(sched)
 
                 epoch_end_time += time() - start_time
 
@@ -187,6 +199,8 @@ function train(config::Dict)
                 log(lg_wandb,
                     Dict("Training/Step/Loss" => loss, "Training/Step/NFE" => nfe_counts[end],
                          "Training/Step/Count" => step))
+                # This is pretty expensive so do after every 50 steps
+                step % 50 == 1 && log(lg_wandb, watch, gs)
                 lg_term(; records=Dict("Train/Running/NFE" => nfe_counts[end], "Train/Running/Loss" => loss))
                 step += 1
             end
@@ -247,8 +261,9 @@ for seed in [1, 11, 111]
     # We will do the skip_no_extra_params experiments later.
     for model_type in ["vanilla", "skip"] #, "skip_no_extra_params"]
         config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-1, "reltol" => 1.0f-1,
-                      "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 256,
-                      "eval_batch_size" => 256, "model_type" => model_type, "solver_type" => "dynamicss")
+                      "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 128,
+                      "eval_batch_size" => 128, "model_type" => model_type, "solver_type" => "dynamicss",
+                      "weight_decay" => 0.0000025)
 
         model, nfe_counts = train(config)
 
