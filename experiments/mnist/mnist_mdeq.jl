@@ -42,7 +42,7 @@ function get_model(maxiters::Int, abstol::T, reltol::T, batch_size::Int, model_t
                    sensealg=get_default_ssadjoint(abstol, reltol, maxiters), verbose=false)
     end
 
-    model = DEQChain(conv1x1_norm(1 => 8, gelu; layer_kwargs...), deq, t -> tuple(t...),
+    model = DEQChain(conv1x1_norm(1 => 8, gelu; layer_kwargs...), deq,
                      Parallel(+, downsample_module(8 => 32, 28 => 7, gelu; layer_kwargs...),
                               downsample_module(16 => 32, 14 => 7, gelu; layer_kwargs...),
                               conv1x1_norm(32 => 32, gelu; layer_kwargs...)), Flux.flatten,
@@ -215,10 +215,11 @@ end
 ## Run Experiment
 nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [])
 
+# Was trained on a 6 GPU configuration -- so an effective batch size of 64 * 6 = 384
 for seed in [1, 11, 111]
     for model_type in ["skip", "skip_no_extra_params", "vanilla"]
         config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-1, "reltol" => 1.0f-1, "maxiters" => 20,
-                      "epochs" => 10, "batch_size" => 256, "eval_batch_size" => 256, "model_type" => model_type,
+                      "epochs" => 10, "batch_size" => 64, "eval_batch_size" => 64, "model_type" => model_type,
                       "solver_type" => "dynamicss")
 
         model, nfe_counts = train(config)

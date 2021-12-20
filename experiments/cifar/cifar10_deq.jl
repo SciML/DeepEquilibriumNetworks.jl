@@ -257,12 +257,13 @@ end
 ## Run Experiment
 nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [])
 
+# We are running the experiments across 6 processes -- Effective Batch Size = 6 * 32 = 192
 for seed in [1, 11, 111]
     # We will do the skip_no_extra_params experiments later.
     for model_type in ["vanilla", "skip"] #, "skip_no_extra_params"]
         config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-1, "reltol" => 1.0f-1,
-                      "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 128,
-                      "eval_batch_size" => 128, "model_type" => model_type, "solver_type" => "dynamicss",
+                      "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 32,
+                      "eval_batch_size" => 32, "model_type" => model_type, "solver_type" => "dynamicss",
                       "weight_decay" => 0.0000025)
 
         model, nfe_counts = train(config)
