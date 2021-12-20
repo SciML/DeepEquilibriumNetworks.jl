@@ -31,3 +31,13 @@ function solve_depth_k_neural_network(re, p, x, u0, depth)
     update_is_variational_hidden_dropout_mask_reset_allowed(true)
     return u0
 end
+
+
+flatten(x::AbstractArray{T,N}) where {T,N} = reshape(x, :, size(x, N))
+
+Zygote.@adjoint function flatten(x::AbstractArray{T,N}) where {T,N}
+    s = size(x)
+    res = reshape(x, :, s[N])
+    flatten_sensitivity(Δ) = (reshape(Δ, s),)
+    return res, flatten_sensitivity
+end

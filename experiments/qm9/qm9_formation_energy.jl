@@ -1,12 +1,12 @@
-using ChemistryFeaturization, CSV, CUDA, DataFrames, Dates, FastDEQ, Flux, Random, Serialization, Statistics,
-      SteadyStateDiffEq, Wandb, Zygote
+using ChemistryFeaturization, CSV, CUDA, DataFrames, Dates, FastDEQ, FluxExperimental, FileIO, JLD2, Random,
+      Serialization, Statistics, Wandb, Zygote
 using ParameterSchedulers: Scheduler, Cos
 
 const DATA_PATH = joinpath(@__DIR__, "data", "qm9")
 const CACHED_DATASET = Dict()
 
-function load_dataset(data_dir=DATA_PATH; num_data_points::Union{Int,Nothing}=nothing,
-                      train_fraction::Float64=0.8, verbose::Bool=false, seed::Int=0)
+function load_dataset_from_serialized_files(data_dir=DATA_PATH; num_data_points::Union{Int,Nothing}=nothing,
+                                            train_fraction::Float64=0.8, verbose::Bool=false, seed::Int=0)
     Random.seed!(seed)
 
     num_data_points = isnothing(num_data_points) ? 133885 : num_data_points
@@ -33,33 +33,49 @@ function load_dataset(data_dir=DATA_PATH; num_data_points::Union{Int,Nothing}=no
         inputs[i] = deserialize(fpath)
     end
 
-    # pick out train/test sets
-    verbose && @info("Dividing into train/test sets...")
+    # pick out train/val sets
+    verbose && @info("Dividing into train/val sets...")
     train_output = output[1:num_train]
-    test_output = output[(num_train + 1):end]
+    val_output = output[(num_train + 1):end]
     train_input = inputs[1:num_train]
-    test_input = inputs[(num_train + 1):end]
+    val_input = inputs[(num_train + 1):end]
 
-    return (train_input, train_output), (test_input, test_output)
+    return (train_input, train_output), (val_input, val_output)
+end
+
+function load_dataset(data_dir=DATA_PATH; kwargs...)
+    filepath = joinpath(data_dir, "qm9_data.jld2")
+    if !isfile(filepath)
+        @info "JLD2 file not found. Attempting to load from serialized files..."
+        return load_dataset_from_serialized_files(data_dir; kwargs...)
+    end
+
+    @info "Loading JLD2 file..."
+    @info "All kwargs are ignored since JLD2 file found..."
+
+    data = load(filepath)
+    return (data["train_X"], data["train_y"]), (data["val_X"], data["val_y"])
 end
 
 function construct_dataiterators(X, y; batch_size::Int=128)
     return zip(BatchedAtomicGraph(batch_size, X), Iterators.partition(y, batch_size))
 end
 
-function get_model(model_type::Symbol; num_features::Int=61, num_conv::Int=15, crystal_feature_length::Int=128,
-                   num_hidden_layers::Int=5, abstol::Real=0.1f0, reltol::Real=0.1f0, maxiters::Int=10)
-    model = CrystalGraphCNN(num_features; num_conv=num_conv, atom_conv_feature_length=crystal_feature_length,
+function get_model(model_type::Symbol; num_features::Int=61, crystal_feature_length::Int=128, num_hidden_layers::Int=5,
+                   abstol::Real=0.1f0, reltol::Real=0.1f0, maxiters::Int=10)
+    model = CrystalGraphCNN(num_features; num_conv=maxiters+1, atom_conv_feature_length=crystal_feature_length,
                             pooled_feature_length=crystal_feature_length ÷ 2, num_hidden_layers=num_hidden_layers,
                             deq_type=model_type, abstol=Float32(abstol), reltol=Float32(reltol), maxiters=maxiters)
 
     return gpu(model)
 end
 
-function register_nfe_counts(model, buffer)
-    callback() = push!(buffer, get_and_clear_nfe!(model))
-    return callback
-end
+(train_X, train_y), (val_X, val_y) = load_dataset_from_serialized_files(; num_data_points=10)
+X = first(BatchedAtomicGraph(128, train_X)) |> gpu
+model = get_model(:explicit)
+gradient(() -> sum(model(X)), Flux.params(model))
+
+register_nfe_counts(deq, buffer) = () -> push!(buffer, get_and_clear_nfe!(deq))
 
 function compute_total_loss(model, dataloader)
     total_loss, total_datasize, total_nfe = 0, 0, 0
@@ -116,10 +132,10 @@ function train(config::Dict)
     model = get_model(Symbol(get_config(lg_wandb, "model_type")); abstol=get_config(lg_wandb, "abstol"),
                       reltol=get_config(lg_wandb, "reltol"), maxiters=get_config(lg_wandb, "maxiters"))
 
-    loss_function = SupervisedLossContainer((ŷ, y) -> mean(abs2, y .- vec(ŷ)), 2.5f0)
+    loss_function = SupervisedLossContainer((ŷ, y) -> mean(abs, y .- vec(ŷ)), 2.5f0)
 
     ## Warmup
-    __x, __y = first(train_dataloader) .|> gpu
+    __x, __y = gpu.(first(train_dataloader))
     loss_function(model, __x, __y)
     @info "Forward Pass Warmup Completed"
     Zygote.gradient(() -> loss_function(model, __x, __y), Flux.params(model))
@@ -165,7 +181,8 @@ function train(config::Dict)
             val_end_time = time()
 
             log(lg_wandb,
-                Dict("Validation/Epoch/Count" => epoch, "Validation/Epoch/Loss" => val_loss, "Validation/Epoch/NFE" => val_nfe))
+                Dict("Validation/Epoch/Count" => epoch, "Validation/Epoch/Loss" => val_loss,
+                     "Validation/Epoch/NFE" => val_nfe))
             lg_term(epoch, train_end_time - train_start_time, val_nfe, val_loss, val_end_time - val_start_time)
         catch ex
             if ex isa Flux.Optimise.StopException

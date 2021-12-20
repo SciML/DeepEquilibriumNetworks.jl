@@ -160,7 +160,7 @@ function train(config::Dict)
                          length(trainiter) * get_config(lg_wandb, "epochs")))
     opt = ADAMW(get_config(lg_wandb, "learning_rate"), (0.9, 0.999), get_config(lg_wandb, "weight_decay"))
 
-    watch = ParameterStateGradientWatcher(model, :mdeq)
+    watch = ParameterStateGradientWatcher(model.model, :mdeq)
 
     step = 1
     train_vec = zeros(3)

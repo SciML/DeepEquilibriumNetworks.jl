@@ -42,6 +42,7 @@ Base.deepcopy(op::DiffEqSensitivity.ZygotePullbackMultiplyOperator) = op
 abstract type IterativeDEQSolver end
 
 include("utils.jl")
+include("layers/fchain.jl")
 
 include("solvers/broyden.jl")
 include("solvers/limited_memory_broyden.jl")
@@ -66,6 +67,7 @@ export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork, MultiScaleDeepEquilib
        MultiScaleSkipDeepEquilibriumNetwork, WidthStackedDEQ
 
 # Compositional Layers
+export FChain
 export DEQChain
 export BasicResidualBlock, BranchNet, MultiParallelNet, BasicBottleneckBlock
 

@@ -83,9 +83,7 @@ using Test
                                                   Dense(3, 4, tanh_fast) identity Dense(3, 2, tanh_fast) Dense(3, 1, tanh_fast);
                                                   Dense(2, 4, tanh_fast) Dense(2, 3, tanh_fast) identity Dense(2, 1, tanh_fast);
                                                   Dense(1, 4, tanh_fast) Dense(1, 3, tanh_fast) Dense(1, 2, tanh_fast) identity],
-                                                 get_default_ssrootfind_solver(0.1f0, 0.1f0, LimitedMemoryBroydenSolver;
-                                                                               device=gpu, original_dims=(1, 10),
-                                                                               batch_size=2, maxiters=10);
+                                                 get_default_dynamicss_solver(0.1f0, 0.1f0);
                                                  sensealg=get_default_ssadjoint(0.1f0, 0.1f0, 10), maxiters=10))
     x = gpu(rand(4, 2))
     y = tuple([gpu(rand(i, 2)) for i in 4:-1:1]...)

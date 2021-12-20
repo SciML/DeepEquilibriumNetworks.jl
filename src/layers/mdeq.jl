@@ -13,11 +13,8 @@ struct MultiScaleDeepEquilibriumNetwork{N,M1<:Parallel,M2<:Chain,RE1,RE2,P,A,K,S
 
     function MultiScaleDeepEquilibriumNetwork(main_layers::Parallel, mapping_layers::Chain, re1, re2, p,
                                               ordered_split_idxs, args::A, kwargs::K, sensealg::S, stats) where {A,K,S}
-        @assert 1 <= length(mapping_layers) <= 2
+        @assert length(mapping_layers) == 2
         @assert mapping_layers[1] isa MultiParallelNet
-        if length(mapping_layers) == 2
-            @assert mapping_layers[2] isa Parallel
-        end
 
         p_main_layers, re_main_layers = destructure_parameters(main_layers)
         p_mapping_layers, re_mapping_layers = destructure_parameters(mapping_layers)
@@ -46,7 +43,8 @@ function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Ma
                                           sensealg=get_default_ssadjoint(0.1f0, 0.1f0, 10), kwargs...)
     mapping_layers = if post_fuse_layers === nothing
         @assert size(mapping_layers, 1) == size(mapping_layers, 2) == length(main_layers)
-        Chain(MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...))
+        Chain(MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...),
+              (args...) -> args)
     else
         @assert size(mapping_layers, 1) == size(mapping_layers, 2) == length(main_layers) == length(post_fuse_layers)
         Chain(MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...),
