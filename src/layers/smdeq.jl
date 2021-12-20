@@ -17,6 +17,7 @@ struct MultiScaleSkipDeepEquilibriumNetwork{M3<:Union{Nothing,Parallel},N,M1<:Pa
                                                   shortcut_layers::Union{Nothing,Parallel}, re1, re2, re3, p,
                                                   ordered_split_idxs, args::A, kwargs::K, sensealg::S,
                                                   stats) where {A,K,S}
+        @show mapping_layers, length(mapping_layers)
         @assert length(mapping_layers) == 2
         @assert mapping_layers[1] isa MultiParallelNet
     
@@ -44,7 +45,8 @@ function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers
                                               sensealg=get_default_ssadjoint(0.1f0, 0.1f0, 10), kwargs...)
     mapping_layers = if post_fuse_layers === nothing
         @assert size(mapping_layers, 1) == size(mapping_layers, 2) == length(main_layers) == length(shortcut_layers)
-        Chain(MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...))
+        Chain(MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...),
+              (args...) -> args)
     else
         @assert size(mapping_layers, 1) ==
                 size(mapping_layers, 2) ==
