@@ -17,7 +17,6 @@ struct MultiScaleSkipDeepEquilibriumNetwork{M3<:Union{Nothing,Parallel},N,M1<:Pa
                                                   shortcut_layers::Union{Nothing,Parallel}, re1, re2, re3, p,
                                                   ordered_split_idxs, args::A, kwargs::K, sensealg::S,
                                                   stats) where {A,K,S}
-        @show mapping_layers, length(mapping_layers)
         @assert length(mapping_layers) == 2
         @assert mapping_layers[1] isa MultiParallelNet
     
