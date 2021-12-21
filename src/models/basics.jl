@@ -39,7 +39,7 @@ function (b::BasicResidualBlock)(x::AbstractArray{T}, injection::Union{AbstractA
     x = b.conv1(x)
     x = b.conv2(b.gn1(x))
     residual = b.downsample(x_)
-    return b.gn3(relu.(b.gn2(b.dropout(x) .+ injection) .+ residual))
+    return b.gn3(gelu.(b.gn2(b.dropout(x) .+ injection) .+ residual))
 end
 
 function Base.show(io::IO, l::BasicResidualBlock)

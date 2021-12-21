@@ -1,4 +1,4 @@
-struct MultiScaleSkipDeepEquilibriumNetwork{M3<:Union{Nothing,Parallel},N,M1<:Parallel,M2<:Chain,RE1,RE2,RE3,P,A,K,S} <:
+struct MultiScaleSkipDeepEquilibriumNetwork{M3<:Union{Nothing,Parallel},N,M1<:Parallel,M2<:Union{Chain,FChain},RE1,RE2,RE3,P,A,K,S} <:
        AbstractDeepEquilibriumNetwork
     main_layers::M1
     mapping_layers::M2
@@ -13,7 +13,7 @@ struct MultiScaleSkipDeepEquilibriumNetwork{M3<:Union{Nothing,Parallel},N,M1<:Pa
     sensealg::S
     stats::DEQTrainingStats
 
-    function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Parallel, mapping_layers::Chain,
+    function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Parallel, mapping_layers::Union{Chain,FChain},
                                                   shortcut_layers::Union{Nothing,Parallel}, re1, re2, re3, p,
                                                   ordered_split_idxs, args::A, kwargs::K, sensealg::S,
                                                   stats) where {A,K,S}
@@ -45,7 +45,7 @@ function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers
     mapping_layers = if post_fuse_layers === nothing
         @assert size(mapping_layers, 1) == size(mapping_layers, 2) == length(main_layers) == length(shortcut_layers)
         Chain(MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...),
-              (args...) -> args)
+              NoOp())
     else
         @assert size(mapping_layers, 1) ==
                 size(mapping_layers, 2) ==
@@ -69,7 +69,7 @@ function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers
     mapping_layers = if post_fuse_layers === nothing
         @assert size(mapping_layers, 1) == size(mapping_layers, 2) == length(main_layers)
         Chain(MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...),
-              (args...) -> args)
+              NoOp())
     else
         @assert size(mapping_layers, 1) ==
                 size(mapping_layers, 2) ==

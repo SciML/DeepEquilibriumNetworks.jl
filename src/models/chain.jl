@@ -41,8 +41,8 @@ function DEQChain(layers...)
         end
     end
     !encounter_deq && error("No DEQ Layer in the Chain!!! Maybe you wanted to use Chain")
-    pre_deq = length(pre_deq) == 0 ? identity : Chain(pre_deq...)
-    post_deq = length(post_deq) == 0 ? identity : Chain(post_deq...)
+    pre_deq = length(pre_deq) == 0 ? identity : FChain(pre_deq...)
+    post_deq = length(post_deq) == 0 ? identity : FChain(post_deq...)
     return DEQChain{global_val,typeof(pre_deq),typeof(deq),typeof(post_deq)}(pre_deq, deq, post_deq)
 end
 
@@ -63,4 +63,16 @@ function get_and_clear_nfe!(model::DEQChain)
     nfe = model.deq.stats.nfe
     model.deq.stats.nfe = 0
     return nfe
+end
+
+function Base.show(io::IO, model::DEQChain)
+    l1 = length(destructure_parameters(model)[1])
+    println(io, "DEQChain(")
+    print(io, "\t")
+    show(io, model.pre_deq)
+    print(io, "\n\t")
+    show(io, model.deq)
+    print(io, "\n\t")
+    show(io, model.post_deq)
+    print(io, "\n) $l1 Trainable Parameters")
 end

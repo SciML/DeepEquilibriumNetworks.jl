@@ -12,28 +12,21 @@ const MPI_COMM_WORLD = MPI.COMM_WORLD
 const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
 
 ## Models
-function get_model(maxiters::Int, abstol::T, reltol::T, batch_size::Int, model_type::String,
-                   solver_type::String) where {T}
+function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, args...; kwargs...) where {T}
     layer_kwargs = Dict(:norm_layer => GroupNormV2, :group_count => 4, :conv_kwargs => Dict{Symbol,Any}(:bias => false),
                         :norm_kwargs => Dict{Symbol,Any}(:affine => true, :track_stats => false))
 
-    main_layers = (BasicResidualBlock((28, 28), 8, 8), BasicResidualBlock((14, 14), 16, 16),
-                   BasicResidualBlock((7, 7), 32, 32))
-    mapping_layers = [identity downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...) downsample_module(8 => 32, 28 => 7, gelu; layer_kwargs...);
-                      upsample_module(16 => 8, 14 => 28, gelu; layer_kwargs...) identity downsample_module(16 => 32, 14 => 7, gelu; layer_kwargs...);
-                      upsample_module(32 => 8, 7 => 28, gelu; layer_kwargs...) upsample_module(32 => 16, 7 => 14, gelu; layer_kwargs...) identity]
+    main_layers = (BasicResidualBlock((28, 28), 8, 8), BasicResidualBlock((14, 14), 16, 16))
+    mapping_layers = [identity downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...);
+                      upsample_module(16 => 8, 14 => 28, gelu; layer_kwargs...) identity]
 
-    solver = solver_type == "dynamicss" ? get_default_dynamicss_solver(abstol, reltol, BS3()) :
-             get_default_ssrootfind_solver(abstol, reltol, LimitedMemoryBroydenSolver; device=gpu,
-                                           original_dims=(1, (28 * 28 * 8) + (14 * 14 * 16) + (7 * 7 * 32)),
-                                           batch_size=batch_size, maxiters=maxiters)
+    solver = get_default_dynamicss_solver(abstol, reltol, BS3())
 
     if model_type == "skip"
-        deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers,
-                                                   (BasicResidualBlock((28, 28), 8, 8),
-                                                    downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...),
-                                                    downsample_module(8 => 32, 28 => 7, gelu; layer_kwargs...)), solver;
-                                                   maxiters=maxiters,
+        aux_layers = (FChain(BasicResidualBlock((28, 28), 8, 8), conv1x1(8 => 8, identity; bias=true)),
+                      FChain(downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...),
+                             conv1x1(16 => 16, identity; bias=true)))
+        deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, aux_layers, solver; maxiters=maxiters,
                                                    sensealg=get_default_ssadjoint(abstol, reltol, maxiters),
                                                    verbose=false)
     else
@@ -42,11 +35,14 @@ function get_model(maxiters::Int, abstol::T, reltol::T, batch_size::Int, model_t
                    sensealg=get_default_ssadjoint(abstol, reltol, maxiters), verbose=false)
     end
 
-    model = DEQChain(conv1x1_norm(1 => 8, gelu; layer_kwargs...), deq,
-                     Parallel(+, downsample_module(8 => 32, 28 => 7, gelu; layer_kwargs...),
-                              downsample_module(16 => 32, 14 => 7, gelu; layer_kwargs...),
-                              conv1x1_norm(32 => 32, gelu; layer_kwargs...)), Flux.flatten,
-                     Dense(7 * 7 * 32, 10; bias=true))
+    model = DEQChain(conv1x1_norm(1 => 8, gelu; norm_layer=BatchNormV2,
+                                  norm_kwargs=Dict{Symbol,Any}(:track_stats => true, :affine => true)), deq,
+                     Parallel(+,
+                              downsample_module(8 => 16, 28 => 14, gelu; norm_layer=BatchNormV2,
+                                                norm_kwargs=Dict{Symbol,Any}(:track_stats => true, :affine => true)),
+                              conv1x1_norm(16 => 16, gelu; norm_layer=BatchNormV2,
+                                           norm_kwargs=Dict{Symbol,Any}(:track_stats => true, :affine => true))),
+                     GlobalMeanPool(), FlattenLayer(), Dense(16, 10; bias=true))
 
     return (MPI_COMM_SIZE > 1 ? DataParallelFluxModel : gpu)(model)
 end
@@ -107,8 +103,7 @@ function train(config::Dict)
 
     ## Model Setup
     model = get_model(get_config(lg_wandb, "maxiters"), Float32(get_config(lg_wandb, "abstol")),
-                      Float32(get_config(lg_wandb, "reltol")), batch_size, get_config(lg_wandb, "model_type"),
-                      get_config(lg_wandb, "solver_type"))
+                      Float32(get_config(lg_wandb, "reltol")), get_config(lg_wandb, "model_type"))
 
     loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f1)
 
@@ -218,9 +213,9 @@ nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [
 # Was trained on a 6 GPU configuration -- so an effective batch size of 64 * 6 = 384
 for seed in [1, 11, 111]
     for model_type in ["skip", "skip_no_extra_params", "vanilla"]
-        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-1, "reltol" => 1.0f-1, "maxiters" => 20,
-                      "epochs" => 10, "batch_size" => 64, "eval_batch_size" => 64, "model_type" => model_type,
-                      "solver_type" => "dynamicss")
+        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-1, "reltol" => 1.0f-1,
+                      "maxiters" => 20, "epochs" => 10, "batch_size" => 64, "eval_batch_size" => 64,
+                      "model_type" => model_type, "solver_type" => "dynamicss")
 
         model, nfe_counts = train(config)
 

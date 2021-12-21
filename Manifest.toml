@@ -128,7 +128,7 @@ version = "3.3.0"
 
 [[deps.CUDA]]
 deps = ["AbstractFFTs", "Adapt", "BFloat16s", "CEnum", "CompilerSupportLibraries_jll", "ExprTools", "GPUArrays", "GPUCompiler", "LLVM", "LazyArtifacts", "Libdl", "LinearAlgebra", "Logging", "Printf", "Random", "Random123", "RandomNumbers", "Reexport", "Requires", "SparseArrays", "SpecialFunctions", "TimerOutputs"]
-git-tree-sha1 = "d2f831f3181e9308b9397848e1d8ae8d2a9488d1"
+git-tree-sha1 = "1f8ebf85abb7d1eff965730e592794a27c1350d8"
 repo-rev = "master"
 repo-url = "https://github.com/JuliaGPU/CUDA.jl.git"
 uuid = "052768ef-5323-5732-b1bb-66c8b64840ba"
@@ -289,9 +289,9 @@ version = "6.77.2"
 
 [[deps.DiffEqCallbacks]]
 deps = ["DataStructures", "DiffEqBase", "ForwardDiff", "LinearAlgebra", "NLsolve", "OrdinaryDiffEq", "Parameters", "RecipesBase", "RecursiveArrayTools", "SciMLBase", "StaticArrays"]
-git-tree-sha1 = "a615f494f0c10d0a21f895aa0b65b2056c37d17b"
+git-tree-sha1 = "f42fade8d703f9b57d193d711b15ae7224a0db27"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
-version = "2.18.0"
+version = "2.19.0"
 
 [[deps.DiffEqJump]]
 deps = ["ArrayInterface", "Compat", "DataStructures", "DiffEqBase", "FunctionWrappers", "Graphs", "LinearAlgebra", "PoissonRandom", "Random", "RandomNumbers", "RecursiveArrayTools", "Reexport", "StaticArrays", "TreeViews", "UnPack"]
@@ -343,9 +343,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
 deps = ["ChainRulesCore", "DensityInterface", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "Test"]
-git-tree-sha1 = "c1724611e6ae29c6094c8d9850e3136297ba7fff"
+git-tree-sha1 = "6a8dc9f82e5ce28279b6e3e2cea9421154f5bd0d"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.36"
+version = "0.25.37"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
@@ -459,7 +459,7 @@ version = "0.12.8"
 
 [[deps.FluxExperimental]]
 deps = ["CUDA", "FileIO", "FiniteDifferences", "Flux", "Functors", "JLD2", "LinearAlgebra", "NNlibCUDA", "Requires", "Serialization", "Statistics", "Wandb", "Zygote"]
-git-tree-sha1 = "5ce54a7f84692e1c5a6deeaaf6f0f0e7932b6a84"
+git-tree-sha1 = "cf0c6890b1665a52340fc9b09ac58230e33652fc"
 repo-rev = "main"
 repo-url = "git@github.com:avik-pal/FluxExperimental.jl.git"
 uuid = "c0d22e4d-7f3e-44a4-9c97-37045f84daf2"
@@ -757,9 +757,9 @@ uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[deps.LinearSolve]]
 deps = ["ArrayInterface", "DocStringExtensions", "IterativeSolvers", "KLU", "Krylov", "KrylovKit", "LinearAlgebra", "RecursiveFactorization", "Reexport", "Requires", "SciMLBase", "Setfield", "SparseArrays", "SuiteSparse", "UnPack"]
-git-tree-sha1 = "42a88126413115dbf7ea5a2f60cdd149c8c548ef"
+git-tree-sha1 = "40f2999b259bf03001b911481c14b07ad2c3355f"
 uuid = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
-version = "1.0.1"
+version = "1.1.1"
 
 [[deps.LogExpFunctions]]
 deps = ["ChainRulesCore", "ChangesOfVariables", "DocStringExtensions", "InverseFunctions", "IrrationalConstants", "LinearAlgebra"]
@@ -1033,9 +1033,9 @@ uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
 
 [[deps.PyCall]]
 deps = ["Conda", "Dates", "Libdl", "LinearAlgebra", "MacroTools", "Serialization", "VersionParsing"]
-git-tree-sha1 = "4ba3651d33ef76e24fef6a598b63ffd1c5e1cd17"
+git-tree-sha1 = "71fd4022ecd0c6d20180e23ff1b3e05a143959c2"
 uuid = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
-version = "1.92.5"
+version = "1.93.0"
 
 [[deps.QuadGK]]
 deps = ["DataStructures", "LinearAlgebra"]
