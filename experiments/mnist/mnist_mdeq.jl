@@ -20,19 +20,19 @@ function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, args
     mapping_layers = [identity downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...);
                       upsample_module(16 => 8, 14 => 28, gelu; layer_kwargs...) identity]
 
-    solver = get_default_dynamicss_solver(abstol, reltol, BS3())
+    solver = get_default_dynamicss_solver(reltol, abstol, BS3())
 
     if model_type == "skip"
         aux_layers = (FChain(BasicResidualBlock((28, 28), 8, 8), conv1x1(8 => 8, identity; bias=true)),
                       FChain(downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...),
                              conv1x1(16 => 16, identity; bias=true)))
         deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, aux_layers, solver; maxiters=maxiters,
-                                                   sensealg=get_default_ssadjoint(abstol, reltol, maxiters),
+                                                   sensealg=get_default_ssadjoint(reltol, abstol, maxiters),
                                                    verbose=false)
     else
         _deq = model_type == "vanilla" ? MultiScaleDeepEquilibriumNetwork : MultiScaleSkipDeepEquilibriumNetwork
         deq = _deq(main_layers, mapping_layers, solver; maxiters=maxiters,
-                   sensealg=get_default_ssadjoint(abstol, reltol, maxiters), verbose=false)
+                   sensealg=get_default_ssadjoint(reltol, abstol, maxiters), verbose=false)
     end
 
     model = DEQChain(FChain(conv3x3_norm(1 => 8, gelu; norm_layer=BatchNormV2,

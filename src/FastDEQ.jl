@@ -4,6 +4,7 @@ using Reexport
 
 @reexport using CUDA
 using DiffEqBase
+using DiffEqCallbacks
 @reexport using DiffEqSensitivity
 @reexport using Flux
 @reexport using FluxExperimental
@@ -41,6 +42,7 @@ Base.deepcopy(op::DiffEqSensitivity.ZygotePullbackMultiplyOperator) = op
 
 abstract type IterativeDEQSolver end
 
+include("solve.jl")
 include("utils.jl")
 
 include("solvers/broyden.jl")

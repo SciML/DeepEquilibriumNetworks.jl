@@ -50,8 +50,8 @@ function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, mode
                                       conv_kwargs=Dict{Symbol,Any}(:init => normal_init(), :bias => normal_init()(200))).layers...,
                          GlobalMeanPool(), Flux.flatten, Dense(200, 10))
 
-    solver = solver_type == "dynamicss" ? get_default_dynamicss_solver(abstol, reltol, BS3()) :
-             get_default_ssrootfind_solver(abstol, reltol, LimitedMemoryBroydenSolver; device=gpu,
+    solver = solver_type == "dynamicss" ? get_default_dynamicss_solver(reltol, abstol, BS3()) :
+             get_default_ssrootfind_solver(reltol, abstol, LimitedMemoryBroydenSolver; device=gpu,
                                            original_dims=(1, (32 * 32 * 24) + (16 * 16 * 24)), batch_size=batch_size,
                                            maxiters=maxiters)
 
@@ -60,12 +60,12 @@ function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, mode
                                                    (BasicResidualBlock((32, 32), 24, 24; num_gn_groups=8),
                                                     downsample_module(24 => 24, 32 => 16; layer_kwargs...)), solver;
                                                    post_fuse_layers=post_fuse_layers, maxiters=maxiters,
-                                                   sensealg=get_default_ssadjoint(abstol, reltol, maxiters),
+                                                   sensealg=get_default_ssadjoint(reltol, abstol, maxiters),
                                                    verbose=false)
     else
         _deq = model_type == "vanilla" ? MultiScaleDeepEquilibriumNetwork : MultiScaleSkipDeepEquilibriumNetwork
         deq = _deq(main_layers, mapping_layers, solver; post_fuse_layers=post_fuse_layers, maxiters=maxiters,
-                   sensealg=get_default_ssadjoint(abstol, reltol, maxiters), verbose=false)
+                   sensealg=get_default_ssadjoint(reltol, abstol, maxiters), verbose=false)
     end
     model = DEQChain(initial_layers, deq, final_layers)
 
