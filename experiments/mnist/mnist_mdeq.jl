@@ -61,6 +61,11 @@ end
 ## Utilities
 register_nfe_counts(deq, buffer) = () -> push!(buffer, get_and_clear_nfe!(deq))
 
+function invoke_gc()
+    GC.gc(true)
+    CUDA.reclaim()
+end
+
 function loss_and_accuracy(model, dataloader)
     matches, total_loss, total_datasize, total_nfe = 0, 0, 0, 0
     for (x, y) in dataloader
@@ -148,6 +153,7 @@ function train(config::Dict)
 
     for epoch in 1:get_config(lg_wandb, "epochs")
         try
+            invoke_gc()
             train_time = 0
             for (x, y) in trainiter
                 x = gpu(x)
