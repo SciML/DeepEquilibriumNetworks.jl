@@ -21,7 +21,7 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem, alg::DE
 
     du = prob.f(sol.u[end], prob.p, sol.t[end])
 
-    if sol.retcode == :Terminated && (abs.(du) .<= alg.reltol .* abs.(sol.u[end]))
+    if sol.retcode == :Terminated && all(abs.(du) .<= alg.reltol .* abs.(sol.u[end]))
         return DiffEqBase.build_solution(prob, alg, sol.u[end], du; retcode=:Success)
     else
         return DiffEqBase.build_solution(prob, alg, sol.u[end], du; retcode=:Failure)
