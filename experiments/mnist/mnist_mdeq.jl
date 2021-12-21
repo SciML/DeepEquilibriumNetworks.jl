@@ -35,14 +35,25 @@ function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, args
                    sensealg=get_default_ssadjoint(abstol, reltol, maxiters), verbose=false)
     end
 
-    model = DEQChain(conv1x1_norm(1 => 8, gelu; norm_layer=BatchNormV2,
-                                  norm_kwargs=Dict{Symbol,Any}(:track_stats => true, :affine => true)), deq,
-                     Parallel(+,
-                              downsample_module(8 => 16, 28 => 14, gelu; norm_layer=BatchNormV2,
-                                                norm_kwargs=Dict{Symbol,Any}(:track_stats => true, :affine => true)),
-                              conv1x1_norm(16 => 16, gelu; norm_layer=BatchNormV2,
-                                           norm_kwargs=Dict{Symbol,Any}(:track_stats => true, :affine => true))),
-                     GlobalMeanPool(), FlattenLayer(), Dense(16, 10; bias=true))
+    model = DEQChain(FChain(conv3x3_norm(1 => 8, gelu; norm_layer=BatchNormV2,
+                                         norm_kwargs=Dict{Symbol,Any}(:track_stats => true, :affine => true),
+                                         conv_kwargs=Dict{Symbol,Any}(:init => normal_init(),
+                                                                      :bias => normal_init()(8))),
+                            conv3x3_norm(8 => 8, gelu; norm_layer=BatchNormV2,
+                                         norm_kwargs=Dict{Symbol,Any}(:track_stats => true, :affine => true),
+                                         conv_kwargs=Dict{Symbol,Any}(:init => normal_init(),
+                                                                      :bias => normal_init()(8)))), deq,
+                     FChain(Parallel(+,
+                                     FChain(BasicBottleneckBlock(8 => 8),
+                                            conv3x3(8 * 4 => 16 * 4; stride=2, bias=normal_init()(16 * 4),
+                                                    init=normal_init()),
+                                            BatchNormV2(16 * 4, gelu; track_stats=true, affine=true)),
+                                     BasicBottleneckBlock(16 => 16)),
+                            conv1x1_norm(16 * 4 => 200, gelu; norm_layer=BatchNormV2,
+                                         norm_kwargs=Dict{Symbol,Any}(:track_stats => true, :affine => true),
+                                         conv_kwargs=Dict{Symbol,Any}(:init => normal_init(),
+                                                                      :bias => normal_init()(200))), GlobalMeanPool(),
+                            FlattenLayer(), Dense(200, 10)))
 
     return (MPI_COMM_SIZE > 1 ? DataParallelFluxModel : gpu)(model)
 end
@@ -105,7 +116,7 @@ function train(config::Dict)
     model = get_model(get_config(lg_wandb, "maxiters"), Float32(get_config(lg_wandb, "abstol")),
                       Float32(get_config(lg_wandb, "reltol")), get_config(lg_wandb, "model_type"))
 
-    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f2)
+    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 50.0f0)
 
     ## Warmup
     __x = gpu(rand(28, 28, 1, 1))
