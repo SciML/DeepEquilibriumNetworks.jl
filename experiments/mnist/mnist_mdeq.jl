@@ -4,6 +4,7 @@ using ParameterSchedulers: Scheduler, Cos
 
 CUDA.versioninfo()
 
+MPI.Init()
 FluxMPI.Init()
 enable_fast_mode!()
 CUDA.allowscalar(false)
@@ -12,7 +13,8 @@ const MPI_COMM_WORLD = MPI.COMM_WORLD
 const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
 
 ## Models
-function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, args...; kwargs...) where {T}
+function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, args...; mode::Symbol=:rel_norm,
+                   solver=Tsit5(), kwargs...) where {T}
     layer_kwargs = Dict(:norm_layer => GroupNormV2, :group_count => 4, :conv_kwargs => Dict{Symbol,Any}(:bias => false),
                         :norm_kwargs => Dict{Symbol,Any}(:affine => true, :track_stats => false))
 
@@ -20,11 +22,10 @@ function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, args
     mapping_layers = [identity downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...);
                       upsample_module(16 => 8, 14 => 28, gelu; layer_kwargs...) identity]
 
-    solver = get_default_dynamicss_solver(reltol, abstol, BS3())
+    solver = get_default_dynamicss_solver(reltol, abstol, solver; mode=mode)
 
     if model_type == "skip"
-        aux_layers = (BasicResidualBlock((28, 28), 8, 8),
-                      downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...))
+        aux_layers = (BasicResidualBlock((28, 28), 8, 8), downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...))
         deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, aux_layers, solver; maxiters=maxiters,
                                                    sensealg=get_default_ssadjoint(reltol, abstol, maxiters),
                                                    verbose=false)
@@ -63,6 +64,7 @@ register_nfe_counts(deq, buffer) = () -> push!(buffer, get_and_clear_nfe!(deq))
 function invoke_gc()
     GC.gc(true)
     CUDA.reclaim()
+    return nothing
 end
 
 function loss_and_accuracy(model, dataloader)
@@ -226,15 +228,14 @@ end
 ## Run Experiment
 nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [])
 
-# Was trained on a 6 GPU configuration -- so an effective batch size of 64 * 6 = 384
 for seed in [0, 10, 100]
     for model_type in ["skip", "vanilla"]
         if MPI.Comm_rank(MPI_COMM_WORLD) == 0
             @info model_type
         end
 
-        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-1, "reltol" => 1.0f-1,
-                      "maxiters" => 20, "epochs" => 25, "batch_size" => 64, "eval_batch_size" => 64,
+        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 2.0f-1, "reltol" => 2.0f-1,
+                      "maxiters" => 50, "epochs" => 25, "batch_size" => 64, "eval_batch_size" => 64,
                       "model_type" => model_type, "solver_type" => "dynamicss")
 
         model, nfe_counts = train(config)
