@@ -13,8 +13,8 @@ const MPI_COMM_WORLD = MPI.COMM_WORLD
 const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
 
 ## Models
-function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, model_type::String, batch_size::Int,
-                   solver_type::String="dynamicss") where {T}
+function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, model_type::String, args...;
+                   kwargs...) where {T}
     layer_kwargs = Dict(:norm_layer => GroupNormV2, :group_count => 8,
                         :conv_kwargs => Dict{Symbol,Any}(:bias => false, :init => normal_init()),
                         :norm_kwargs => Dict{Symbol,Any}(:affine => true, :track_stats => false))
@@ -43,17 +43,14 @@ function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, mode
                                   Chain(BasicBottleneckBlock(24 => 8),
                                         conv3x3(8 * 4 => 16 * 4; stride=2, bias=normal_init()(16 * 4),
                                                 init=normal_init()),
-                                        BatchNormV2(16 * 4, relu; track_stats=true, affine=true)),
+                                        BatchNormV2(16 * 4, gelu; track_stats=true, affine=true)),
                                   BasicBottleneckBlock(24 => 16)),
                          conv1x1_norm(16 * 4 => 200, gelu; norm_layer=BatchNormV2,
                                       norm_kwargs=Dict{Symbol,Any}(:track_stats => true, :affine => true),
                                       conv_kwargs=Dict{Symbol,Any}(:init => normal_init(), :bias => normal_init()(200))).layers...,
                          GlobalMeanPool(), Flux.flatten, Dense(200, 10))
 
-    solver = solver_type == "dynamicss" ? get_default_dynamicss_solver(reltol, abstol, BS3()) :
-             get_default_ssrootfind_solver(reltol, abstol, LimitedMemoryBroydenSolver; device=gpu,
-                                           original_dims=(1, (32 * 32 * 24) + (16 * 16 * 24)), batch_size=batch_size,
-                                           maxiters=maxiters)
+    solver = get_default_dynamicss_solver(reltol, abstol, Tsit5(); mode=:rel_deq_best)
 
     if model_type == "skip"
         deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers,
@@ -78,6 +75,7 @@ register_nfe_counts(deq, buffer) = () -> push!(buffer, get_and_clear_nfe!(deq))
 function invoke_gc()
     GC.gc(true)
     CUDA.reclaim()
+    return nothing
 end
 
 function loss_and_accuracy(model, dataloader)
@@ -140,7 +138,7 @@ function train(config::Dict)
     testiter = DataParallelDataLoader((xs_test, ys_test); batchsize=eval_batch_size, shuffle=false)
 
     ## Loss Function
-    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f-1)
+    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 50.0f0)
 
     nfe_counts = []
     cb = register_nfe_counts(model, nfe_counts)
@@ -257,13 +255,11 @@ end
 ## Run Experiment
 nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [])
 
-# We are running the experiments across 6 processes -- Effective Batch Size = 6 * 32 = 192
 for seed in [1, 11, 111]
-    # We will do the skip_no_extra_params experiments later.
-    for model_type in ["vanilla", "skip"] #, "skip_no_extra_params"]
-        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-1, "reltol" => 1.0f-1,
-                      "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 32,
-                      "eval_batch_size" => 32, "model_type" => model_type, "solver_type" => "dynamicss",
+    for model_type in ["skip", "vanilla"]
+        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 2.0f-1, "reltol" => 2.0f-1,
+                      "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 64,
+                      "eval_batch_size" => 64, "model_type" => model_type, "solver_type" => "dynamicss",
                       "weight_decay" => 0.0000025)
 
         model, nfe_counts = train(config)
