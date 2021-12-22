@@ -23,7 +23,7 @@ function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, args
     solver = get_default_dynamicss_solver(reltol, abstol, BS3())
 
     if model_type == "skip"
-        aux_layers = (BasicResidualBlock((28, 28), 8, 8), conv1x1(8 => 8, identity; bias=true),
+        aux_layers = (BasicResidualBlock((28, 28), 8, 8),
                       downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...))
         deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, aux_layers, solver; maxiters=maxiters,
                                                    sensealg=get_default_ssadjoint(reltol, abstol, maxiters),

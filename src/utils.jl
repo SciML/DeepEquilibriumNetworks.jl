@@ -51,9 +51,9 @@ function get_default_ssadjoint(reltol, abstol, maxiters)
                               linsolve=KrylovJL_GMRES(; rtol=reltol, atol=abstol, itmax=maxiters))
 end
 
-function get_default_dynamicss_solver(reltol, abstol, ode_solver=Tsit5())
+function get_default_dynamicss_solver(reltol, abstol, ode_solver=Tsit5(); mode::Symbol = :abs_norm)
     # return DynamicSS(ode_solver; reltol=reltol, abstol=abstol)
-    return DEQSolver(ode_solver; reltol=reltol, abstol=abstol)
+    return DEQSolver(ode_solver; mode=mode, reltol=reltol, abstol=abstol)
 end
 
 function get_default_ssrootfind_solver(reltol, abstol, solver=LimitedMemoryBroydenSolver; kwargs...)
