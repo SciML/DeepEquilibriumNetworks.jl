@@ -23,9 +23,8 @@ function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, args
     solver = get_default_dynamicss_solver(reltol, abstol, BS3())
 
     if model_type == "skip"
-        aux_layers = (FChain(BasicResidualBlock((28, 28), 8, 8), conv1x1(8 => 8, identity; bias=true)),
-                      FChain(downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...),
-                             conv1x1(16 => 16, identity; bias=true)))
+        aux_layers = (BasicResidualBlock((28, 28), 8, 8), conv1x1(8 => 8, identity; bias=true),
+                      downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...))
         deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, aux_layers, solver; maxiters=maxiters,
                                                    sensealg=get_default_ssadjoint(reltol, abstol, maxiters),
                                                    verbose=false)
@@ -228,14 +227,14 @@ end
 nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [])
 
 # Was trained on a 6 GPU configuration -- so an effective batch size of 64 * 6 = 384
-for seed in [1, 11, 111]
-    for model_type in ["skip", "skip_no_extra_params", "vanilla"]
+for seed in [0, 10, 100]
+    for model_type in ["skip", "vanilla"]
         if MPI.Comm_rank(MPI_COMM_WORLD) == 0
             @info model_type
         end
 
         config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-1, "reltol" => 1.0f-1,
-                      "maxiters" => 20, "epochs" => 10, "batch_size" => 64, "eval_batch_size" => 64,
+                      "maxiters" => 20, "epochs" => 25, "batch_size" => 64, "eval_batch_size" => 64,
                       "model_type" => model_type, "solver_type" => "dynamicss")
 
         model, nfe_counts = train(config)

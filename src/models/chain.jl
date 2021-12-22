@@ -41,8 +41,8 @@ function DEQChain(layers...)
         end
     end
     !encounter_deq && error("No DEQ Layer in the Chain!!! Maybe you wanted to use Chain")
-    pre_deq = length(pre_deq) == 0 ? identity : FChain(pre_deq...)
-    post_deq = length(post_deq) == 0 ? identity : FChain(post_deq...)
+    pre_deq = length(pre_deq) == 0 ? NoOp() : (length(pre_deq) == 1 ? pre_deq[1] : FChain(pre_deq...))
+    post_deq = length(post_deq) == 0 ? NoOp() : (length(post_deq) == 1 ? post_deq[1] : FChain(post_deq...))
     return DEQChain{global_val,typeof(pre_deq),typeof(deq),typeof(post_deq)}(pre_deq, deq, post_deq)
 end
 
