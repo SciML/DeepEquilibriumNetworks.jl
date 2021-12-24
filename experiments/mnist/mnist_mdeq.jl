@@ -188,6 +188,7 @@ function train(config::Dict, name_extension::String="")
             end
 
             ### Training Loss/Accuracy
+            invoke_gc()
             train_loss, train_acc, train_nfe = loss_and_accuracy(model, trainiter_test)
 
             if MPI_COMM_SIZE > 1
@@ -201,6 +202,7 @@ function train(config::Dict, name_extension::String="")
                      "Training/Epoch/NFE" => train_nfe, "Training/Epoch/Accuracy" => train_acc))
 
             ### Testing Loss/Accuracy
+            invoke_gc()
             test_time = time()
             test_loss, test_acc, test_nfe = loss_and_accuracy(model, testiter)
             test_time = time() - test_time

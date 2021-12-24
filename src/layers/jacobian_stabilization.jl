@@ -8,16 +8,20 @@ model = DeepEquilibriumNetwork(
         Dense(2, 2; bias = false)
     ),
     get_default_dynamicss_solver(0.1f0, 0.1f0),
-    sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10)
+    sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10),
+    jacobian_regularization = true,
+    maxiters = 10
 ) |> gpu
 
 x = rand(Float32, 2, 1) |> gpu
 
-z = model(x)
-
-FastDEQ.compute_deq_jacobian_loss(model.re, model.p, z, x)
-
-Flux.gradient(p -> FastDEQ.compute_deq_jacobian_loss(model.re, p, z, x), model.p)
+gradient(
+    () -> begin
+        z, jac_loss = model(x)
+        sum(abs, z) + jac_loss
+    end,
+    Flux.params(model)
+)
 =#
 gaussian_like(p::Array) = randn(eltype(p), size(p))
 gaussian_like(p::CuArray) = CUDA.randn(eltype(p), size(p))
@@ -36,5 +40,5 @@ function compute_deq_jacobian_loss(re, p::AbstractVector{T}, z::A, x::A) where {
     vjp_z, vjp_x = back(v)
     # vjp_z = Zygote.reshape_scalar(z, Zygote.forward_jacobian(z -> re(p)(z, x), z)[2] * Zygote.vec_scalar(v))
     # NOTE: This weird sum(zero, ...) ensures that we get zeros instead of nothings
-    return (norm(vjp_z, 2)^2) / d + sum(zero, vjp_x)
+    return sum(abs2, vjp_z) / d + sum(zero, vjp_x)
 end
