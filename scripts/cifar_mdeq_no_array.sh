@@ -4,8 +4,7 @@
 #SBATCH --gres=gpu:volta:2
 #SBATCH -n 6 -N 1
 #SBATCH --time=144:00:00
-#SBATCH -a 1-3
-#SBATCH -o slurm_logs/cifar_mdeq-%j-%a.log
+#SBATCH -o slurm_logs/cifar_mdeq-%j.log
 
 cd /home/gridsan/apal/research/FastDEQ.jl
 
