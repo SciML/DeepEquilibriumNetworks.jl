@@ -280,7 +280,7 @@ NUM_TASKS = parse(Int, ARGS[2])
 
 for i in TASK_ID:NUM_TASKS:length(experiment_configurations)
     (seed, model_type, solver_type) = experiment_configurations[i]
-    batch_size = 64 # solver_type == "dynamicss" ? 64 : 32
+    batch_size = solver_type == "dynamicss" ? 64 : 32
 
     if MPI.Comm_rank(MPI_COMM_WORLD) == 0
         @info "Seed = $seed | Model Type = $model_type | Solver Type = $solver_type"

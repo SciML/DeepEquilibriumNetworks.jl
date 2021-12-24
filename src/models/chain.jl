@@ -2,6 +2,8 @@ modeltype_to_val(::DeepEquilibriumNetwork) = Val(1)
 modeltype_to_val(::SkipDeepEquilibriumNetwork) = Val(2)
 modeltype_to_val(::MultiScaleDeepEquilibriumNetwork) = Val(3)
 modeltype_to_val(::MultiScaleSkipDeepEquilibriumNetwork) = Val(4)
+modeltype_to_val(::DeepEquilibriumNetwork{true}) = Val(5)
+modeltype_to_val(::SkipDeepEquilibriumNetwork{M,S,true}) where {M,S} = Val(6)
 modeltype_to_val(m) = Val(-1)
 
 # Default to nothing happening
@@ -52,11 +54,23 @@ function (deq::Union{DEQChain{Val(1)},DEQChain{Val(3)}})(x)
     return deq.post_deq(deq.deq(deq.pre_deq(x)))
 end
 
+function (deq::DEQChain{Val(5)})(x)
+    x_, jac_loss = deq.deq(deq.pre_deq(x))
+    return deq.post_deq(x_), jac_loss
+end
+
 function (deq::Union{DEQChain{Val(2)},DEQChain{Val(4)}})(x)
     x1 = deq.pre_deq(x)
     z, ẑ = deq.deq(x1)
     x2 = deq.post_deq(z)
-    return (x2, (z, ẑ))
+    return x2, (z, ẑ)
+end
+
+function (deq::DEQChain{Val(6)})(x)
+    x1 = deq.pre_deq(x)
+    z, ẑ, jac_loss = deq.deq(x1)
+    x2 = deq.post_deq(z)
+    return x2, (z, ẑ), jac_loss
 end
 
 function get_and_clear_nfe!(model::DEQChain)
@@ -74,5 +88,5 @@ function Base.show(io::IO, model::DEQChain)
     show(io, model.deq)
     print(io, "\n\t")
     show(io, model.post_deq)
-    print(io, "\n) $l1 Trainable Parameters")
+    return print(io, "\n) $l1 Trainable Parameters")
 end

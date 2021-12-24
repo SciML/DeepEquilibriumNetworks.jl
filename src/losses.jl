@@ -1,6 +1,7 @@
 Base.@kwdef struct SupervisedLossContainer{L,T}
     loss_function::L
     λ::T = 1.0f0
+    λⱼ::T = 1.0f0
 end
 
 function (lc::SupervisedLossContainer)(model::DEQChain{Val(2)}, x, y; kwargs...)
@@ -26,6 +27,11 @@ function (lc::SupervisedLossContainer)(model::WidthStackedDEQ{true}, x, y; kwarg
         l2 += mean(abs, y .- ŷ)
     end
     return l1 + lc.λ * l2
+end
+
+function (lc::SupervisedLossContainer)(model::Union{DeepEquilibriumNetwork{true},DEQChain{Val(5)}}, x, y; kwargs...)
+    ŷ, jac_loss = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc.λⱼ * jac_loss
 end
 
 function (lc::SupervisedLossContainer)(model::SkipDeepEquilibriumNetwork, x, y; kwargs...)

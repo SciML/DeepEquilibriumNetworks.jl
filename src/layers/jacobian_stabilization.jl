@@ -1,28 +1,3 @@
-#= Testing Code
-using FastDEQ, Flux
-
-model = DeepEquilibriumNetwork(
-    Parallel(
-        +,
-        Dense(2, 2; bias = false),
-        Dense(2, 2; bias = false)
-    ),
-    get_default_dynamicss_solver(0.1f0, 0.1f0),
-    sensealg = get_default_ssadjoint(0.1f0, 0.1f0, 10),
-    jacobian_regularization = true,
-    maxiters = 10
-) |> gpu
-
-x = rand(Float32, 2, 1) |> gpu
-
-gradient(
-    () -> begin
-        z, jac_loss = model(x)
-        sum(abs, z) + jac_loss
-    end,
-    Flux.params(model)
-)
-=#
 gaussian_like(p::Array) = randn(eltype(p), size(p))
 gaussian_like(p::CuArray) = CUDA.randn(eltype(p), size(p))
 
