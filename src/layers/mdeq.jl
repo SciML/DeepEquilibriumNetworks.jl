@@ -44,7 +44,7 @@ function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Ma
     mapping_layers = if post_fuse_layers === nothing
         @assert size(mapping_layers, 1) == size(mapping_layers, 2) == length(main_layers)
         FChain(MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...),
-               NoOp())
+               NoOpLayer())
     else
         @assert size(mapping_layers, 1) == size(mapping_layers, 2) == length(main_layers) == length(post_fuse_layers)
         FChain(MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...),

@@ -1,6 +1,6 @@
 # Load Packages
 using Dates, FastDEQ, MLDatasets, MPI, Serialization, Statistics, Plots, Random, Wandb
-using ParameterSchedulers: Scheduler, Cos
+using ParameterSchedulers: Stateful, Scheduler, Cos
 
 CUDA.versioninfo()
 
@@ -13,26 +13,32 @@ const MPI_COMM_WORLD = MPI.COMM_WORLD
 const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
 
 ## Models
-function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, args...; mode::Symbol=:rel_norm,
-                   solver=Tsit5(), kwargs...) where {T}
-    layer_kwargs = Dict(:norm_layer => GroupNormV2, :group_count => 4, :conv_kwargs => Dict{Symbol,Any}(:bias => false),
+function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, solver_type::String, batch_size::Int,
+                   args...; mode::Symbol=:rel_norm, solver=Tsit5(), kwargs...) where {T}
+    layer_kwargs = Dict(:norm_layer => GroupNormV2, :group_count => 8, :conv_kwargs => Dict{Symbol,Any}(:bias => false),
                         :norm_kwargs => Dict{Symbol,Any}(:affine => true, :track_stats => false))
 
     main_layers = (BasicResidualBlock((28, 28), 8, 8), BasicResidualBlock((14, 14), 16, 16))
-    mapping_layers = [identity downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...);
-                      upsample_module(16 => 8, 14 => 28, gelu; layer_kwargs...) identity]
+    mapping_layers = [NoOpLayer() downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...);
+                      upsample_module(16 => 8, 14 => 28, gelu; layer_kwargs...) NoOpLayer()]
 
-    solver = get_default_dynamicss_solver(reltol, abstol, solver; mode=mode)
+    if solver_type == "dynamicss"
+        solver = get_default_dynamicss_solver(reltol, abstol, solver; mode=mode)
+    else
+        solver = get_default_ssrootfind_solver(reltol, abstol, LimitedMemoryBroydenSolver; device=gpu,
+                                               original_dims=(28 * 28 * 8 + 14 * 14 * 16, 1), batch_size=batch_size,
+                                               maxiters=maxiters)
+    end
 
     if model_type == "skip"
         aux_layers = (BasicResidualBlock((28, 28), 8, 8), downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...))
         deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, aux_layers, solver; maxiters=maxiters,
-                                                   sensealg=get_default_ssadjoint(reltol, abstol, maxiters),
+                                                   sensealg=get_default_ssadjoint(reltol, abstol, min(maxiters, 15)),
                                                    verbose=false)
     else
         _deq = model_type == "vanilla" ? MultiScaleDeepEquilibriumNetwork : MultiScaleSkipDeepEquilibriumNetwork
         deq = _deq(main_layers, mapping_layers, solver; maxiters=maxiters,
-                   sensealg=get_default_ssadjoint(reltol, abstol, maxiters), verbose=false)
+                   sensealg=get_default_ssadjoint(reltol, abstol, min(maxiters, 15)), verbose=false)
     end
 
     model = DEQChain(FChain(conv3x3_norm(1 => 8, gelu; norm_layer=BatchNormV2,
@@ -84,12 +90,13 @@ function loss_and_accuracy(model, dataloader)
 end
 
 ## Training Function
-function train(config::Dict)
+function train(config::Dict, name_extension::String="")
     comm = MPI_COMM_WORLD
     rank = MPI.Comm_rank(comm)
 
     ## Setup Logging & Experiment Configuration
-    expt_name = "fastdeqjl-supervised_mnist_classication-mdeq-$(now())"
+    t = MPI.Bcast!([now()], 0, comm)[1]
+    expt_name = "fastdeqjl-supervised_mnist_classification-$(t)-$(name_extension)"
     lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, config=config)
     lg_term = PrettyTableLogger("logs/" * expt_name * ".log",
                                 ["Epoch Number", "Train/NFE", "Train/Accuracy", "Train/Loss", "Train/Time", "Test/NFE",
@@ -120,9 +127,10 @@ function train(config::Dict)
 
     ## Model Setup
     model = get_model(get_config(lg_wandb, "maxiters"), Float32(get_config(lg_wandb, "abstol")),
-                      Float32(get_config(lg_wandb, "reltol")), get_config(lg_wandb, "model_type"))
+                      Float32(get_config(lg_wandb, "reltol")), get_config(lg_wandb, "model_type"),
+                      get_config(lg_wandb, "solver_type"), batch_size)
 
-    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 50.0f0)
+    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0)
 
     ## Warmup
     __x = gpu(rand(28, 28, 1, 1))
@@ -137,9 +145,9 @@ function train(config::Dict)
 
     ## Training Loop
     ps = Flux.params(model)
-    opt = Scheduler(Cos(get_config(lg_wandb, "learning_rate"), 1e-6,
-                        length(trainiter) * get_config(lg_wandb, "epochs")),
-                    ADAM(get_config(lg_wandb, "learning_rate"), (0.9, 0.999)))
+    sched = Stateful(Cos(get_config(lg_wandb, "learning_rate"), 1e-6,
+                         length(trainiter) * get_config(lg_wandb, "epochs")))
+    opt = ADAMW(get_config(lg_wandb, "learning_rate"), (0.9, 0.999), 0.0000025)
     step = 1
 
     train_vec = zeros(3)
@@ -165,6 +173,7 @@ function train(config::Dict)
                 loss = _res.val
                 gs = _res.grad
                 Flux.Optimise.update!(opt, ps, gs)
+                opt[3].eta = ParameterSchedulers.next!(sched)
                 train_time += time() - train_start_time
 
                 ### Store the NFE Count
@@ -226,26 +235,29 @@ function train(config::Dict)
 end
 
 ## Run Experiment
-nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [])
-
-for seed in [0, 10, 100]
-    for model_type in ["skip", "vanilla"]
-        if MPI.Comm_rank(MPI_COMM_WORLD) == 0
-            @info model_type
+experiment_configurations = []
+for seed in [6171, 3859, 2961]  # Generated this by randomly sampling from 1:10000
+    for solver_type in ["dynamicss", "ssrootfind"]
+        for model_type in ["skip", "vanilla"]
+            model_type == "skip" && solver_type == "ssrootfind" && continue
+            push!(experiment_configurations, (seed, model_type, solver_type))
         end
-
-        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 2.0f-1, "reltol" => 2.0f-1,
-                      "maxiters" => 50, "epochs" => 25, "batch_size" => 64, "eval_batch_size" => 64,
-                      "model_type" => model_type, "solver_type" => "dynamicss")
-
-        model, nfe_counts = train(config)
-
-        push!(nfe_count_dict[model_type], nfe_counts)
     end
 end
 
-if MPI.Comm_rank(MPI_COMM_WORLD) == 0
-    filename = "fastdeqjl-supervised_mnist_classication-mdeq-$(now()).jls"
-    serialize(joinpath("artifacts", filename), nfe_count_dict)
-    @info "Serialized NFE Counts to $filename"
+TASK_ID = parse(Int, ARGS[1])
+NUM_TASKS = parse(Int, ARGS[2])
+
+for i in TASK_ID+1:NUM_TASKS:length(experiment_configurations)
+    (seed, model_type, solver_type) = experiment_configurations[i]
+
+    if MPI.Comm_rank(MPI_COMM_WORLD) == 0
+        @info "Seed = $seed | Model Type = $model_type | Solver Type = $solver_type"
+    end
+
+    config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-2, "reltol" => 1.0f-2,
+                "maxiters" => 50, "epochs" => 25, "batch_size" => 64, "eval_batch_size" => 64,
+                "model_type" => model_type, "solver_type" => solver_type)
+
+    model, nfe_counts = train(config, "seed-$(seed)_model-$(model_type)_solver-$(solver_type)")
 end

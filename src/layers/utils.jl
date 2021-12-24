@@ -41,9 +41,3 @@ Zygote.@adjoint function flatten(x::AbstractArray{T,N}) where {T,N}
     flatten_sensitivity(Δ) = (reshape(Δ, s),)
     return res, flatten_sensitivity
 end
-
-
-struct NoOp end
-
-(noop::NoOp)(x...) = x
-(noop::NoOp)(x) = x

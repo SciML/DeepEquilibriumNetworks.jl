@@ -68,7 +68,6 @@ export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork, MultiScaleDeepEquilib
        MultiScaleSkipDeepEquilibriumNetwork, WidthStackedDEQ
 
 # Compositional Layers
-export NoOp
 export DEQChain
 export BasicResidualBlock, BranchNet, MultiParallelNet, BasicBottleneckBlock
 

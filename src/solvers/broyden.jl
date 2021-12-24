@@ -1,4 +1,5 @@
 # Broyden
+## NOTE: For the time being it is better to use `LimitedMemoryBroydenSolver`
 struct BroydenCache{J,F,X} <: IterativeDEQSolver
     Jinv::J
     fx::F

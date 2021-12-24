@@ -48,7 +48,7 @@ end
 
 function get_default_ssadjoint(reltol, abstol, maxiters)
     return SteadyStateAdjoint(; autodiff=true, autojacvec=ZygoteVJP(),
-                              linsolve=KrylovJL_GMRES(; rtol=reltol, atol=abstol, itmax=maxiters))
+                              linsolve=KrylovJL_BICGSTAB(; rtol=reltol, atol=abstol, itmax=maxiters))
 end
 
 function get_default_dynamicss_solver(reltol, abstol, ode_solver=Tsit5(); mode::Symbol = :rel_deq_default)

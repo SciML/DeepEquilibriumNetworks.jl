@@ -7,23 +7,24 @@ struct LimitedMemoryBroydenCache{uT,vT,F,X} <: IterativeDEQSolver
     x::X
 end
 
-struct LimitedMemoryBroydenSolver{C<:LimitedMemoryBroydenCache,T<:Real}
+struct LimitedMemoryBroydenSolver{C<:LimitedMemoryBroydenCache,RT<:Union{AbstractFloat,Nothing},
+                                  AT<:Union{AbstractFloat,Nothing}}
     cache::C
     original_dims::Tuple{Int,Int}
     maxiters::Int
     batch_size::Int
-    ϵ::T
+    criteria::Symbol
+    reltol::RT
+    abstol::AT
 end
 
 function LimitedMemoryBroydenSolver(; T=Float32, device, original_dims::Tuple{Int,Int}, batch_size, maxiters::Int=50,
-                                    ϵ::Real=1e-6, abstol::Union{Real,Nothing}=nothing,
+                                    ϵ::Real=1e-6, criteria::Symbol=:reltol, abstol::Union{Real,Nothing}=nothing,
                                     reltol::Union{Real,Nothing}=nothing)
-    ϵ = abstol !== nothing ? abstol : ϵ
+    @assert criteria ∈ (:abstol, :reltol)
 
-    if reltol !== nothing
-        warn_txt = "reltol is set to $reltol, but `LimitedMemoryBroydenSolver` ignores this value"
-        @warn maxlog = 1 warn_txt
-    end
+    abstol = abstol !== nothing ? T(abstol) : T(ϵ)
+    reltol = reltol !== nothing ? T(reltol) : T(ϵ)
 
     LBFGS_threshold = min(maxiters, 27)
 
@@ -39,7 +40,7 @@ function LimitedMemoryBroydenSolver(; T=Float32, device, original_dims::Tuple{In
 
     cache = LimitedMemoryBroydenCache(Us, VTs, vec(fx), x)
 
-    return LimitedMemoryBroydenSolver(cache, original_dims, maxiters, batch_size, T(ϵ))
+    return LimitedMemoryBroydenSolver(cache, original_dims, maxiters, batch_size, criteria, reltol, abstol)
 end
 
 function line_search(update, x₀, f₀, f, nstep::Int=0, on::Bool=false)
@@ -50,13 +51,16 @@ function line_search(update, x₀, f₀, f, nstep::Int=0, on::Bool=false)
 end
 
 function (lbroyden::LimitedMemoryBroydenSolver{C,T})(f!, x_::AbstractVector{T}) where {C,T}
-    @unpack cache, original_dims, batch_size, maxiters, ϵ = lbroyden
+    @unpack cache, original_dims, batch_size, maxiters, criteria, reltol, abstol = lbroyden
+    ϵ = getfield(lbroyden, criteria)
+
     nfeatures = prod(original_dims)
     if nfeatures * batch_size != length(x_)
         # Maybe the last batch is smaller than the others
         cache = LimitedMemoryBroydenSolver(; T=T, device=x_ isa CuArray ? gpu : cpu, original_dims=original_dims,
                                            batch_size=length(x_) ÷ nfeatures, maxiters=maxiters, ϵ=ϵ).cache
     end
+
     @unpack Us, VTs, fx_, x = cache
     x .= reshape(x_, size(x))
     LBFGS_threshold = size(Us, 1)
@@ -68,8 +72,7 @@ function (lbroyden::LimitedMemoryBroydenSolver{C,T})(f!, x_::AbstractVector{T}) 
     tnstep = 1
 
     # Initialize
-    total_hsize, n_elem, batch_size = size(x)
-    actual_size = size(x)
+    total_hsize, n_elem, batch_size = actual_size = size(x)
 
     # Modify the functions
     f(x) = (f!(fx_, vec(x)); return reshape(fx_, actual_size))
@@ -77,8 +80,9 @@ function (lbroyden::LimitedMemoryBroydenSolver{C,T})(f!, x_::AbstractVector{T}) 
 
     update = fx
     new_objective = norm(fx)
+    objective_values = [new_objective]
 
-    protect_threshold = T(1e6) * n_elem
+    protect_threshold = (criteria == :abstol ? T(1e6) : T(1e3)) * n_elem
     initial_objective = new_objective
     lowest_objective = new_objective
     lowest_xest = x
@@ -88,13 +92,19 @@ function (lbroyden::LimitedMemoryBroydenSolver{C,T})(f!, x_::AbstractVector{T}) 
         nstep += 1
         tnstep += (ite + 1)
 
-        new_objective = norm(fx)
-        # TODO: Terminate Early if Stagnant
+        new_objective = criteria == :abstol ? norm(fx) : (norm(fx) / (norm(fx .+ x) + eps(T)))
+        push!(objective_values, new_objective)
+
         if new_objective < lowest_objective
             lowest_objective = new_objective
             lowest_xest = x
         end
         new_objective < ϵ && break
+
+        new_objective < 3ϵ &&
+            nstep >= 30 &&
+            maximum(objective_values[(end - nstep + 1):end]) < 1.3 * minimum(objective_values[(end - nstep + 1):end]) &&
+            break
 
         # Prevent Divergence
         (new_objective > initial_objective * protect_threshold) && break

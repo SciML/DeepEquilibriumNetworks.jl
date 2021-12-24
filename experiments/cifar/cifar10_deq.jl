@@ -13,8 +13,8 @@ const MPI_COMM_WORLD = MPI.COMM_WORLD
 const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
 
 ## Models
-function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, model_type::String, args...;
-                   kwargs...) where {T}
+function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, model_type::String, batch_size::Int,
+                   solver_type::String, args...; kwargs...) where {T}
     layer_kwargs = Dict(:norm_layer => GroupNormV2, :group_count => 8,
                         :conv_kwargs => Dict{Symbol,Any}(:bias => false, :init => normal_init()),
                         :norm_kwargs => Dict{Symbol,Any}(:affine => true, :track_stats => false))
@@ -31,8 +31,8 @@ function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, mode
     main_layers = (BasicResidualBlock((32, 32), 24, 24; dropout_rate=dropout_rate, num_gn_groups=8),
                    BasicResidualBlock((16, 16), 24, 24; dropout_rate=dropout_rate, num_gn_groups=8))
 
-    mapping_layers = [identity downsample_module(24 => 24, 32 => 16, gelu; layer_kwargs...);
-                      upsample_module(24 => 24, 16 => 32, gelu; layer_kwargs...) identity]
+    mapping_layers = [NoOpLayer() downsample_module(24 => 24, 32 => 16, gelu; layer_kwargs...);
+                      upsample_module(24 => 24, 16 => 32, gelu; layer_kwargs...) NoOpLayer()]
 
     post_fuse_layers = (Chain(x -> gelu.(x), conv1x1(24 => 24; bias=false, init=normal_init()),
                               GroupNormV2(24, 4; affine=true, track_stats=false)),
@@ -48,21 +48,27 @@ function get_model(maxiters::Int, abstol::T, reltol::T, dropout_rate::Real, mode
                          conv1x1_norm(16 * 4 => 200, gelu; norm_layer=BatchNormV2,
                                       norm_kwargs=Dict{Symbol,Any}(:track_stats => true, :affine => true),
                                       conv_kwargs=Dict{Symbol,Any}(:init => normal_init(), :bias => normal_init()(200))).layers...,
-                         GlobalMeanPool(), Flux.flatten, Dense(200, 10))
+                         GlobalMeanPool(), FlattenLayer(), Dense(200, 10))
 
-    solver = get_default_dynamicss_solver(reltol, abstol, Tsit5(); mode=:rel_deq_best)
+    if solver_type == "dynamicss"
+        solver = get_default_dynamicss_solver(reltol, abstol, Tsit5(); mode=:rel_deq_best)
+    else
+        solver = get_default_ssrootfind_solver(reltol, abstol, LimitedMemoryBroydenSolver; device=gpu,
+                                               original_dims=(32 * 32 * 24 + 16 * 16 * 24, 1), batch_size=batch_size,
+                                               maxiters=maxiters)
+    end
 
     if model_type == "skip"
         deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers,
                                                    (BasicResidualBlock((32, 32), 24, 24; num_gn_groups=8),
                                                     downsample_module(24 => 24, 32 => 16; layer_kwargs...)), solver;
                                                    post_fuse_layers=post_fuse_layers, maxiters=maxiters,
-                                                   sensealg=get_default_ssadjoint(reltol, abstol, maxiters),
+                                                   sensealg=get_default_ssadjoint(reltol, abstol, min(maxiters, 15)),
                                                    verbose=false)
     else
         _deq = model_type == "vanilla" ? MultiScaleDeepEquilibriumNetwork : MultiScaleSkipDeepEquilibriumNetwork
         deq = _deq(main_layers, mapping_layers, solver; post_fuse_layers=post_fuse_layers, maxiters=maxiters,
-                   sensealg=get_default_ssadjoint(reltol, abstol, maxiters), verbose=false)
+                   sensealg=get_default_ssadjoint(reltol, abstol, min(maxiters, 15)), verbose=false)
     end
     model = DEQChain(initial_layers, deq, final_layers)
 
@@ -95,14 +101,14 @@ function loss_and_accuracy(model, dataloader)
 end
 
 ## Training Function
-function train(config::Dict)
+function train(config::Dict, name_extension::String="")
     comm = MPI_COMM_WORLD
     rank = MPI.Comm_rank(comm)
 
     ## Setup Logging & Experiment Configuration
     t = MPI.Bcast!([now()], 0, comm)[1]
-    expt_name = "fastdeqjl-supervised_cifar10_classification-$(t)"
-    lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, group="cifar-10-mdeq-$(t)", config=config)
+    expt_name = "fastdeqjl-supervised_cifar10_classification-$(t)-$(name_extension)"
+    lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, config=config)
     lg_term = PrettyTableLogger("logs/" * expt_name * ".log",
                                 ["Epoch Number", "Train/NFE", "Train/Accuracy", "Train/Loss", "Train/Time", "Test/NFE",
                                  "Test/Accuracy", "Test/Loss", "Test/Time"],
@@ -138,7 +144,7 @@ function train(config::Dict)
     testiter = DataParallelDataLoader((xs_test, ys_test); batchsize=eval_batch_size, shuffle=false)
 
     ## Loss Function
-    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 50.0f0)
+    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f-2)
 
     nfe_counts = []
     cb = register_nfe_counts(model, nfe_counts)
@@ -197,8 +203,12 @@ function train(config::Dict)
                 log(lg_wandb,
                     Dict("Training/Step/Loss" => loss, "Training/Step/NFE" => nfe_counts[end],
                          "Training/Step/Count" => step))
+
                 # This is pretty expensive so do after every 50 steps
-                step % 50 == 1 && log(lg_wandb, watch, gs)
+                # NOTE: This is mainly for debugging purposes so if you suspect something is
+                #       wrong with the model you can uncomment this
+                # step % 50 == 1 && log(lg_wandb, watch, gs)
+
                 lg_term(; records=Dict("Train/Running/NFE" => nfe_counts[end], "Train/Running/Loss" => loss))
                 step += 1
             end
@@ -253,23 +263,19 @@ function train(config::Dict)
 end
 
 ## Run Experiment
-nfe_count_dict = Dict("vanilla" => [], "skip" => [], "skip_no_extra_params" => [])
-
 for seed in [1, 11, 111]
     for model_type in ["skip", "vanilla"]
-        config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 2.0f-1, "reltol" => 2.0f-1,
-                      "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 64,
-                      "eval_batch_size" => 64, "model_type" => model_type, "solver_type" => "dynamicss",
-                      "weight_decay" => 0.0000025)
+        for solver_type in (model_type == "vanilla" ? ["dynamicss", "ssrootfind"] : ["dynamicss"])
+            if MPI.Comm_rank(MPI_COMM_WORLD) == 0
+                @info "Seed = $seed | Model Type = $model_type | Solver Type = $solver_type"
+            end
 
-        model, nfe_counts = train(config)
+            config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 5.0f-2, "reltol" => 5.0f-2,
+                          "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 64,
+                          "eval_batch_size" => 64, "model_type" => model_type, "solver_type" => solver_type,
+                          "weight_decay" => 0.0000025)
 
-        push!(nfe_count_dict[model_type], nfe_counts)
+            model, nfe_counts = train(config, "seed-$(seed)_model-$(model_type)_solver-$(solver_type)")
+        end
     end
-end
-
-if MPI.Comm_rank(MPI_COMM_WORLD) == 0
-    filename = "fastdeqjl-supervised_cifar10_classication-$(now()).jls"
-    serialize(joinpath("artifacts", filename), nfe_count_dict)
-    @info "Serialized NFE Counts to $filename"
 end

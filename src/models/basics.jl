@@ -12,7 +12,7 @@ end
 Flux.@functor BasicResidualBlock
 
 function BasicResidualBlock(outdims::Tuple, inplanes::Int, planes::Int; deq_expand::Int=5, num_gn_groups::Int=4,
-                            downsample=identity, n_big_kernels::Int=0, dropout_rate::Real=0.0f0, gn_affine::Bool=true,
+                            downsample=NoOpLayer(), n_big_kernels::Int=0, dropout_rate::Real=0.0f0, gn_affine::Bool=true,
                             weight_norm::Bool=true, gn_track_stats::Bool=false)
     wn_layer = weight_norm ? WeightNorm : identity
 
@@ -28,7 +28,7 @@ function BasicResidualBlock(outdims::Tuple, inplanes::Int, planes::Int; deq_expa
     gn3 = GroupNormV2(planes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
 
     return BasicResidualBlock(conv1, conv2, gn1, gn2, gn3, downsample,
-                              (iszero(dropout_rate) ? identity :
+                              (iszero(dropout_rate) ? NoOpLayer() :
                                VariationalHiddenDropout(dropout_rate, (outdims..., planes, 1))))
 end
 
@@ -140,7 +140,7 @@ function BasicBottleneckBlock(mapping::Pair, expansion::Int=4; bn_track_stats::B
                      norm_kwargs=Dict{Symbol,Any}(:track_stats => bn_track_stats, :affine => bn_affine),
                      conv_kwargs=Dict{Symbol,Any}(:bias => false, :init => normal_init()))
     else
-        identity
+        NoOpLayer()
     end
     conv1 = conv1x1(mapping; bias=false, init=normal_init())
     chain = Chain(BatchNormV2(last(mapping), gelu; affine=bn_affine, track_stats=bn_track_stats),
