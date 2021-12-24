@@ -144,7 +144,7 @@ function train(config::Dict, name_extension::String="")
     testiter = DataParallelDataLoader((xs_test, ys_test); batchsize=eval_batch_size, shuffle=false)
 
     ## Loss Function
-    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f-2)
+    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f-2, 1.0f0)
 
     nfe_counts = []
     cb = register_nfe_counts(model, nfe_counts)

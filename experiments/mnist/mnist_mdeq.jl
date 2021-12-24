@@ -130,7 +130,7 @@ function train(config::Dict, name_extension::String="")
                       Float32(get_config(lg_wandb, "reltol")), get_config(lg_wandb, "model_type"),
                       get_config(lg_wandb, "solver_type"), batch_size)
 
-    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0)
+    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0, 1.0f0)
 
     ## Warmup
     __x = gpu(rand(28, 28, 1, 1))
