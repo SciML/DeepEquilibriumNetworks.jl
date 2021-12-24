@@ -276,7 +276,7 @@ end
 TASK_ID = parse(Int, ARGS[1])
 NUM_TASKS = parse(Int, ARGS[2])
 
-for i in TASK_ID+1:NUM_TASKS:length(experiment_configurations)
+for i in TASK_ID:NUM_TASKS:length(experiment_configurations)
     (seed, model_type, solver_type) = experiment_configurations[i]
 
     if MPI.Comm_rank(MPI_COMM_WORLD) == 0
