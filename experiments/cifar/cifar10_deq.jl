@@ -263,19 +263,30 @@ function train(config::Dict, name_extension::String="")
 end
 
 ## Run Experiment
-for seed in [1, 11, 111]
-    for model_type in ["skip", "vanilla"]
-        for solver_type in (model_type == "vanilla" ? ["dynamicss", "ssrootfind"] : ["dynamicss"])
-            if MPI.Comm_rank(MPI_COMM_WORLD) == 0
-                @info "Seed = $seed | Model Type = $model_type | Solver Type = $solver_type"
-            end
-
-            config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 5.0f-2, "reltol" => 5.0f-2,
-                          "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 64,
-                          "eval_batch_size" => 64, "model_type" => model_type, "solver_type" => solver_type,
-                          "weight_decay" => 0.0000025)
-
-            model, nfe_counts = train(config, "seed-$(seed)_model-$(model_type)_solver-$(solver_type)")
+experiment_configurations = []
+for seed in [6171, 3859, 2961]  # Generated this by randomly sampling from 1:10000
+    for solver_type in ["dynamicss", "ssrootfind"]
+        for model_type in ["skip", "vanilla"]
+            model_type == "skip" && solver_type == "ssrootfind" && continue
+            push!(experiment_configurations, (seed, model_type, solver_type))
         end
     end
+end
+
+TASK_ID = parse(Int, ARGS[1])
+NUM_TASKS = parse(Int, ARGS[2])
+
+for i in TASK_ID+1:NUM_TASKS:length(experiment_configurations)
+    (seed, model_type, solver_type) = experiment_configurations[i]
+
+    if MPI.Comm_rank(MPI_COMM_WORLD) == 0
+        @info "Seed = $seed | Model Type = $model_type | Solver Type = $solver_type"
+    end
+
+    config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 5.0f-2, "reltol" => 5.0f-2,
+                  "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 64,
+                  "eval_batch_size" => 64, "model_type" => model_type, "solver_type" => solver_type,
+                  "weight_decay" => 0.0000025)
+
+    model, nfe_counts = train(config, "seed-$(seed)_model-$(model_type)_solver-$(solver_type)")
 end

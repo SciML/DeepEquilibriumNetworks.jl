@@ -1,5 +1,5 @@
 # Load Packages
-using Dates, FastDEQ, MLDatasets, MPI, Serialization, Statistics, Plots, Random, Wandb
+using Dates, FastDEQ, MLDatasets, MPI, Serialization, Statistics, ParameterSchedulers, Plots, Random, Wandb
 using ParameterSchedulers: Stateful, Scheduler, Cos
 
 CUDA.versioninfo()
