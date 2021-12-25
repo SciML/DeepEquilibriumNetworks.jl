@@ -9,6 +9,11 @@ function (lc::SupervisedLossContainer)(model::DEQChain{Val(2)}, x, y; kwargs...)
     return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- z)
 end
 
+function (lc::SupervisedLossContainer)(model::DEQChain{Val(6)}, x, y; kwargs...)
+    ŷ, (ẑ, z), jac_loss = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- z) + lc.λⱼ * jac_loss
+end
+
 function (lc::SupervisedLossContainer)(model::DEQChain{Val(4)}, x, y; kwargs...)
     ŷ, guess_pairs = model(x; kwargs...)
     l1 = lc.loss_function(ŷ, y)
@@ -37,6 +42,11 @@ end
 function (lc::SupervisedLossContainer)(model::SkipDeepEquilibriumNetwork, x, y; kwargs...)
     ŷ, ẑ = model(x; kwargs...)
     return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- ŷ)
+end
+
+function (lc::SupervisedLossContainer)(model::SkipDeepEquilibriumNetwork{M,S,true}, x, y; kwargs...) where {M,S}
+    ŷ, ẑ, jac_loss = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- ŷ) + lc.λⱼ * jac_loss
 end
 
 function (lc::SupervisedLossContainer)(model::MultiScaleDeepEquilibriumNetwork, x, ys::Tuple; kwargs...)
