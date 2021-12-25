@@ -15,7 +15,7 @@ const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
 ## Models
 function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, solver_type::String, batch_size::Int,
                    jac_reg::Bool, args...; mode::Symbol=:rel_norm, solver=Tsit5(), kwargs...) where {T}
-    main_layer = Parallel(+, Dense(128, 128, tanh_fast; bias=false), Dense(128, 128, tanh_fast; bias=false))
+    main_layer = Parallel(+, Dense(128, 128, relu; bias=false), Dense(128, 128, relu; bias=false))
 
     if solver_type == "dynamicss"
         solver = get_default_dynamicss_solver(reltol, abstol, solver; mode=mode)
@@ -25,7 +25,7 @@ function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, solv
     end
 
     if model_type == "skip"
-        aux_layer = Dense(128, 128, tanh_fast)
+        aux_layer = Dense(128, 128, relu)
         deq = SkipDeepEquilibriumNetwork(main_layer, aux_layer, solver; maxiters=maxiters,
                                          sensealg=get_default_ssadjoint(reltol, abstol, min(maxiters, 15)),
                                          verbose=false, jacobian_regularization=jac_reg)
@@ -36,7 +36,7 @@ function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, solv
                    jacobian_regularization=jac_reg)
     end
 
-    model = DEQChain(Dense(784, 128, tanh_fast), deq, Dense(128, 10))
+    model = DEQChain(Dense(784, 128, relu), deq, Dense(128, 10))
 
     return (MPI_COMM_SIZE > 1 ? DataParallelFluxModel : gpu)(model)
 end
@@ -107,7 +107,7 @@ function train(config::Dict, name_extension::String="")
                       Float32(get_config(lg_wandb, "reltol")), get_config(lg_wandb, "model_type"),
                       get_config(lg_wandb, "solver_type"), batch_size, get_config(lg_wandb, "jac_reg"))
 
-    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 10.0f0, 1.0f0)
+    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 5.0f0, 1.0f0)
 
     ## Warmup
     __x = gpu(rand(784, 1))
@@ -233,7 +233,7 @@ for i in TASK_ID:NUM_TASKS:length(experiment_configurations)
         @info "Seed = $seed | Model Type = $model_type | Jacobian Regularization = $jac_reg"
     end
 
-    config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 5.0f-4, "reltol" => 5.0f-4,
+    config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 5.0f-3, "reltol" => 5.0f-3,
                 "maxiters" => 50, "epochs" => 25, "batch_size" => 32, "eval_batch_size" => 32,
                 "model_type" => model_type, "solver_type" => "ssrootfind", "jac_reg" => jac_reg)
 
