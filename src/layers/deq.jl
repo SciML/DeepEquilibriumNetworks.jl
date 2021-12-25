@@ -19,6 +19,10 @@ end
 
 Flux.@functor DeepEquilibriumNetwork
 
+function Base.show(io::IO, l::DeepEquilibriumNetwork{J}) where {J}
+    return print(io, "DeepEquilibriumNetwork(jacobian_regularization = $J) ", string(length(l.p)), " Trainable Parameters")
+end
+
 function DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=false, p=nothing,
                                 sensealg=get_default_ssadjoint(0.1f0, 0.1f0, 10), kwargs...)
     return DeepEquilibriumNetwork(jacobian_regularization, model, p, nothing, (solver,), kwargs, sensealg,

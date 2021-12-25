@@ -269,7 +269,6 @@ experiment_configurations = []
 for seed in [6171, 3859, 2961]  # Generated this by randomly sampling from 1:10000
     for solver_type in ["dynamicss", "ssrootfind"]
         for model_type in ["skip", "vanilla"]
-            model_type == "skip" && solver_type == "ssrootfind" && continue
             push!(experiment_configurations, (seed, model_type, solver_type))
         end
     end
