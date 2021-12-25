@@ -73,7 +73,7 @@ function train(config::Dict, name_extension::String="")
 
     ## Setup Logging & Experiment Configuration
     t = MPI.Bcast!([now()], 0, comm)[1]
-    expt_name = "fastdeqjl-supervised_mnist_classification-$(t)-$(name_extension)"
+    expt_name = "fastdeqjl-supervised_mnist_classification-dense-$(t)-$(name_extension)"
     lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, config=config)
     lg_term = PrettyTableLogger("logs/" * expt_name * ".log",
                                 ["Epoch Number", "Train/NFE", "Train/Accuracy", "Train/Loss", "Train/Time", "Test/NFE",
@@ -107,7 +107,7 @@ function train(config::Dict, name_extension::String="")
                       Float32(get_config(lg_wandb, "reltol")), get_config(lg_wandb, "model_type"),
                       get_config(lg_wandb, "solver_type"), batch_size, get_config(lg_wandb, "jac_reg"))
 
-    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0, 1.0f0)
+    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 10.0f0, 1.0f0)
 
     ## Warmup
     __x = gpu(rand(784, 1))
@@ -233,8 +233,8 @@ for i in TASK_ID:NUM_TASKS:length(experiment_configurations)
         @info "Seed = $seed | Model Type = $model_type | Jacobian Regularization = $jac_reg"
     end
 
-    config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-2, "reltol" => 1.0f-2,
-                "maxiters" => 50, "epochs" => 25, "batch_size" => 64, "eval_batch_size" => 64,
+    config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 5.0f-4, "reltol" => 5.0f-4,
+                "maxiters" => 50, "epochs" => 25, "batch_size" => 32, "eval_batch_size" => 32,
                 "model_type" => model_type, "solver_type" => "ssrootfind", "jac_reg" => jac_reg)
 
     model, nfe_counts = train(config, "seed-$(seed)_model-$(model_type)_jac_reg-$(jac_reg)")
