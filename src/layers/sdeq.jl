@@ -128,7 +128,7 @@ function (deq::SkipDeepEquilibriumNetwork{M,S,true,true})(x::AbstractArray{T}) w
 
     jac_loss = compute_deq_jacobian_loss(deq.re1, p1, z_star, x)
 
-    return z_star, z, jac_loss, sum(abs, deq.re1(deq.p)(z_star, x) .- z_star)
+    return z_star, z, jac_loss, sum(abs, deq.re1(p1)(z_star, x) .- z_star)
 end
 
 function (deq::SkipDeepEquilibriumNetwork{M,Nothing,true,true})(x::AbstractArray{T}) where {M,T}
