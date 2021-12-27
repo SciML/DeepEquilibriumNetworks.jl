@@ -130,7 +130,7 @@ function train(config::Dict, name_extension::String="")
     ## Model Setup
     model = get_model(get_config(lg_wandb, "maxiters"), Float32(get_config(lg_wandb, "abstol")),
                       Float32(get_config(lg_wandb, "reltol")), get_config(lg_wandb, "model_type"),
-                      get_config(lg_wandb, "solver_type"), batch_size)
+                      get_config(lg_wandb, "solver_type"), batch_size, get_config(lg_wandb, "residual_regularization"))
 
     loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0, 1.0f0, 1.0f-1)
 
@@ -254,7 +254,7 @@ TASK_ID = parse(Int, ARGS[1])
 NUM_TASKS = parse(Int, ARGS[2])
 
 for i in TASK_ID:NUM_TASKS:length(experiment_configurations)
-    (seed, model_type, solver_type, residual_regularization) = experiment_configurations[i]
+    residual_regularization, seed, model_type, solver_type = experiment_configurations[i]
 
     if MPI.Comm_rank(MPI_COMM_WORLD) == 0
         @info "Seed = $seed | Model Type = $model_type | Solver Type = $solver_type"
