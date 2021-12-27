@@ -279,15 +279,14 @@ NUM_TASKS = parse(Int, ARGS[2])
 
 for i in TASK_ID:NUM_TASKS:length(experiment_configurations)
     (seed, model_type, solver_type) = experiment_configurations[i]
-    batch_size = solver_type == "dynamicss" ? 64 : 32
 
     if MPI.Comm_rank(MPI_COMM_WORLD) == 0
         @info "Seed = $seed | Model Type = $model_type | Solver Type = $solver_type"
     end
 
     config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 5.0f-2, "reltol" => 5.0f-2,
-                  "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => batch_size,
-                  "eval_batch_size" => batch_size, "model_type" => model_type, "solver_type" => solver_type,
+                  "maxiters" => 50, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 64,
+                  "eval_batch_size" => 64, "model_type" => model_type, "solver_type" => solver_type,
                   "weight_decay" => 0.0000025)
 
     model, nfe_counts = train(config, "seed-$(seed)_model-$(model_type)_solver-$(solver_type)")
