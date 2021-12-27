@@ -45,6 +45,7 @@ struct PrettyTableLogger{N,AM,F,R,FIO}
 
         N = length(header) + length(record)
         headers = vcat(header, record)
+        headers_og = headers
         _c = 0
         count() = (_c += 1; _c)
         rsplits = first.(map(x -> length(x) >= 2 ? x : ("__" * string(count()), x), rsplit.(headers, "/"; limit=2)),)
@@ -62,29 +63,25 @@ struct PrettyTableLogger{N,AM,F,R,FIO}
             rsplits_unique = unique(rsplits)
             if !(length(rsplits_unique) == 1 && rsplits_unique[0] == "")
                 println("="^span)
-                println(fio, "="^span)
                 for r in rsplits_unique
                     if startswith(r, "__")
                         print("| " * (" "^length(r)) * (" "^rsplit_lens[string(r)]))
-                        print(fio, "| " * (" "^length(r)) * (" "^rsplit_lens[string(r)]))
                     else
                         print("| $r" * (" "^rsplit_lens[string(r)]))
-                        print(fio, "| $r" * (" "^rsplit_lens[string(r)]))
                     end
                 end
                 println("|")
-                println(fio, "|")
             end
             println("="^span)
-            println(fio, "="^span)
             for h in headers
                 print("| $h ")
-                print(fio, "| $h ")
             end
             println("|")
-            println(fio, "|")
             println("="^span)
-            println(fio, "="^span)
+            for h in headers_og[1:end-1]
+                print(fio, "$h,")
+            end
+            println(fio, "$(headers_og[end])")
         end
 
         avg_meters = Dict{String,AverageMeter}(rec => AverageMeter() for rec in record)
@@ -110,21 +107,24 @@ function (pl::PrettyTableLogger)(args...; last::Bool=false, records::Dict=Dict()
     if last
         str = "="^pl.span
         println(str)
-        println(pl.fio, str)
         return
     end
-    for h in [fmtrfunc(arg)
-              for (fmtrfunc, arg) in
-                  zip(pl.fmtrfuncs, vcat([args...], [reset!(pl.average_meters[rec]) for rec in pl.records]))]
+    for (i, (fmtrfunc, arg)) in enumerate(zip(pl.fmtrfuncs, vcat([args...], [reset!(pl.average_meters[rec]) for rec in pl.records])))
+        h = fmtrfunc(arg)
         print("| $h ")
-        print(pl.fio, "| $h ")
+        if i < length(pl.fmtrfuncs)
+            print(pl.fio, "$arg,")
+        else
+            println(pl.fio, "$arg")
+        end
     end
     println("|")
-    println(pl.fio, "|")
-    return flush(pl.fio)
+    flush(pl.fio)
+    return nothing
 end
 
 function Base.close(pl::PrettyTableLogger)
     pl(; last=true)
-    return pl.fio === nothing || close(pl.fio)
+    pl.fio === nothing || close(pl.fio)
+    return nothing
 end

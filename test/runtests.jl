@@ -6,7 +6,7 @@ using Random
 using Test
 
 @testset "FastDEQ.jl" begin
-    mse_loss_function = SupervisedLossContainer(Flux.Losses.mse, 1.0f0)
+    mse_loss_function = SupervisedLossContainer(loss_function = Flux.Losses.mse)
 
     # Testing DEQ
     Random.seed!(0)

@@ -2,6 +2,7 @@ Base.@kwdef struct SupervisedLossContainer{L,T}
     loss_function::L
     λ::T = 1.0f0
     λⱼ::T = 1.0f0
+    λᵣ::T = 1.0f0
 end
 
 function (lc::SupervisedLossContainer)(model::DEQChain{Val(2)}, x, y; kwargs...)
@@ -12,6 +13,26 @@ end
 function (lc::SupervisedLossContainer)(model::DEQChain{Val(6)}, x, y; kwargs...)
     ŷ, (ẑ, z), jac_loss = model(x; kwargs...)
     return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- z) + lc.λⱼ * jac_loss
+end
+
+function (lc::SupervisedLossContainer)(model::DEQChain{Val(7)}, x, y; kwargs...)
+    ŷ, res_loss = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc.λᵣ * res_loss
+end
+
+function (lc::SupervisedLossContainer)(model::DEQChain{Val(8)}, x, y; kwargs...)
+    ŷ, (ẑ, z), res_loss = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- z) + lc.λᵣ * res_loss
+end
+
+function (lc::SupervisedLossContainer)(model::DEQChain{Val(9)}, x, y; kwargs...)
+    ŷ, jac_loss, res_loss = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc.λⱼ * jac_loss + lc.λᵣ * res_loss
+end
+
+function (lc::SupervisedLossContainer)(model::DEQChain{Val(10)}, x, y; kwargs...)
+    ŷ, (ẑ, z), jac_loss, res_loss = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- z) + lc.λⱼ * jac_loss + lc.λᵣ * res_loss
 end
 
 function (lc::SupervisedLossContainer)(model::DEQChain{Val(4)}, x, y; kwargs...)
@@ -39,6 +60,16 @@ function (lc::SupervisedLossContainer)(model::Union{DeepEquilibriumNetwork{true}
     return lc.loss_function(ŷ, y) + lc.λⱼ * jac_loss
 end
 
+function (lc::SupervisedLossContainer)(model::DeepEquilibriumNetwork{false,true}, x, y; kwargs...)
+    ŷ, res_loss = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc.λᵣ * res_loss
+end
+
+function (lc::SupervisedLossContainer)(model::DeepEquilibriumNetwork{true,true}, x, y; kwargs...)
+    ŷ, jac_loss, res_loss = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc.λⱼ * jac_loss + lc.λᵣ * res_loss
+end
+
 function (lc::SupervisedLossContainer)(model::SkipDeepEquilibriumNetwork, x, y; kwargs...)
     ŷ, ẑ = model(x; kwargs...)
     return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- ŷ)
@@ -47,6 +78,16 @@ end
 function (lc::SupervisedLossContainer)(model::SkipDeepEquilibriumNetwork{M,S,true}, x, y; kwargs...) where {M,S}
     ŷ, ẑ, jac_loss = model(x; kwargs...)
     return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- ŷ) + lc.λⱼ * jac_loss
+end
+
+function (lc::SupervisedLossContainer)(model::SkipDeepEquilibriumNetwork{M,S,false,true}, x, y; kwargs...) where {M,S}
+    ŷ, ẑ, res_loss = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- ŷ) + lc.λᵣ * res_loss
+end
+
+function (lc::SupervisedLossContainer)(model::SkipDeepEquilibriumNetwork{M,S,true,true}, x, y; kwargs...) where {M,S}
+    ŷ, ẑ, jac_loss, res_loss = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc.λ * mean(abs, ẑ .- ŷ) + lc.λⱼ * jac_loss + lc.λᵣ * res_loss
 end
 
 function (lc::SupervisedLossContainer)(model::MultiScaleDeepEquilibriumNetwork, x, ys::Tuple; kwargs...)

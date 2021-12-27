@@ -4,6 +4,10 @@ modeltype_to_val(::MultiScaleDeepEquilibriumNetwork) = Val(3)
 modeltype_to_val(::MultiScaleSkipDeepEquilibriumNetwork) = Val(4)
 modeltype_to_val(::DeepEquilibriumNetwork{true}) = Val(5)
 modeltype_to_val(::SkipDeepEquilibriumNetwork{M,S,true}) where {M,S} = Val(6)
+modeltype_to_val(::DeepEquilibriumNetwork{false,true}) = Val(7)
+modeltype_to_val(::SkipDeepEquilibriumNetwork{M,S,false,true}) where {M,S} = Val(8)
+modeltype_to_val(::DeepEquilibriumNetwork{true,true}) = Val(9)
+modeltype_to_val(::SkipDeepEquilibriumNetwork{M,S,true,true}) where {M,S} = Val(10)
 modeltype_to_val(m) = Val(-1)
 
 # Default to nothing happening
@@ -54,9 +58,9 @@ function (deq::Union{DEQChain{Val(1)},DEQChain{Val(3)}})(x)
     return deq.post_deq(deq.deq(deq.pre_deq(x)))
 end
 
-function (deq::DEQChain{Val(5)})(x)
-    x_, jac_loss = deq.deq(deq.pre_deq(x))
-    return deq.post_deq(x_), jac_loss
+function (deq::Union{DEQChain{Val(5)},DEQChain{Val(7)}})(x)
+    x_, loss = deq.deq(deq.pre_deq(x))
+    return deq.post_deq(x_), loss
 end
 
 function (deq::Union{DEQChain{Val(2)},DEQChain{Val(4)}})(x)
@@ -66,11 +70,25 @@ function (deq::Union{DEQChain{Val(2)},DEQChain{Val(4)}})(x)
     return x2, (z, ẑ)
 end
 
-function (deq::DEQChain{Val(6)})(x)
+function (deq::Union{DEQChain{Val(6)},DEQChain{Val(8)}})(x)
     x1 = deq.pre_deq(x)
-    z, ẑ, jac_loss = deq.deq(x1)
+    z, ẑ, loss = deq.deq(x1)
     x2 = deq.post_deq(z)
-    return x2, (z, ẑ), jac_loss
+    return x2, (z, ẑ), loss
+end
+
+function (deq::DEQChain{Val(9)})(x)
+    x1 = deq.pre_deq(x)
+    z, jac_loss, res_loss = deq.deq(x1)
+    x2 = deq.post_deq(z)
+    return x2, jac_loss, res_loss
+end
+
+function (deq::DEQChain{Val(10)})(x)
+    x1 = deq.pre_deq(x)
+    z, ẑ, jac_loss, res_loss = deq.deq(x1)
+    x2 = deq.post_deq(z)
+    return x2, (z, ẑ), jac_loss, res_loss
 end
 
 function get_and_clear_nfe!(model::DEQChain)
