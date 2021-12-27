@@ -14,7 +14,8 @@ const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
 
 ## Models
 function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, solver_type::String, batch_size::Int,
-                   args...; mode::Symbol=:rel_norm, solver=Tsit5(), kwargs...) where {T}
+                   residual_regularization::Bool=false, args...; mode::Symbol=:rel_norm, solver=Tsit5(),
+                   kwargs...) where {T}
     layer_kwargs = Dict(:norm_layer => GroupNormV2, :group_count => 8, :conv_kwargs => Dict{Symbol,Any}(:bias => false),
                         :norm_kwargs => Dict{Symbol,Any}(:affine => true, :track_stats => false))
 
@@ -34,11 +35,12 @@ function get_model(maxiters::Int, abstol::T, reltol::T, model_type::String, solv
         aux_layers = (BasicResidualBlock((28, 28), 8, 8), downsample_module(8 => 16, 28 => 14, gelu; layer_kwargs...))
         deq = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, aux_layers, solver; maxiters=maxiters,
                                                    sensealg=get_default_ssadjoint(reltol, abstol, min(maxiters, 15)),
-                                                   verbose=false)
+                                                   verbose=false, residual_regularization=residual_regularization)
     else
         _deq = model_type == "vanilla" ? MultiScaleDeepEquilibriumNetwork : MultiScaleSkipDeepEquilibriumNetwork
         deq = _deq(main_layers, mapping_layers, solver; maxiters=maxiters,
-                   sensealg=get_default_ssadjoint(reltol, abstol, min(maxiters, 15)), verbose=false)
+                   sensealg=get_default_ssadjoint(reltol, abstol, min(maxiters, 15)), verbose=false,
+                   residual_regularization=residual_regularization)
     end
 
     model = DEQChain(FChain(conv3x3_norm(1 => 8, gelu; norm_layer=BatchNormV2,
@@ -130,7 +132,7 @@ function train(config::Dict, name_extension::String="")
                       Float32(get_config(lg_wandb, "reltol")), get_config(lg_wandb, "model_type"),
                       get_config(lg_wandb, "solver_type"), batch_size)
 
-    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0, 1.0f0)
+    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0, 1.0f0, 1.0f-1)
 
     ## Warmup
     __x = gpu(rand(28, 28, 1, 1))
@@ -238,10 +240,12 @@ end
 
 ## Run Experiment
 experiment_configurations = []
-for seed in [6171, 3859, 2961]  # Generated this by randomly sampling from 1:10000
-    for solver_type in ["dynamicss", "ssrootfind"]
-        for model_type in ["skip", "vanilla"]
-            push!(experiment_configurations, (seed, model_type, solver_type))
+for residual_regularization in [true, false]
+    for seed in [6171, 3859, 2961]  # Generated this by randomly sampling from 1:10000
+        for solver_type in ["dynamicss", "ssrootfind"]
+            for model_type in ["skip", "vanilla"]
+                push!(experiment_configurations, (residual_regularization, seed, model_type, solver_type))
+            end
         end
     end
 end
@@ -250,15 +254,15 @@ TASK_ID = parse(Int, ARGS[1])
 NUM_TASKS = parse(Int, ARGS[2])
 
 for i in TASK_ID:NUM_TASKS:length(experiment_configurations)
-    (seed, model_type, solver_type) = experiment_configurations[i]
+    (seed, model_type, solver_type, residual_regularization) = experiment_configurations[i]
 
     if MPI.Comm_rank(MPI_COMM_WORLD) == 0
         @info "Seed = $seed | Model Type = $model_type | Solver Type = $solver_type"
     end
 
-    config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-2, "reltol" => 1.0f-2,
-                "maxiters" => 50, "epochs" => 25, "batch_size" => 64, "eval_batch_size" => 64,
-                "model_type" => model_type, "solver_type" => solver_type)
+    config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-2, "reltol" => 1.0f-2, "maxiters" => 50,
+                  "epochs" => 25, "batch_size" => 64, "eval_batch_size" => 64, "model_type" => model_type,
+                  "solver_type" => solver_type, "residual_regularization" => residual_regularization)
 
     model, nfe_counts = train(config, "seed-$(seed)_model-$(model_type)_solver-$(solver_type)")
 end

@@ -8,6 +8,8 @@ modeltype_to_val(::DeepEquilibriumNetwork{false,true}) = Val(7)
 modeltype_to_val(::SkipDeepEquilibriumNetwork{M,S,false,true}) where {M,S} = Val(8)
 modeltype_to_val(::DeepEquilibriumNetwork{true,true}) = Val(9)
 modeltype_to_val(::SkipDeepEquilibriumNetwork{M,S,true,true}) where {M,S} = Val(10)
+modeltype_to_val(::MultiScaleDeepEquilibriumNetwork{true}) = Val(11)
+modeltype_to_val(::MultiScaleSkipDeepEquilibriumNetwork{S,true}) where {S} = Val(12)
 modeltype_to_val(m) = Val(-1)
 
 # Default to nothing happening

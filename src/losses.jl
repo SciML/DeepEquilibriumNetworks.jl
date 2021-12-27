@@ -45,6 +45,16 @@ function (lc::SupervisedLossContainer)(model::DEQChain{Val(4)}, x, y; kwargs...)
     return l1 + lc.λ * l2
 end
 
+function (lc::SupervisedLossContainer)(model::DEQChain{Val(12)}, x, y; kwargs...)
+    ŷ, guess_pairs, res_loss = model(x; kwargs...)
+    l1 = lc.loss_function(ŷ, y)
+    l2 = 0
+    for i in 1:length(guess_pairs[1])
+        l2 += mean(abs, guess_pairs[1][i] .- guess_pairs[2][i])
+    end
+    return l1 + lc.λ * l2 + lc.λᵣ * res_loss
+end
+
 function (lc::SupervisedLossContainer)(model::WidthStackedDEQ{true}, x, y; kwargs...)
     ŷ, guess_pairs = model(x; kwargs...)
     l1 = lc.loss_function(ŷ, y)
@@ -60,7 +70,8 @@ function (lc::SupervisedLossContainer)(model::Union{DeepEquilibriumNetwork{true}
     return lc.loss_function(ŷ, y) + lc.λⱼ * jac_loss
 end
 
-function (lc::SupervisedLossContainer)(model::DeepEquilibriumNetwork{false,true}, x, y; kwargs...)
+function (lc::SupervisedLossContainer)(model::Union{DeepEquilibriumNetwork{false,true},DEQChain{Val(11)}}, x, y;
+                                       kwargs...)
     ŷ, res_loss = model(x; kwargs...)
     return lc.loss_function(ŷ, y) + lc.λᵣ * res_loss
 end
