@@ -60,7 +60,7 @@ function (deq::Union{DEQChain{Val(1)},DEQChain{Val(3)}})(x)
     return deq.post_deq(deq.deq(deq.pre_deq(x)))
 end
 
-function (deq::Union{DEQChain{Val(5)},DEQChain{Val(7)}})(x)
+function (deq::Union{DEQChain{Val(5)},DEQChain{Val(7)},DEQChain{Val(11)}})(x)
     x_, loss = deq.deq(deq.pre_deq(x))
     return deq.post_deq(x_), loss
 end
@@ -72,7 +72,7 @@ function (deq::Union{DEQChain{Val(2)},DEQChain{Val(4)}})(x)
     return x2, (z, ẑ)
 end
 
-function (deq::Union{DEQChain{Val(6)},DEQChain{Val(8)}})(x)
+function (deq::Union{DEQChain{Val(6)},DEQChain{Val(8)},DEQChain{Val(12)}})(x)
     x1 = deq.pre_deq(x)
     z, ẑ, loss = deq.deq(x1)
     x2 = deq.post_deq(z)
