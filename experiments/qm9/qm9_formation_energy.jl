@@ -77,7 +77,7 @@ gradient(() -> sum(model(X)), Flux.params(model))
 
 register_nfe_counts(deq, buffer) = () -> push!(buffer, get_and_clear_nfe!(deq))
 
-function compute_total_loss(model, dataloader)
+function compute_total_loss(model, dataloader, scale_μ, scale_σ)
     total_loss, total_datasize, total_nfe = 0, 0, 0
     for (x, y) in dataloader
         x = gpu(x)
@@ -85,8 +85,9 @@ function compute_total_loss(model, dataloader)
 
         ŷ = model(x)
         ŷ = ŷ isa Tuple ? ŷ[1] : ŷ
+        ŷ = vec(ŷ .* scale_σ .+ scale_μ)
         total_nfe += get_and_clear_nfe!(model) * length(y)
-        total_loss += mean(abs2, vec(ŷ) .- y) * length(y)
+        total_loss += mean(abs, ŷ .- y) * length(y)
         total_datasize += length(y)
     end
     return (total_loss / total_datasize, total_nfe / total_datasize)
@@ -125,6 +126,9 @@ function train(config::Dict)
         end
     end
 
+    scale_μ = mean(train_output)
+    scale_σ = std(train_output)
+
     train_dataloader = construct_dataiterators(train_input, train_output; batch_size=batch_size)
     val_dataloader = construct_dataiterators(val_input, val_output; batch_size=eval_batch_size)
 
@@ -132,7 +136,7 @@ function train(config::Dict)
     model = get_model(Symbol(get_config(lg_wandb, "model_type")); abstol=get_config(lg_wandb, "abstol"),
                       reltol=get_config(lg_wandb, "reltol"), maxiters=get_config(lg_wandb, "maxiters"))
 
-    loss_function = SupervisedLossContainer((ŷ, y) -> mean(abs, y .- vec(ŷ)), 2.5f0)
+    loss_function = SupervisedLossContainer((ŷ, y) -> mean(abs, y .- (vec(ŷ) .* scale_σ .+ scale_μ)), 2.5f0, 0.0f0, 0.0f0)
 
     ## Warmup
     __x, __y = gpu.(first(train_dataloader))
@@ -153,15 +157,17 @@ function train(config::Dict)
 
     for epoch in 1:get_config(lg_wandb, "epochs")
         try
-            train_start_time = time()
+            train_time = 0
             for (x, y) in train_dataloader
                 x = gpu(x)
                 y = gpu(y)
 
+                train_start_time = time()
                 _res = Zygote.withgradient(() -> loss_function(model, x, y), ps)
                 loss = _res.val
                 gs = _res.grad
                 Flux.Optimise.update!(opt, ps, gs)
+                train_time += time() - train_start_time
 
                 ### Store the NFE Count
                 cb()
@@ -173,17 +179,16 @@ function train(config::Dict)
                 lg_term(; records=Dict("Train/Running/NFE" => nfe_counts[end], "Train/Running/Loss" => loss))
                 step += 1
             end
-            train_end_time = time()
 
             ### Validation Loss
             val_start_time = time()
-            val_loss, val_nfe = compute_total_loss(model, val_dataloader)
+            val_loss, val_nfe = compute_total_loss(model, val_dataloader, scale_μ, scale_σ)
             val_end_time = time()
 
             log(lg_wandb,
                 Dict("Validation/Epoch/Count" => epoch, "Validation/Epoch/Loss" => val_loss,
                      "Validation/Epoch/NFE" => val_nfe))
-            lg_term(epoch, train_end_time - train_start_time, val_nfe, val_loss, val_end_time - val_start_time)
+            lg_term(epoch, train_time, val_nfe, val_loss, val_end_time - val_start_time)
         catch ex
             if ex isa Flux.Optimise.StopException
                 break
@@ -209,7 +214,7 @@ for seed in [1, 11, 111]
         @info "Starting Run for Model: $model_type with Seed: $seed"
 
         config = Dict("seed" => seed, "learning_rate" => 0.005, "abstol" => 0.1f0, "reltol" => 0.1f0, "maxiters" => 15,
-                      "epochs" => 10, "batch_size" => 512, "eval_batch_size" => 512, "model_type" => model_type,
+                      "epochs" => 100, "batch_size" => 512, "eval_batch_size" => 512, "model_type" => model_type,
                       "solver_type" => "dynamicss", "num_data_points" => 133885)
 
         model, nfe_counts = train(config)

@@ -101,7 +101,8 @@ function get_terminate_condition(::DEQSolver{Val(:rel_deq_default),A,T}, args...
     return terminate_condition_closure
 end
 
-function get_terminate_condition(::DEQSolver{Val(:rel_deq_best),A,T}, terminate_stats::Dict, args...; kwargs...) where {A,T}
+function get_terminate_condition(::DEQSolver{Val(:rel_deq_best),A,T}, terminate_stats::Dict, args...;
+                                 kwargs...) where {A,T}
     nstep = 0
     protective_threshold = T(1e3)
     objective_values = T[]
@@ -140,7 +141,8 @@ function get_terminate_condition(::DEQSolver{Val(:rel_deq_best),A,T}, terminate_
     return terminate_condition_closure
 end
 
-function get_terminate_condition(::DEQSolver{Val(:abs_deq_best),A,T}, terminate_stats::Dict, args...; kwargs...) where {A,T}
+function get_terminate_condition(::DEQSolver{Val(:abs_deq_best),A,T}, terminate_stats::Dict, args...;
+                                 kwargs...) where {A,T}
     nstep = 0
     protective_threshold = T(1e3)
     objective_values = T[]
@@ -189,7 +191,23 @@ has_converged(du, u, alg::DEQSolver{Val(:abs_norm)}) = norm(du) <= alg.abstol
 has_converged(du, u, alg::DEQSolver{Val(:abs_deq_default)}) = norm(du) <= alg.abstol
 has_converged(du, u, alg::DEQSolver{Val(:abs_deq_best)}) = norm(du) <= alg.abstol
 
-function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem, alg::DEQSolver, args...; kwargs...)
+struct EquilibriumSolution{T,N,uType,R,P,A,TEnd} <: SciMLBase.AbstractNonlinearSolution{T,N}
+    u::uType
+    resid::R
+    prob::P
+    alg::A
+    retcode::Symbol
+    t::TEnd
+    λₜ::T
+end
+
+function transform_solution(soln::EquilibriumSolution)
+    # Creates a NonlinearSolution/SteadyStateSolution
+    return DiffEqBase.build_solution(soln.prob, soln.alg, soln.u, soln.resid; retcode=soln.retcode)
+end
+
+function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem, alg::DEQSolver, args...;
+                            regularize_endpoint=false, kwargs...)
     tspan = alg.tspan isa Tuple ? alg.tspan : convert.(real(eltype(prob.u0)), (zero(alg.tspan), alg.tspan))
     _prob = ODEProblem(prob.f, prob.u0, tspan, prob.p)
 
@@ -202,9 +220,82 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem, alg::DE
     u, t = terminate_stats[:best_objective_value_iteration] === nothing ? (sol.u[end], sol.t[end]) :
            (sol.u[terminate_stats[:best_objective_value_iteration] + 1],
             sol.t[terminate_stats[:best_objective_value_iteration] + 1])
+
     du = prob.f(u, prob.p, t)
 
-    return DiffEqBase.build_solution(prob, alg, u, du;
-                                     retcode=(sol.retcode == :Terminated && has_converged(du, u, alg) ?
-                                              :Success : :Failure))
+    T = eltype(eltype(u))
+    N = ndims(u)
+    retcode = (sol.retcode == :Terminated && has_converged(du, u, alg) ? :Success : :Failure)
+    _t = regularize_endpoint isa Bool ? (regularize_endpoint ? t : nothing) : t
+    regularize_endpoint = regularize_endpoint isa Bool ? (regularize_endpoint ? T(1e-5) : T(0)) : t(regularize_endpoint)
+
+    return EquilibriumSolution{T,N,typeof(u),typeof(du),typeof(prob),typeof(alg),typeof(_t)}(u, du, prob, alg, retcode,
+                                                                                             _t, regularize_endpoint)
+end
+
+function clear_zero(x::T) where T
+    ϵ = eps(T)
+    if -ϵ <= x < 0
+        return -ϵ
+    elseif 0 <= x < ϵ
+        return ϵ
+    end
+    return x
+end
+
+@noinline function DiffEqSensitivity.SteadyStateAdjointProblem(sol::EquilibriumSolution,
+                                                               sensealg::DiffEqSensitivity.SteadyStateAdjoint, g, dg;
+                                                               save_idxs=nothing)
+    @unpack f, p, u0 = sol.prob
+
+    discrete = false
+
+    p === DiffEqBase.NullParameters() &&
+        error("Your model does not have parameters, and thus it is impossible to calculate the derivative of the solution with respect to the parameters. Your model must have parameters to use parameter sensitivity calculations!")
+
+    sense = DiffEqSensitivity.SteadyStateAdjointSensitivityFunction(g, sensealg, discrete, sol, dg, f.colorvec, false)
+    @unpack diffcache, y, sol, λ, vjp, linsolve = sense
+
+    _save_idxs = save_idxs === nothing ? Colon() : save_idxs
+    if dg !== nothing
+        if g !== nothing
+            dg(vec(diffcache.dg_val), y, p, nothing, nothing)
+        else
+            if typeof(_save_idxs) <: Number
+                diffcache.dg_val[_save_idxs] = dg[_save_idxs]
+            elseif typeof(dg) <: Number
+                @. diffcache.dg_val[_save_idxs] = dg
+            else
+                @. diffcache.dg_val[_save_idxs] = dg[_save_idxs]
+            end
+        end
+    else
+        if g !== nothing
+            DiffEqSensitivity.gradient!(vec(diffcache.dg_val), diffcache.g, y, sensealg, diffcache.g_grad_config)
+        end
+    end
+
+    _val, back = Zygote.pullback(x -> f(x, p, nothing), y)
+    s_val = size(_val)
+    op = DiffEqSensitivity.ZygotePullbackMultiplyOperator{eltype(y),typeof(back),typeof(s_val)}(back, s_val)
+
+    b = sol.t === nothing ? vec(diffcache.dg_val) : vec(diffcache.dg_val) .+ vec(sol.λₜ ./ clear_zero.(vec(sol.resid)))
+    linear_problem = LinearProblem(op, b)
+
+    copyto!(vec(λ), solve(linear_problem, linsolve).u)
+    _, back = Zygote.pullback(p -> vec(f(y, p, nothing)), p)
+    vjp .= -vec(back(λ)[1])
+
+    if g !== nothing
+        # compute del g/del p
+        dg_dp_val = zero(p)
+        dg_dp = DiffEqSensitivity.ParamGradientWrapper(g, nothing, y)
+        dg_dp_config = DiffEqSensitivity.build_grad_config(sensealg, dg_dp, p, p)
+        DiffEqSensitivity.gradient!(dg_dp_val, dg_dp, p, sensealg, dg_dp_config)
+
+        @. dg_dp_val = dg_dp_val + vjp
+        return dg_dp_val
+    else
+        return vjp
+    end
 end

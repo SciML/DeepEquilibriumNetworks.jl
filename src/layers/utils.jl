@@ -1,3 +1,21 @@
+struct DeepEquilibriumSolution{T,R<:AbstractFloat}
+    z_star::T
+    u₀::T
+    residual::T
+    jacobian_loss::R
+end
+
+function Base.show(io::IO, l::DeepEquilibriumSolution)
+    println(io, "DeepEquilibriumSolution(")
+    println(io, "\tz_star: ", l.z_star)
+    println(io, "\tinitial_condition: ", l.u₀)
+    println(io, "\tresidual: ", l.residual)
+    println(io, "\tjacobian_loss: ", l.jacobian_loss)
+    print(io, ")")
+    return nothing
+end
+
+
 function solve_steady_state_problem(re, p, x, u0, sensealg, args...; dudt=nothing, update_nfe=() -> (), kwargs...)
     # Solving the equation f(u) - u = du = 0
     update_is_variational_hidden_dropout_mask_reset_allowed(false)

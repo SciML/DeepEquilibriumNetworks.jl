@@ -132,7 +132,7 @@ function train(config::Dict, name_extension::String="")
                       Float32(get_config(lg_wandb, "reltol")), get_config(lg_wandb, "model_type"),
                       get_config(lg_wandb, "solver_type"), batch_size, get_config(lg_wandb, "residual_regularization"))
 
-    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0, 1.0f0, 1.0f-1)
+    loss_function = SupervisedLossContainer(Flux.Losses.logitcrossentropy, 1.0f0, 1.0f0, 1.0f-3)
 
     ## Warmup
     __x = gpu(rand(28, 28, 1, 1))
@@ -257,12 +257,12 @@ for i in TASK_ID:NUM_TASKS:length(experiment_configurations)
     residual_regularization, seed, model_type, solver_type = experiment_configurations[i]
 
     if MPI.Comm_rank(MPI_COMM_WORLD) == 0
-        @info "Seed = $seed | Model Type = $model_type | Solver Type = $solver_type"
+        @info "Seed = $seed | Model Type = $model_type | Solver Type = $solver_type | Residual Regularization = $residual_regularization"
     end
 
     config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 1.0f-2, "reltol" => 1.0f-2, "maxiters" => 50,
                   "epochs" => 25, "batch_size" => 64, "eval_batch_size" => 64, "model_type" => model_type,
                   "solver_type" => solver_type, "residual_regularization" => residual_regularization)
 
-    model, nfe_counts = train(config, "seed-$(seed)_model-$(model_type)_solver-$(solver_type)")
+    model, nfe_counts = train(config, "seed-$(seed)_model-$(model_type)_solver-$(solver_type)_resreg-$(residual_regularization)")
 end

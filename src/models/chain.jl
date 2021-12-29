@@ -56,41 +56,11 @@ end
 
 Flux.@functor DEQChain
 
-function (deq::Union{DEQChain{Val(1)},DEQChain{Val(3)}})(x)
-    return deq.post_deq(deq.deq(deq.pre_deq(x)))
-end
-
-function (deq::Union{DEQChain{Val(5)},DEQChain{Val(7)},DEQChain{Val(11)}})(x)
-    x_, loss = deq.deq(deq.pre_deq(x))
-    return deq.post_deq(x_), loss
-end
-
-function (deq::Union{DEQChain{Val(2)},DEQChain{Val(4)}})(x)
+function (deq::DEQChain)(x)
     x1 = deq.pre_deq(x)
-    z, ẑ = deq.deq(x1)
-    x2 = deq.post_deq(z)
-    return x2, (z, ẑ)
-end
-
-function (deq::Union{DEQChain{Val(6)},DEQChain{Val(8)},DEQChain{Val(12)}})(x)
-    x1 = deq.pre_deq(x)
-    z, ẑ, loss = deq.deq(x1)
-    x2 = deq.post_deq(z)
-    return x2, (z, ẑ), loss
-end
-
-function (deq::DEQChain{Val(9)})(x)
-    x1 = deq.pre_deq(x)
-    z, jac_loss, res_loss = deq.deq(x1)
-    x2 = deq.post_deq(z)
-    return x2, jac_loss, res_loss
-end
-
-function (deq::DEQChain{Val(10)})(x)
-    x1 = deq.pre_deq(x)
-    z, ẑ, jac_loss, res_loss = deq.deq(x1)
-    x2 = deq.post_deq(z)
-    return x2, (z, ẑ), jac_loss, res_loss
+    x2, deq_soln = deq.deq(x1)
+    x3 = deq.post_deq(x2)
+    return x3, deq_soln
 end
 
 function get_and_clear_nfe!(model::DEQChain)

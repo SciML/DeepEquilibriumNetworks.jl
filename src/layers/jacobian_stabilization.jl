@@ -13,7 +13,18 @@ function compute_deq_jacobian_loss(re, p::AbstractVector{T}, z::A, x::A) where {
 
     _, back = Zygote.pullback(model, z, x)
     vjp_z, vjp_x = back(v)
-    # vjp_z = Zygote.reshape_scalar(z, Zygote.forward_jacobian(z -> re(p)(z, x), z)[2] * Zygote.vec_scalar(v))
     # NOTE: This weird sum(zero, ...) ensures that we get zeros instead of nothings
     return sum(abs2, vjp_z) / d + sum(zero, vjp_x)
+end
+
+function compute_deq_jacobian_loss(re, p::AbstractVector{T}, lapl::A, z::A, x::A) where {T,A<:AbstractArray}
+    d = length(z)
+    v = gaussian_like(z)
+    model = re(p)
+
+    ## FIXME: Doesn't work as of now...
+    _, back = Zygote.pullback((lapl, z, x) -> model(lapl, z, x)[2], lapl, z, x)
+    vjp_lapl, vjp_z, vjp_x = back(v)
+    # NOTE: This weird sum(zero, ...) ensures that we get zeros instead of nothings
+    return sum(abs2, vjp_z) / d + sum(zero, vjp_x) + sum(zero, vjp_lapl)
 end

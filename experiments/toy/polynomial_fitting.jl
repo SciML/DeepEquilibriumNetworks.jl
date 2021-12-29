@@ -8,7 +8,7 @@ enable_fast_mode!()
 
 ## Model and Loss Function
 function get_model(hdims::Int, abstol::T, reltol::T, model_type::String, jacobian_regularization::Bool,
-                   residual_regularization::Bool) where {T}
+                   regularize_endpoint) where {T}
     main_model = Chain(Parallel((x₁, x₂) -> relu.(x₁ .+ x₂), Dense(hdims, hdims * 2), Dense(hdims, hdims * 2)),
                        Dense(hdims * 2, hdims))
     aux_model = Chain(Dense(hdims, hdims * 2, relu), Dense(hdims * 2, hdims))
@@ -19,7 +19,7 @@ function get_model(hdims::Int, abstol::T, reltol::T, model_type::String, jacobia
                         _deq(args..., get_default_dynamicss_solver(Float32(abstol), Float32(reltol));
                              sensealg=get_default_ssadjoint(Float32(abstol), Float32(reltol), 50), maxiters=50,
                              verbose=false, jacobian_regularization=jacobian_regularization,
-                             return_residual_error=residual_regularization), Dense(hdims, 1)))
+                             regularize_endpoint=regularize_endpoint), Dense(hdims, 1)))
 end
 
 ## Utilities
@@ -30,8 +30,7 @@ function train(config::Dict, name_extension::String="")
     ## Setup Logging & Experiment Configuration
     expt_name = "fastdeqjl-toy-$(now())-$(name_extension)"
     lg_wandb = WandbLogger(; project="FastDEQ.jl", name=expt_name, config=config)
-    lg_term = PrettyTableLogger("logs/" * expt_name * ".csv",
-                                ["Epoch Number", "Train/Time"],
+    lg_term = PrettyTableLogger("logs/" * expt_name * ".csv", ["Epoch Number", "Train/Time"],
                                 ["Train/Running/NFE", "Train/Running/Loss"])
 
     ## Reproducibility
@@ -49,16 +48,19 @@ function train(config::Dict, name_extension::String="")
     ## Model Setup
     model = get_model(get_config(lg_wandb, "hidden_dims"), get_config(lg_wandb, "abstol"),
                       get_config(lg_wandb, "reltol"), get_config(lg_wandb, "model_type"),
-                      get_config(lg_wandb, "jacobian_regularization"), get_config(lg_wandb, "residual_regularization"))
+                      get_config(lg_wandb, "jacobian_regularization"), get_config(lg_wandb, "regularize_endpoint"))
 
-    loss_function = SupervisedLossContainer(Flux.Losses.mse, 1.0f-2, 1.0f0, 1.0f-1)
+    model_type = get_config(lg_wandb, "model_type")
+    jac_reg = get_config(lg_wandb, "jacobian_regularization")
+    loss_function = SupervisedLossContainer(Flux.Losses.mse, model_type == "vanilla" ? 0.0f0 : 1.0f-2,
+                                            jac_reg ? 1.0f0 : 0.0f0, 0.0f0)
 
     nfe_counts = Int64[]
     cb = register_nfe_counts(model, nfe_counts)
 
     ## Training Loop
     ps = Flux.params(model)
-    opt = ADAMW(get_config(lg_wandb, "learning_rate"), (0.9, 0.999), 0.001)
+    opt = ADAM(get_config(lg_wandb, "learning_rate"))
     step = 1
     for epoch in 1:get_config(lg_wandb, "epochs")
         try
@@ -116,21 +118,22 @@ end
 experimental_configurations = []
 for seed in [1, 11, 111]
     for model_type in ["skip", "vanilla"]
-        for jacobian_regularization in [true, false]
-            for residual_regularization in [true, false]
-                push!(experimental_configurations, (seed, model_type, jacobian_regularization, residual_regularization))
+        for jacobian_regularization in [false]
+            for regularize_endpoint in [true, false]
+                model_type == "vanilla" && regularize_endpoint && continue
+                push!(experimental_configurations, (seed, model_type, jacobian_regularization, regularize_endpoint))
             end
         end
     end
 end
 
-for (seed, model_type, jacobian_regularization, residual_regularization) in experimental_configurations
-    @info "Seed = $seed | Model Type = $model_type | Jacobian Regularization = $jacobian_regularization | Residual Regularization = $residual_regularization"
+for (seed, model_type, jacobian_regularization, regularize_endpoint) in experimental_configurations
+    @info "Seed = $seed | Model Type = $model_type | Jacobian Regularization = $jacobian_regularization | Endpoint Regularization = $regularize_endpoint"
 
-    config = Dict("seed" => seed, "learning_rate" => 1.0f-3, "abstol" => 1.0f-3, "reltol" => 1.0f-3,
-                  "epochs" => 250, "batch_size" => 128, "data_size" => 512, "hidden_dims" => 50,
-                  "model_type" => model_type, "jacobian_regularization" => jacobian_regularization,
-                  "residual_regularization" => residual_regularization)
+    config = Dict("seed" => seed, "learning_rate" => 1.0f-3, "abstol" => 1.0f-3, "reltol" => 1.0f-3, "epochs" => 1000,
+                  "batch_size" => 128, "data_size" => 512, "hidden_dims" => 50, "model_type" => model_type,
+                  "jacobian_regularization" => jacobian_regularization, "regularize_endpoint" => regularize_endpoint)
 
-    model, nfe_counts, x_data, y_data = train(config, "seed-$(seed)_model-$(model_type)_jacreg-$(jacobian_regularization)_resreg-$(residual_regularization)")
+    model, nfe_counts, x_data, y_data = train(config,
+                                              "seed-$(seed)_model-$(model_type)_jacreg-$(jacobian_regularization)_endptreg-$(regularize_endpoint)")
 end

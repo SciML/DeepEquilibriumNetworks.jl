@@ -5,6 +5,14 @@ using FluxExperimental: AGNConv, AGNPool
 # Update FluxExperimental and remove this
 (bn::BatchNormV2)(lapl::CuMatrix{T}, X::AbstractMatrix) where {T<:Union{Float32,Float64}} = (lapl, bn(X))
 
+# NoOp DEQ
+struct NoOpDEQ end
+
+function (deq::NoOpDEQ)(lapl::AbstractMatrix{T}, x::AbstractMatrix{T}) where {T}
+    z = zero(x)
+    return (lapl, x), DeepEquilibriumSolution(z, z, z, T(0))
+end
+
 # Residual AGN Modules
 struct ResidualAGNConvBlock{Op,C1<:AGNConv,C2<:AGNConv}
     op::Op
@@ -57,12 +65,12 @@ function CrystalGraphCNN(input_feature_length::Int; num_conv::Int=2, conv_activa
     @assert deq_type ∈ (:explicit, :deq, :skip_deq, :skip_deq_no_extra_params) "Unknown deq_type: $(deq_type)!"
 
     pre_deq = FChain(AGNConv(input_feature_length => atom_conv_feature_length; initW=initW_explicit),
-                    BatchNormV2(atom_conv_feature_length, conv_activation; track_stats=true, affine=true),
-                    AGNConv(atom_conv_feature_length => atom_conv_feature_length; initW=initW_explicit),
-                    BatchNormV2(atom_conv_feature_length, conv_activation; track_stats=true, affine=true))
+                     BatchNormV2(atom_conv_feature_length, conv_activation; track_stats=true, affine=true),
+                     AGNConv(atom_conv_feature_length => atom_conv_feature_length; initW=initW_explicit),
+                     BatchNormV2(atom_conv_feature_length, conv_activation; track_stats=true, affine=true))
 
     if deq_type == :explicit
-        deq = NoOpLayer()
+        deq = NoOpDEQ()
         layers = []
         for i in 1:(num_conv - 2)
             push!(layers,
@@ -128,29 +136,13 @@ end
 
 function (cgcnn::CrystalGraphCNN)(bag::BatchedAtomicGraph)
     lapl, x = bag.laplacians, bag.encoded_features
-    # debug_backward_pass("Pre DEQ")
     _lapl1, _x1 = cgcnn.pre_deq(lapl, x)
-    # debug_backward_pass("DEQ")
-    _lapl2, _x2 = cgcnn.deq(_lapl1, _x1)
-    # debug_backward_pass("Post DEQ")
+    (_lapl2, _x2), soln = cgcnn.deq(_lapl1, _x1)
     _lapl3, _x3 = cgcnn.post_deq(_lapl2, _x2)
-    # debug_backward_pass("Pooling")
     _x4 = hcat([cgcnn.pool(_lapl3[(s1 + 1):s2, (s1 + 1):s2], _x3[:, (s1 + 1):s2])[2]
                 for (s1, s2) in zip(bag.sizes[1:(end - 1)], bag.sizes[2:end])]...)
-    # debug_backward_pass("Final Mapping")
     r = cgcnn.dense_chain(_x4)
-    # debug_backward_pass("Done")
-    return r
-end
-
-function (cgcnn::CrystalGraphCNN{Val(2)})(bag::BatchedAtomicGraph)
-    lapl, x = bag.laplacians, bag.encoded_features
-    _lapl1, _x1 = cgcnn.pre_deq(lapl, x)
-    (_lapl2, _x2), guess = cgcnn.deq((_lapl1, _x1))
-    _lapl3, _x3 = cgcnn.post_deq(_lapl2, _x2)
-    _x4 = hcat([cgcnn.pool(_lapl3[(s1 + 1):s2, (s1 + 1):s2], _x3[:, (s1 + 1):s2])[2]
-                for (s1, s2) in zip(bag.sizes[1:(end - 1)], bag.sizes[2:end])]...)
-    return cgcnn.dense_chain(_x4), (_x2, guess)
+    return r, soln
 end
 
 function get_and_clear_nfe!(model::CrystalGraphCNN)
@@ -161,7 +153,7 @@ end
 
 get_and_clear_nfe!(model::CrystalGraphCNN{Val(-1)}) = -1
 
-function (lc::SupervisedLossContainer)(model::CrystalGraphCNN{Val(2)}, x, y; kwargs...)
-    ŷ, guess_pair = model(x; kwargs...)
-    return lc.loss_function(ŷ, y) + lc.λ * mean(abs, guess_pair[1] .- guess_pair[2])
+function (lc::SupervisedLossContainer)(model::CrystalGraphCNN, x, y; kwargs...)
+    ŷ, soln = model(x; kwargs...)
+    return lc.loss_function(ŷ, y) + lc(soln)
 end

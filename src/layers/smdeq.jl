@@ -115,43 +115,16 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork)(x::AbstractArray{T}) where
     res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
 
     x_ = dudt_(res, mdeq.p)
-    update_is_variational_hidden_dropout_mask_reset_allowed(true)
-
-    return x_, initial_conditions
-end
-
-function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{S,true})(x::AbstractArray{T}) where {S,T}
-    p1, p2, p3 = split_array_by_indices(mdeq.p, mdeq.ordered_split_idxs)
-    initial_conditions = mdeq.shortcut_layers_re(p3)(x)
-    u_sizes = size.(initial_conditions)
-    u_split_idxs = vcat(0, cumsum(length.(initial_conditions) .÷ size(x, ndims(x)))...)
-    u0 = Zygote.@ignore vcat(Flux.flatten.(initial_conditions)...)
-
-    N = length(u_sizes)
-    update_is_variational_hidden_dropout_mask_reset_allowed(false)
-
-    function dudt_(u, _p)
-        mdeq.stats.nfe += 1
-
-        uₛ = split_array_by_indices(u, u_split_idxs)
-        p1, p2, _ = split_array_by_indices(_p, mdeq.ordered_split_idxs)
-
-        u_reshaped = ntuple(i -> reshape(uₛ[i], u_sizes[i]), N)
-
-        main_layers_output = mdeq.main_layers_re(p1)((u_reshaped[1], x), u_reshaped[2:end]...)
-
-        return mdeq.mapping_layers_re(p2)(main_layers_output)
+    residual = if mdeq.residual_regularization
+        Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
+                  enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))
+    else
+        Zygote.@ignore Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
+                                 enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))
     end
-
-    dudt(u, _p, t) = vcat(Flux.flatten.(dudt_(u, _p))...) .- u
-
-    ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
-    res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
-
-    x_ = dudt_(res, mdeq.p)
     update_is_variational_hidden_dropout_mask_reset_allowed(true)
 
-    return x_, initial_conditions, sum(abs, dudt(res, mdeq.p, nothing))
+    return x_, DeepEquilibriumSolution(x_, initial_conditions, residual, T(0))
 end
 
 function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{Nothing})(x::AbstractArray{T}) where {T}
@@ -187,45 +160,14 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{Nothing})(x::AbstractArray{
     res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
 
     x_ = dudt_(res, mdeq.p)
-    update_is_variational_hidden_dropout_mask_reset_allowed(true)
-
-    return x_, initial_conditions
-end
-
-function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{Nothing,true})(x::AbstractArray{T}) where {T}
-    p1, p2 = split_array_by_indices(mdeq.p, mdeq.ordered_split_idxs)
-
-    _initial_conditions = Zygote.@ignore [l(x) for l in map(l -> l.layers[1], mdeq.mapping_layers[1].layers)]
-    _initial_conditions = mdeq.mapping_layers_re(p2)((x, zero.(_initial_conditions[2:end])...))
-    initial_conditions = mdeq.main_layers_re(p1)((zero(_initial_conditions[1]), _initial_conditions[1]),
-                                                 _initial_conditions[2:end]...)
-    u_sizes = size.(initial_conditions)
-    u_split_idxs = vcat(0, cumsum(length.(initial_conditions) .÷ size(x, ndims(x)))...)
-    u0 = vcat(Flux.flatten.(initial_conditions)...)
-
-    N = length(u_sizes)
-    update_is_variational_hidden_dropout_mask_reset_allowed(false)
-
-    function dudt_(u, _p)
-        mdeq.stats.nfe += 1
-
-        uₛ = split_array_by_indices(u, u_split_idxs)
-        p1, p2, _ = split_array_by_indices(_p, mdeq.ordered_split_idxs)
-
-        u_reshaped = ntuple(i -> reshape(uₛ[i], u_sizes[i]), N)
-
-        main_layers_output = mdeq.main_layers_re(p1)((u_reshaped[1], x), u_reshaped[2:end]...)
-
-        return mdeq.mapping_layers_re(p2)(main_layers_output)
+    residual = if mdeq.residual_regularization
+        Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
+                  enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))
+    else
+        Zygote.@ignore Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
+                                 enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))
     end
-
-    dudt(u, _p, t) = vcat(Flux.flatten.(dudt_(u, _p))...) .- u
-
-    ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
-    res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
-
-    x_ = dudt_(res, mdeq.p)
     update_is_variational_hidden_dropout_mask_reset_allowed(true)
 
-    return x_, initial_conditions, sum(abs, dudt(res, mdeq.p, nothing))
+    return x_, DeepEquilibriumSolution(x_, initial_conditions, residual, T(0))
 end
