@@ -44,7 +44,7 @@ function compute_mae(model, dataloader, data_μ, data_σ)
 end
 
 
-trd, vd, ted = FastDEQ.get_materials_project_dataloaders("data/mp/3402/", 512, 512; verbose=true)
+trd, vd, ted = FastDEQ.get_materials_project_dataloaders("data/mp/46744/", 512, 512; verbose=true)
 
 _targets = hcat(last.(trd)...)
 data_μ = Float32(mean(_targets))

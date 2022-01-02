@@ -10,8 +10,8 @@ end
 
 function MaterialsProjectGraphConv(atom_feature_length::Int, neighbor_feature_length::Int)
     fc_full = Dense(2 * atom_feature_length + neighbor_feature_length, 2 * atom_feature_length)
-    bn1 = BatchNorm(2 * atom_feature_length)
-    bn2 = BatchNorm(atom_feature_length)
+    bn1 = BatchNormV2(2 * atom_feature_length)
+    bn2 = BatchNormV2(atom_feature_length)
     return MaterialsProjectGraphConv(atom_feature_length, neighbor_feature_length, fc_full, bn1, bn2)
 end
 
