@@ -1,9 +1,15 @@
-using ChemistryFeaturization, CSV, CUDA, DataFrames, Dates, FastDEQ, FluxExperimental, FileIO, JLD2, Random,
+using ChemistryFeaturization, CSV, CUDA, DataFrames, Dates, FastDEQ, FluxExperimental, FluxMPI, FileIO, JLD2, Random,
       Serialization, Statistics, Wandb, Zygote
 using ParameterSchedulers: Scheduler, Cos
 
+CUDA.versioninfo()
+
+FluxMPI.Init()
 const DATA_PATH = joinpath(@__DIR__, "data", "qm9")
 const CACHED_DATASET = Dict()
+
+const MPI_COMM_WORLD = MPI.COMM_WORLD
+const MPI_COMM_SIZE = MPI.Comm_size(MPI_COMM_WORLD)
 
 function load_dataset_from_serialized_files(data_dir=DATA_PATH; num_data_points::Union{Int,Nothing}=nothing,
                                             train_fraction::Float64=0.8, verbose::Bool=false, seed::Int=0)
@@ -57,35 +63,31 @@ function load_dataset(data_dir=DATA_PATH; kwargs...)
     return (data["train_X"], data["train_y"]), (data["val_X"], data["val_y"])
 end
 
-function construct_dataiterators(X, y; batch_size::Int=128)
-    return zip(BatchedAtomicGraph(batch_size, X), Iterators.partition(y, batch_size))
+function construct_dataiterators(X, y; batch_size::Int=128, shuffle::Bool=false)
+    return DataParallelDataLoader((BatchedAtomicGraph(batch_size, X), collect(Iterators.partition(y, batch_size)));
+                                  batchsize=1, shuffle=shuffle)
 end
 
 function get_model(model_type::Symbol; num_features::Int=61, crystal_feature_length::Int=128, num_hidden_layers::Int=5,
                    abstol::Real=0.1f0, reltol::Real=0.1f0, maxiters::Int=10)
-    model = CrystalGraphCNN(num_features; num_conv=maxiters+1, atom_conv_feature_length=crystal_feature_length,
+    model = CrystalGraphCNN(num_features; num_conv=maxiters + 1, atom_conv_feature_length=crystal_feature_length,
                             pooled_feature_length=crystal_feature_length ÷ 2, num_hidden_layers=num_hidden_layers,
                             deq_type=model_type, abstol=Float32(abstol), reltol=Float32(reltol), maxiters=maxiters)
 
-    return gpu(model)
+    return (MPI_COMM_SIZE > 1 ? DataParallelFluxModel : gpu)(model)
 end
-
-(train_X, train_y), (val_X, val_y) = load_dataset_from_serialized_files(; num_data_points=10)
-X = first(BatchedAtomicGraph(128, train_X)) |> gpu
-model = get_model(:explicit)
-gradient(() -> sum(model(X)), Flux.params(model))
 
 register_nfe_counts(deq, buffer) = () -> push!(buffer, get_and_clear_nfe!(deq))
 
-function compute_total_loss(model, dataloader, scale_μ, scale_σ)
+function compute_total_loss(model, dataloader, rescale)
     total_loss, total_datasize, total_nfe = 0, 0, 0
     for (x, y) in dataloader
-        x = gpu(x)
-        y = gpu(y)
+        x = gpu(x[1])
+        y = gpu(y[1])
 
         ŷ = model(x)
         ŷ = ŷ isa Tuple ? ŷ[1] : ŷ
-        ŷ = vec(ŷ .* scale_σ .+ scale_μ)
+        ŷ = rescale(σ.(vec(ŷ)))
         total_nfe += get_and_clear_nfe!(model) * length(y)
         total_loss += mean(abs, ŷ .- y) * length(y)
         total_datasize += length(y)
@@ -96,7 +98,7 @@ end
 function train(config::Dict)
     ## Setup Logging & Experiment Configuration
     expt_name = "fastdeqjl-qm9_formation_energy-deq-$(now())"
-    lg_wandb = WandbLogger(; project="FastDEQ.jl", name=expt_name, config=config)
+    lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, config=config)
     lg_term = PrettyTableLogger("logs/" * expt_name * ".log",
                                 ["Epoch Number", "Train/Time", "Validation/NFE", "Validation/Loss", "Validation/Time"],
                                 ["Train/Running/NFE", "Train/Running/Loss"])
@@ -126,8 +128,8 @@ function train(config::Dict)
         end
     end
 
-    scale_μ = mean(train_output)
-    scale_σ = std(train_output)
+    min_y, max_y = CUDA.@allowscalar extrema(train_output)
+    rescale(v) = v .* (max_y - min_y) .+ min_y
 
     train_dataloader = construct_dataiterators(train_input, train_output; batch_size=batch_size)
     val_dataloader = construct_dataiterators(val_input, val_output; batch_size=eval_batch_size)
@@ -136,10 +138,11 @@ function train(config::Dict)
     model = get_model(Symbol(get_config(lg_wandb, "model_type")); abstol=get_config(lg_wandb, "abstol"),
                       reltol=get_config(lg_wandb, "reltol"), maxiters=get_config(lg_wandb, "maxiters"))
 
-    loss_function = SupervisedLossContainer((ŷ, y) -> mean(abs, y .- (vec(ŷ) .* scale_σ .+ scale_μ)), 2.5f0, 0.0f0, 0.0f0)
+    loss_function = SupervisedLossContainer((ŷ, y) -> mean(abs, y .- rescale(σ.(vec(ŷ)))), 2.5f0, 0.0f0,
+                                            0.0f0)
 
     ## Warmup
-    __x, __y = gpu.(first(train_dataloader))
+    __x, __y = gpu.(first.(first(train_dataloader)))
     loss_function(model, __x, __y)
     @info "Forward Pass Warmup Completed"
     Zygote.gradient(() -> loss_function(model, __x, __y), Flux.params(model))
@@ -159,8 +162,8 @@ function train(config::Dict)
         try
             train_time = 0
             for (x, y) in train_dataloader
-                x = gpu(x)
-                y = gpu(y)
+                x = gpu(x[1])
+                y = gpu(y[1])
 
                 train_start_time = time()
                 _res = Zygote.withgradient(() -> loss_function(model, x, y), ps)
@@ -182,7 +185,7 @@ function train(config::Dict)
 
             ### Validation Loss
             val_start_time = time()
-            val_loss, val_nfe = compute_total_loss(model, val_dataloader, scale_μ, scale_σ)
+            val_loss, val_nfe = compute_total_loss(model, val_dataloader, rescale)
             val_end_time = time()
 
             log(lg_wandb,
@@ -213,8 +216,8 @@ for seed in [1, 11, 111]
     for model_type in ["explicit", "deq", "skip_deq", "skip_deq_no_extra_params"]
         @info "Starting Run for Model: $model_type with Seed: $seed"
 
-        config = Dict("seed" => seed, "learning_rate" => 0.005, "abstol" => 0.1f0, "reltol" => 0.1f0, "maxiters" => 15,
-                      "epochs" => 100, "batch_size" => 512, "eval_batch_size" => 512, "model_type" => model_type,
+        config = Dict("seed" => seed, "learning_rate" => 0.0001, "abstol" => 0.1f0, "reltol" => 0.1f0, "maxiters" => 50,
+                      "epochs" => 100, "batch_size" => 32, "eval_batch_size" => 32, "model_type" => model_type,
                       "solver_type" => "dynamicss", "num_data_points" => 133885)
 
         model, nfe_counts = train(config)

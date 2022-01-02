@@ -285,7 +285,7 @@ for i in TASK_ID:NUM_TASKS:length(experiment_configurations)
     end
 
     config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 5.0f-2, "reltol" => 5.0f-2,
-                  "maxiters" => 50, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 64,
+                  "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 64,
                   "eval_batch_size" => 64, "model_type" => model_type, "solver_type" => solver_type,
                   "weight_decay" => 0.0000025)
 

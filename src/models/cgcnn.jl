@@ -65,18 +65,15 @@ function CrystalGraphCNN(input_feature_length::Int; num_conv::Int=2, conv_activa
     @assert deq_type ∈ (:explicit, :deq, :skip_deq, :skip_deq_no_extra_params) "Unknown deq_type: $(deq_type)!"
 
     pre_deq = FChain(AGNConv(input_feature_length => atom_conv_feature_length; initW=initW_explicit),
-                     BatchNormV2(atom_conv_feature_length, conv_activation; track_stats=true, affine=true),
-                     AGNConv(atom_conv_feature_length => atom_conv_feature_length; initW=initW_explicit),
-                     BatchNormV2(atom_conv_feature_length, conv_activation; track_stats=true, affine=true))
+                     AGNConv(atom_conv_feature_length => atom_conv_feature_length; initW=initW_explicit))
 
     if deq_type == :explicit
         deq = NoOpDEQ()
         layers = []
         for i in 1:(num_conv - 2)
             push!(layers,
-                  AGNConv(atom_conv_feature_length => atom_conv_feature_length; initW=initW_explicit,
+                  AGNConv(atom_conv_feature_length => atom_conv_feature_length, conv_activation; initW=initW_explicit,
                           initb=(args...) -> Flux.Zeros()))
-            push!(layers, GroupNormV2(atom_conv_feature_length, 8, conv_activation; track_stats=false, affine=true))
         end
         push!(layers,
               AGNConv(atom_conv_feature_length => atom_conv_feature_length, conv_activation; initW=initW_explicit,

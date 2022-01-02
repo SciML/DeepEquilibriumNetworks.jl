@@ -3,6 +3,7 @@ module FastDEQ
 using Reexport
 
 @reexport using CUDA
+using DataLoaders
 using DiffEqBase
 using DiffEqCallbacks
 @reexport using DiffEqSensitivity
@@ -11,12 +12,16 @@ using DiffEqCallbacks
 @reexport using FluxMPI
 using Format
 using Functors
+using Glob
+using LearnBase
 using LinearAlgebra
 using LinearSolve
 using MPI
 @reexport using OrdinaryDiffEq
+using Random
 using Requires
 using SciMLBase
+using Serialization
 using SparseArrays
 using Statistics
 @reexport using SteadyStateDiffEq
@@ -59,6 +64,9 @@ include("layers/smdeq.jl")
 
 include("models/chain.jl")
 include("models/width_stacked_deq.jl")
+include("models/mpgnn.jl")
+
+include("dataset.jl")
 
 include("losses.jl")
 include("logger.jl")
@@ -68,6 +76,7 @@ export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork, MultiScaleDeepEquilib
        MultiScaleSkipDeepEquilibriumNetwork, WidthStackedDEQ
 
 # Compositional Layers
+export MaterialsProjectCrystalGraphConvNet, MaterialsProjectGraphConv
 export DEQChain
 export BasicResidualBlock, BranchNet, MultiParallelNet, BasicBottleneckBlock
 
