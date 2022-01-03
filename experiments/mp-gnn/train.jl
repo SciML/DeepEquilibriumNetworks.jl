@@ -9,7 +9,6 @@ function train_one_epoch!(model, dataloader, ps, opt, data_μ, data_σ)
     for (atom_features, neighbor_features, neighbor_feature_indices, crystal_atom_indices, target) in dataloader
         atom_features = gpu(atom_features)
         neighbor_features = gpu(neighbor_features)
-        neighbor_feature_indices = gpu(neighbor_feature_indices)
         target = gpu(target)
         target_standardized = (target .- data_μ) ./ data_σ
 
