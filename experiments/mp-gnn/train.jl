@@ -122,9 +122,14 @@ for seed in [1, 2, 3]
     push!(experiment_configurations, (seed=seed, deq=false, sdeq=true))
 end
 
-for expt in experiment_configurations
+TASK_ID = parse(Int, ARGS[1])
+NUM_TASKS = parse(Int, ARGS[2])
+
+for i in TASK_ID:NUM_TASKS:length(experiment_configurations)
+    expt = experiment_configurations[i]
     ext = join(map((k, v) -> "$k-$v", keys(expt), values(expt)), "_")
     @info "Starting Run: $ext"
+
     train(ext; epochs=1000, start_learning_rate=1e-2, weight_decay=1e-4, seed=expt.seed, root_dir="data/mp/46744",
           batchsize=256, eval_batchsize=256, deq=expt.deq, sdeq=expt.sdeq)
 end
