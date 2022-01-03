@@ -61,6 +61,11 @@ data_σ = Float32(std(_targets))
 
 model = gpu(MaterialsProjectCrystalGraphConvNet(; original_atom_feature_length=92, neighbor_feature_length=41))
 
+for c in model.convs
+    c.bn1.active = true
+    c.bn2.active = true
+end
+
 val_losses = []
 test_losses = []
 
@@ -69,7 +74,7 @@ opt = ADAMW(1.0f-2, (0.9, 0.999), 0.0)
 for e in 1:1000
     @show e
     train_one_epoch!(model, trd, ps, opt, data_μ, data_σ)
-    if e == 1
+    if e == 10
         opt[3].eta = opt[3].eta / 10
     end
     push!(val_losses, compute_mae(model, vd, data_μ, data_σ))
@@ -80,6 +85,6 @@ end
 idx = argmin(val_losses)
 @show val_losses[idx], test_losses[idx]
 
-function train_and_validate() end
+function train(epochs, start_learning_rate, weight_decay, )
 
-function run() end
+end

@@ -8,10 +8,21 @@ function expand_mid(arr::CuMatrix, M::Int)
     return reshape(arr, s1, 1, s2) .+ CUDA.zeros(eltype(arr), s1, M, s2)
 end
 
+function expand_mid(arr::AbstractMatrix, ex::AbstractArray)
+    s1, s2 = size(arr)
+    return reshape(arr, s1, 1, s2) .+ ex
+end
+
 Zygote.@adjoint function expand_mid(arr::CuArray, M::Int)
     s1, s2 = size(arr)
     expand_mid_sensitivity(Δ) = (reshape(sum(Δ; dims=2), s1, s2), nothing)
     return reshape(arr, s1, 1, s2) .+ CUDA.zeros(eltype(arr), 1, M, 1), expand_mid_sensitivity
+end
+
+Zygote.@adjoint function expand_mid(arr::AbstractMatrix, ex::AbstractArray)
+    s1, s2 = size(arr)
+    expand_mid_sensitivity(Δ) = (reshape(sum(Δ; dims=2), s1, s2), nothing)
+    return reshape(arr, s1, 1, s2) .+ ex, expand_mid_sensitivity
 end
 
 struct ExpandMid{X<:AbstractArray}
@@ -24,10 +35,7 @@ Flux.trainable(::ExpandMid) = ()
 
 ExpandMid(M::Int) = ExpandMid(zeros(Float32, 1, M, 1))
 
-function (e::ExpandMid)(x::AbstractMatrix)
-    s1, s2 = size(x)
-    return reshape(x, s1, 1, s2) .+ e.x
-end
+(e::ExpandMid)(x::AbstractMatrix) = expand_mid(x, e.x)
 
 struct MaterialsProjectGraphConv{L1,B1,B2,E}
     atom_feature_length::Int
@@ -52,7 +60,7 @@ function (c::MaterialsProjectGraphConv)(atom_in_features::AbstractMatrix{T}, nei
                                         neighbor_feature_indices::AbstractMatrix{S}) where {T,S<:Int}
     M, N = size(neighbor_feature_indices)
     atom_neighbor_features = atom_in_features[:, neighbor_feature_indices]
-    ex_atom_in_features = c.exmid(atom_in_features) # expand_mid(atom_in_features, M)
+    ex_atom_in_features = c.exmid(atom_in_features)
 
     total_neighbor_features = vcat(ex_atom_in_features, atom_neighbor_features, neighbor_features)
     total_gated_features = c.fc_full(total_neighbor_features)
