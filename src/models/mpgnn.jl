@@ -28,7 +28,7 @@ end
 Zygote.@adjoint function expand_mid(arr::CuArray, M::Int)
     s1, s2 = size(arr)
     expand_mid_sensitivity(Δ) = (reshape(sum(Δ; dims=2), s1, s2), nothing)
-    return reshape(arr, s1, 1, s2) .+ CUDA.zeros(eltype(arr), s1, M, s2), repeat_no_scalar_sensitivity
+    return reshape(arr, s1, 1, s2) .+ CUDA.zeros(eltype(arr), s1, M, s2), expand_mid_sensitivity
 end
 
 function (c::MaterialsProjectGraphConv)(atom_in_features::AbstractMatrix{T}, neighbor_features::AbstractArray{T,3},

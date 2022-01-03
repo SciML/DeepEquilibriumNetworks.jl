@@ -29,8 +29,7 @@ function train_one_epoch!(model, dataloader, ps, opt, data_μ, data_σ)
 
     actual_loss /= total_data
 
-    @show actual_loss
-    @show training_time / length(dataloader)
+    @show actual_loss, training_time / length(dataloader)
 
     return (training_time=training_time, loss=actual_loss)
 end
@@ -64,6 +63,7 @@ data_σ = Float32(std(_targets))
 model = gpu(MaterialsProjectCrystalGraphConvNet(; original_atom_feature_length=92, neighbor_feature_length=41))
 
 val_losses = []
+test_losses = []
 
 ps = Flux.params(model);
 opt = ADAMW(1.0f-2, (0.9, 0.999), 0.0)
@@ -74,10 +74,12 @@ for e in 1:1000
         opt[3].eta = opt[3].eta / 10
     end
     push!(val_losses, compute_mae(model, vd, data_μ, data_σ))
-    @show val_losses[end]
+    push!(test_losses, compute_mae(model, ted, data_μ, data_σ))
+    @show val_losses[end], test_losses[end]
 end
 
-@show compute_mae(model, ted, data_μ, data_σ)
+idx = argmin(val_losses)
+@show val_losses[idx], test_losses[idx]
 
 function train_and_validate() end
 
