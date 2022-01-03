@@ -114,3 +114,5 @@ function pool(c::MaterialsProjectCrystalGraphConvNet, atom_features::AbstractMat
               crystal_atom_indices::AbstractVector) where {T}
     return hcat([mean(atom_features[:, idx_map]; dims=2) for idx_map in crystal_atom_indices]...)
 end
+
+get_and_clear_nfe!(model::MaterialsProjectCrystalGraphConvNet) = -1
