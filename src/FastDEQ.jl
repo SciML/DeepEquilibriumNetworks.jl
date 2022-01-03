@@ -16,6 +16,7 @@ using Glob
 using LearnBase
 using LinearAlgebra
 using LinearSolve
+using MLDataUtils
 using MPI
 @reexport using OrdinaryDiffEq
 using Random

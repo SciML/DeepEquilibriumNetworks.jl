@@ -32,8 +32,10 @@ function get_materials_project_dataloaders(root_dir, train_batchsize, val_batchs
 
     idxs = randperm(length(dataset))
     idx_1, idx_2 = Int(floor(length(idxs) * train_split)), Int(floor(length(idxs) * val_split))
+
     train_idxs, val_idxs, test_idxs = idxs[1:idx_1], idxs[(idx_1 + 1):(idx_1 + idx_2)], idxs[(idx_1 + idx_2 + 1):end]
-    train_dataset = dataset[train_idxs]
+
+    train_dataset = shuffleobs(dataset[train_idxs])
     val_dataset = dataset[val_idxs]
     test_dataset = dataset[test_idxs]
 

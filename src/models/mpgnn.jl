@@ -15,31 +15,27 @@ function MaterialsProjectGraphConv(atom_feature_length::Int, neighbor_feature_le
     return MaterialsProjectGraphConv(atom_feature_length, neighbor_feature_length, fc_full, bn1, bn2)
 end
 
-repeat_no_scalar(arr::AbstractArray, repeat_dims...) = repeat(arr, repeat_dims...)
-
-function repeat_no_scalar(arr::CuArray, repeat_dims...)
-    s = size(arr)
-    final_size = [s2 == 1 ? s1 : s2 for (s1, s2) in zip(s, repeat_dims)]
-    return arr .+ CUDA.zeros(final_size...)
+function expand_mid(arr::AbstractMatrix, M::Int)
+    s1, s2 = size(arr)
+    return repeat(reshape(arr, s1, 1, s2), 1, M, 1)
 end
 
-Zygote.@adjoint function repeat_no_scalar(arr::CuArray, repeat_dims...)
-    s = size(arr)
-    final_size = [s2 == 1 ? s1 : s2 for (s1, s2) in zip(s, repeat_dims)]
-    res = arr .+ CUDA.zeros(final_size...)
-    function repeat_no_scalar_sensitivity(Δ)
-        return (reshape(sum(Δ; dims=filter(i -> repeat_dims[i] != 1, 1:length(repeat_dims))), s),
-                ntuple(i -> nothing, length(repeat_dims))...)
-    end
-    return res, repeat_no_scalar_sensitivity
+function expand_mid(arr::CuMatrix, M::Int)
+    s1, s2 = size(arr)
+    return reshape(arr, s1, 1, s2) .+ CUDA.zeros(eltype(arr), s1, M, s2)
+end
+
+Zygote.@adjoint function expand_mid(arr::CuArray, M::Int)
+    s1, s2 = size(arr)
+    expand_mid_sensitivity(Δ) = (reshape(sum(Δ; dims=2), s1, s2), nothing)
+    return reshape(arr, s1, 1, s2) .+ CUDA.zeros(eltype(arr), s1, M, s2), repeat_no_scalar_sensitivity
 end
 
 function (c::MaterialsProjectGraphConv)(atom_in_features::AbstractMatrix{T}, neighbor_features::AbstractArray{T,3},
                                         neighbor_feature_indices::AbstractMatrix{S}) where {T,S<:Int}
     M, N = size(neighbor_feature_indices)
     atom_neighbor_features = atom_in_features[:, neighbor_feature_indices]
-    total_neighbor_features = vcat(repeat_no_scalar(Flux.unsqueeze(atom_in_features, 2), 1, M, 1),
-                                   atom_neighbor_features, neighbor_features)
+    total_neighbor_features = vcat(expand_mid(atom_in_features, M), atom_neighbor_features, neighbor_features)
     total_gated_features = c.fc_full(total_neighbor_features)
     total_gated_features = reshape(c.bn1(reshape(total_gated_features, 2 * c.atom_feature_length, :)),
                                    2 * c.atom_feature_length, M, N)
