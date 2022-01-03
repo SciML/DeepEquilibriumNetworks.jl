@@ -6,8 +6,15 @@ enable_fast_mode!()
 
 function loss_function(model, atom_features, neighbor_features, neighbor_feature_indices, crystal_atom_indices,
                        target_standardized)
-    prediction = model(atom_features, neighbor_features, neighbor_feature_indices, crystal_atom_indices)
+    prediction = first(model(atom_features, neighbor_features, neighbor_feature_indices, crystal_atom_indices))
     return mean(abs2, prediction .- target_standardized)
+end
+
+function loss_function(model::MaterialsProjectCrystalGraphConvNet{E,C}, atom_features, neighbor_features,
+                       neighbor_feature_indices, crystal_atom_indices,
+                       target_standardized) where {E,C<:SkipDeepEquilibriumNetwork}
+    prediction, soln = model(atom_features, neighbor_features, neighbor_feature_indices, crystal_atom_indices)
+    return mean(abs2, prediction .- target_standardized) + 1.0f-2 * mean(abs, soln.u₀ .- soln.z_star)
 end
 
 function train_one_epoch!(model, dataloader, ps, opt, data_μ, data_σ)
@@ -25,7 +32,7 @@ function train_one_epoch!(model, dataloader, ps, opt, data_μ, data_σ)
         Flux.Optimise.update!(opt, ps, res.grad)
         training_time += time() - start_time
 
-        pred = model(atom_features, neighbor_features, neighbor_feature_indices, crystal_atom_indices)
+        pred = first(model(atom_features, neighbor_features, neighbor_feature_indices, crystal_atom_indices))
 
         nfe_count += get_and_clear_nfe!(model) * size(atom_features, 2)
         actual_loss += mean(abs, pred .* data_σ .+ data_μ .- target) * size(atom_features, 2)
@@ -46,7 +53,7 @@ function compute_mae(model, dataloader, data_μ, data_σ)
 
         start_time = time()
         mae += mean(abs,
-                    (model(atom_features, neighbor_features, neighbor_feature_indices, crystal_atom_indices) .*
+                    (first(model(atom_features, neighbor_features, neighbor_feature_indices, crystal_atom_indices)) .*
                      data_σ .+ data_μ) .- target) * size(atom_features, ndims(atom_features))
         pred_time += time() - start_time
 
@@ -59,7 +66,7 @@ function compute_mae(model, dataloader, data_μ, data_σ)
 end
 
 function train(name_extension::String=""; epochs, start_learning_rate, weight_decay, seed, root_dir, batchsize,
-               eval_batchsize)
+               eval_batchsize, deq, sdeq)
     expt_name = "fastdeqjl-supervised_mnist_classification-$(now())-$(name_extension)"
     lg_term = PrettyTableLogger("logs/" * expt_name * ".csv",
                                 ["Epoch", "Train/NFE  ", "Train/Loss", "Train/Time", "Train/Time Per Batch",
@@ -80,13 +87,8 @@ function train(name_extension::String=""; epochs, start_learning_rate, weight_de
     data_σ = Float32(std(_targets))
 
     ## Model
-    model = gpu(MaterialsProjectCrystalGraphConvNet(; original_atom_feature_length=92, neighbor_feature_length=41))
-
-    ### Some weird CUDNN error on cyclops for inference mode
-    for c in model.convs
-        c.bn1.active = true
-        c.bn2.active = true
-    end
+    model = gpu(MaterialsProjectCrystalGraphConvNet(; original_atom_feature_length=92, neighbor_feature_length=41,
+                                                    deq=deq, sdeq=sdeq))
 
     ## Optimizer
     ps = Flux.params(model)
@@ -102,8 +104,9 @@ function train(name_extension::String=""; epochs, start_learning_rate, weight_de
                 val_stats.nfe, val_stats.loss, val_stats.prediction_time, val_stats.prediction_time_per_batch,
                 test_stats.nfe, test_stats.loss, test_stats.prediction_time, test_stats.prediction_time_per_batch)
 
-        ## Reduce LR after 10 epochs
+        ## Reduce LR
         e == 10 && (opt[3].eta = opt[3].eta / 10)
+        e == 75 && (opt[3].eta = opt[3].eta / 10)
     end
 
     close(lg_term)
@@ -111,5 +114,17 @@ function train(name_extension::String=""; epochs, start_learning_rate, weight_de
     return nothing
 end
 
-train(; epochs=25, start_learning_rate=1e-2, weight_decay=1e-5, seed=0, root_dir="data/mp/3402", batchsize=256,
-      eval_batchsize=256)
+experiment_configurations = []
+for seed in [1, 2, 3]
+    for deq in [true, false]
+        push!(experiment_configurations, (seed=seed, deq=deq, sdeq=false))
+    end
+    push!(experiment_configurations, (seed=seed, deq=false, sdeq=true))
+end
+
+for expt in experiment_configurations
+    ext = join(map((k, v) -> "$k-$v", keys(expt), values(expt)), "_")
+    @info "Starting Run: $ext"
+    train(ext; epochs=1000, start_learning_rate=1e-2, weight_decay=1e-4, seed=expt.seed, root_dir="data/mp/46744",
+          batchsize=256, eval_batchsize=256, deq=expt.deq, sdeq=expt.sdeq)
+end

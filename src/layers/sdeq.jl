@@ -88,56 +88,54 @@ function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(x::AbstractArray{T}) where
     return z_star, DeepEquilibriumSolution(z_star, z, residual, jac_loss)
 end
 
-# TODO: Update the new API
-function (deq::SkipDeepEquilibriumNetwork)(lapl::AbstractMatrix{T}, x::AbstractMatrix{T}) where {T}
-    # Atomic Graph Nets
+# For multiple argument functions
+function (deq::SkipDeepEquilibriumNetwork)(x::AbstractMatrix{T}, args...) where {T}
     p1, p2 = deq.p[1:(deq.split_idx)], deq.p[(deq.split_idx + 1):end]
-    u0 = deq.re2(p2)(lapl, x)[2]
+    u0 = first(deq.re2(p2)(x, args...))
 
     function dudt(u, _p, t)
         deq.stats.nfe += 1
-        return deq.re1(_p)(lapl, u, x)[2] .- u
+        return first(deq.re1(_p)(u, x, args...)) .- u
     end
 
     ssprob = SteadyStateProblem(dudt, u0, p1)
     sol = solve(ssprob, deq.args...; u0=u0, sensealg=deq.sensealg, deq.kwargs...)
     deq.stats.nfe += 1
 
-    lapl, z_star = deq.re1(p1)(lapl, sol.u, x)
+    z_star = first(deq.re1(p1)(sol.u, x, args...))
 
-    jac_loss = (deq.jacobian_regularization ? compute_deq_jacobian_loss(deq.re1, p1, lapl, z_star, x) : T(0))::T
+    jac_loss = T(0)
 
     residual = if deq.residual_regularization
-        z_star .- deq.re1(p1)(lapl, z_star, x)[2]
+        z_star .- first(deq.re1(p1)(z_star, x, args...))
     else
-        Zygote.@ignore z_star .- deq.re1(p1)(lapl, z_star, x)[2]
+        Zygote.@ignore z_star .- first(deq.re1(p1)(z_star, x, args...))
     end
 
-    return (lapl, z_star), DeepEquilibriumSolution(z_star, u0, residual, jac_loss)
+    return (z_star, args...), DeepEquilibriumSolution(z_star, u0, residual, jac_loss)
 end
 
-function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(lapl::AbstractMatrix{T}, x::AbstractMatrix{T}) where {M,T}
-    # NOTE: encoded_features being 0 causes NaN gradients to propagate
-    u0 = deq.re1(deq.p)(lapl, zero(x) .+ eps(eltype(x)), x)[2]
+function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(x::AbstractMatrix{T}, args...) where {M,T}
+    u0 = first(deq.re1(deq.p)(x, args...))
 
     function dudt(u, _p, t)
         deq.stats.nfe += 1
-        return deq.re1(_p)(lapl, u, x)[2] .- u
+        return first(deq.re1(_p)(u, x, args...)) .- u
     end
 
     ssprob = SteadyStateProblem(dudt, u0, deq.p)
     sol = solve(ssprob, deq.args...; u0=u0, sensealg=deq.sensealg, deq.kwargs...)
     deq.stats.nfe += 1
 
-    lapl, z_star = deq.re1(deq.p)(lapl, sol.u, x)
+    z_star = first(deq.re1(deq.p)(lapl, sol.u, x))
 
-    jac_loss = (deq.jacobian_regularization ? compute_deq_jacobian_loss(deq.re1, deq.p, lapl, z_star, x) : T(0))::T
+    jac_loss = T(0)
 
     residual = if deq.residual_regularization
-        z_star .- deq.re1(deq.p)(lapl, z_star, x)[2]
+        z_star .- first(deq.re1(deq.p)(z_star, x, args...))
     else
-        Zygote.@ignore z_star .- deq.re1(deq.p)(lapl, z_star, x)[2]
+        Zygote.@ignore z_star .- first(deq.re1(deq.p)(z_star, x, args...))
     end
 
-    return (lapl, z_star), DeepEquilibriumSolution(z_star, u0, residual, jac_loss)
+    return (z_star, args...), DeepEquilibriumSolution(z_star, u0, residual, jac_loss)
 end

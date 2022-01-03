@@ -37,6 +37,30 @@ ExpandMid(M::Int) = ExpandMid(zeros(Float32, 1, M, 1))
 
 (e::ExpandMid)(x::AbstractMatrix) = expand_mid(x, e.x)
 
+struct MaterialsProjectResidualGraphConv{C1,C2}
+    c1::C1
+    c2::C2
+
+    function MaterialsProjectResidualGraphConv(atom_feature_length::Int, neighbor_feature_length::Int,
+                                               expand_mid_dims::Int)
+        c1 = MaterialsProjectGraphConv(atom_feature_length, neighbor_feature_length, expand_mid_dims)
+        c2 = MaterialsProjectGraphConv(atom_feature_length, neighbor_feature_length, expand_mid_dims)
+        return new{typeof(c1),typeof(c2)}(c1, c2)
+    end
+
+    MaterialsProjectResidualGraphConv(c1::C1, c2::C2) where {C1,C2} = new{C1,C2}(c1, c2)
+end
+
+@functor MaterialsProjectResidualGraphConv
+
+function (r::MaterialsProjectResidualGraphConv)(atom_in_features_1::AbstractMatrix{T},
+                                                atom_in_features_2::AbstractMatrix{T},
+                                                neighbor_features::AbstractArray{T,3},
+                                                neighbor_feature_indices::AbstractMatrix{S}) where {T,S<:Int}
+    return r.c1(atom_in_features_1, neighbor_features, neighbor_feature_indices) .+
+           r.c2(atom_in_features_2, neighbor_features, neighbor_feature_indices)
+end
+
 struct MaterialsProjectGraphConv{L1,B1,B2,E}
     atom_feature_length::Int
     neighbor_feature_length::Int
@@ -50,8 +74,8 @@ end
 
 function MaterialsProjectGraphConv(atom_feature_length::Int, neighbor_feature_length::Int, expand_mid_dims::Int)
     fc_full = Dense(2 * atom_feature_length + neighbor_feature_length, 2 * atom_feature_length)
-    bn1 = BatchNorm(2 * atom_feature_length)
-    bn2 = BatchNorm(atom_feature_length)
+    bn1 = GroupNormV2(2 * atom_feature_length, 8; track_stats=false)
+    bn2 = GroupNormV2(atom_feature_length, 8; track_stats=false)
     exmid = ExpandMid(expand_mid_dims)
     return MaterialsProjectGraphConv(atom_feature_length, neighbor_feature_length, fc_full, bn1, bn2, exmid)
 end
@@ -84,12 +108,29 @@ end
 
 @functor MaterialsProjectCrystalGraphConvNet
 
-function MaterialsProjectCrystalGraphConvNet(; original_atom_feature_length::Int, neighbor_feature_length::Int,
-                                             atom_feature_length::Int=64, num_conv::Int=3, h_feature_length::Int=128,
-                                             n_hidden::Int=1, expand_mid_dims::Int=12)
+function MaterialsProjectCrystalGraphConvNet(; deq=false, sdeq=false, original_atom_feature_length::Int,
+                                             neighbor_feature_length::Int, atom_feature_length::Int=64, num_conv::Int=3,
+                                             h_feature_length::Int=128, n_hidden::Int=1, expand_mid_dims::Int=12,
+                                             maxiters=10, abstol=1.0f-2, reltol=1.0f-2, ode_solver=Tsit5())
     embedding = Dense(original_atom_feature_length, atom_feature_length)
-    convs = FChain([MaterialsProjectGraphConv(atom_feature_length, neighbor_feature_length, expand_mid_dims)
-                    for _ in 1:num_conv]...)
+    if deq
+        convs = DeepEquilibriumNetwork(MaterialsProjectResidualGraphConv(atom_feature_length, neighbor_feature_length,
+                                                                         expand_mid_dims),
+                                       get_default_dynamicss_solver(reltol, abstol, ode_solver);
+                                       sensealg=get_default_ssadjoint(reltol, abstol, maxiters), maxiters=maxiters,
+                                       verbose=false)
+    elseif sdeq
+        convs = SkipDeepEquilibriumNetwork(MaterialsProjectResidualGraphConv(atom_feature_length,
+                                                                             neighbor_feature_length, expand_mid_dims),
+                                           MaterialsProjectGraphConv(atom_feature_length, neighbor_feature_length,
+                                                                     expand_mid_dims),
+                                           get_default_dynamicss_solver(reltol, abstol, ode_solver);
+                                           sensealg=get_default_ssadjoint(reltol, abstol, maxiters), maxiters=maxiters,
+                                           verbose=false)
+    else
+        convs = FChain([MaterialsProjectGraphConv(atom_feature_length, neighbor_feature_length, expand_mid_dims)
+                        for _ in 1:num_conv]...)
+    end
     conv_to_fc = Dense(atom_feature_length, h_feature_length, softplus)
 
     fcs = FChain(vcat([Dense(h_feature_length, h_feature_length, softplus) for _ in 1:(n_hidden - 1)],
@@ -107,7 +148,21 @@ function (c::MaterialsProjectCrystalGraphConvNet)(atom_features::AbstractMatrix{
                                                                          neighbor_feature_indices)
     crystal_features = pool(c, atom_features, crystal_atom_indices)
     crystal_features = c.conv_to_fc(softplus.(crystal_features))
-    return c.fcs(crystal_features)
+    return (c.fcs(crystal_features),)
+end
+
+function (c::MaterialsProjectCrystalGraphConvNet{E,C})(atom_features::AbstractMatrix{T},
+                                                       neighbor_features::AbstractArray{T,3},
+                                                       neighbor_feature_indices::AbstractMatrix{S},
+                                                       crystal_atom_indices::AbstractVector) where {T,S<:Int,E,
+                                                                                                    C<:Union{DeepEquilibriumNetwork,
+                                                                                                             SkipDeepEquilibriumNetwork}}
+    atom_features = c.embedding(atom_features)
+    (atom_features, neighbor_features, neighbor_feature_indices), soln = c.convs(atom_features, neighbor_features,
+                                                                                 neighbor_feature_indices)
+    crystal_features = pool(c, atom_features, crystal_atom_indices)
+    crystal_features = c.conv_to_fc(softplus.(crystal_features))
+    return c.fcs(crystal_features), soln
 end
 
 function pool(c::MaterialsProjectCrystalGraphConvNet, atom_features::AbstractMatrix{T},
@@ -115,4 +170,10 @@ function pool(c::MaterialsProjectCrystalGraphConvNet, atom_features::AbstractMat
     return hcat([mean(atom_features[:, idx_map]; dims=2) for idx_map in crystal_atom_indices]...)
 end
 
-get_and_clear_nfe!(model::MaterialsProjectCrystalGraphConvNet) = -1
+get_and_clear_nfe!(::MaterialsProjectCrystalGraphConvNet) = -1
+
+function get_and_clear_nfe!(model::MaterialsProjectCrystalGraphConvNet{E,C}) where {E,
+                                                                                    C<:Union{DeepEquilibriumNetwork,
+                                                                                             SkipDeepEquilibriumNetwork}}
+    return get_and_clear_nfe!(model.convs)
+end

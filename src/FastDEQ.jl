@@ -78,7 +78,7 @@ export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork, MultiScaleDeepEquilib
 
 # Compositional Layers
 export MaterialsProjectCrystalGraphConvNet, MaterialsProjectGraphConv
-export DEQChain
+export DEQChain, ExpandMid
 export BasicResidualBlock, BranchNet, MultiParallelNet, BasicBottleneckBlock
 
 # For the sanity of experiment code
