@@ -107,7 +107,7 @@ function train(config::Dict, name_extension::String="")
 
     ## Setup Logging & Experiment Configuration
     t = MPI.Bcast!([now()], 0, comm)[1]
-    expt_name = "fastdeqjl-supervised_cifar10_classification-$(t)-$(name_extension)"
+    expt_name = "fastdeqjl-svhn_classification-$(t)-$(name_extension)"
     lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, config=config)
     lg_term = PrettyTableLogger("logs/" * expt_name * ".csv",
                                 ["Epoch Number", "Train/NFE", "Train/Accuracy", "Train/Loss", "Train/Time", "Test/NFE",
@@ -127,13 +127,13 @@ function train(config::Dict, name_extension::String="")
     batch_size = get_config(lg_wandb, "batch_size")
     eval_batch_size = get_config(lg_wandb, "eval_batch_size")
 
-    ### CIFAR 10 Normalization Stats
-    μ = reshape([0.4914, 0.4822, 0.4465], 1, 1, :, 1)
-    σ² = reshape([0.2023, 0.1994, 0.2010], 1, 1, :, 1)
+    ### SVHN Normalization Stats
+    μ = reshape([0.41037378, 0.4159685, 0.44208914], 1, 1, :, 1)
+    σ² = reshape([0.19587938, 0.19880198, 0.19529267], 1, 1, :, 1)
 
-    _xs_train, _ys_train = CIFAR10.traindata(Float32)
+    _xs_train, _ys_train = SVHN2.traindata(Float32)
     _xs_train = (_xs_train .- μ) ./ σ²
-    _xs_test, _ys_test = CIFAR10.testdata(Float32)
+    _xs_test, _ys_test = SVHN2.testdata(Float32)
     _xs_test = (_xs_test .- μ) ./ σ²
 
     xs_train, ys_train = _xs_train, Float32.(Flux.onehotbatch(_ys_train, 0:9))
@@ -163,8 +163,6 @@ function train(config::Dict, name_extension::String="")
     sched = Stateful(Cos(get_config(lg_wandb, "learning_rate"), 1e-6,
                          length(trainiter) * get_config(lg_wandb, "epochs")))
     opt = ADAMW(get_config(lg_wandb, "learning_rate"), (0.9, 0.999), get_config(lg_wandb, "weight_decay"))
-
-    watch = ParameterStateGradientWatcher(model.model, :mdeq)
 
     step = 1
     train_vec = zeros(3)
@@ -203,11 +201,6 @@ function train(config::Dict, name_extension::String="")
                 log(lg_wandb,
                     Dict("Training/Step/Loss" => loss, "Training/Step/NFE" => nfe_counts[end],
                          "Training/Step/Count" => step))
-
-                # This is pretty expensive so do after every 50 steps
-                # NOTE: This is mainly for debugging purposes so if you suspect something is
-                #       wrong with the model you can uncomment this
-                # step % 50 == 1 && log(lg_wandb, watch, gs)
 
                 lg_term(; records=Dict("Train/Running/NFE" => nfe_counts[end], "Train/Running/Loss" => loss))
                 step += 1
@@ -284,11 +277,9 @@ for i in TASK_ID:NUM_TASKS:length(experiment_configurations)
         @info "Seed = $seed | Model Type = $model_type | Solver Type = $solver_type"
     end
 
-    batch_size = solver_type == "ssrootfind" ? 32 : 64
-
     config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 5.0f-2, "reltol" => 5.0f-2,
-                  "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => batch_size,
-                  "eval_batch_size" => batch_size, "model_type" => model_type, "solver_type" => solver_type,
+                  "maxiters" => 20, "epochs" => 50, "dropout_rate" => 0.25, "batch_size" => 64,
+                  "eval_batch_size" => 64, "model_type" => model_type, "solver_type" => solver_type,
                   "weight_decay" => 0.0000025)
 
     model, nfe_counts = train(config, "seed-$(seed)_model-$(model_type)_solver-$(solver_type)")

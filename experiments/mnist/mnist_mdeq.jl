@@ -100,7 +100,7 @@ function train(config::Dict, name_extension::String="")
     t = MPI.Bcast!([now()], 0, comm)[1]
     expt_name = "fastdeqjl-supervised_mnist_classification-$(t)-$(name_extension)"
     lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, config=config)
-    lg_term = PrettyTableLogger("logs/" * expt_name * ".log",
+    lg_term = PrettyTableLogger("logs/" * expt_name * ".csv",
                                 ["Epoch Number", "Train/NFE", "Train/Accuracy", "Train/Loss", "Train/Time", "Test/NFE",
                                  "Test/Accuracy", "Test/Loss", "Test/Time"],
                                 ["Train/Running/NFE", "Train/Running/Loss"])
