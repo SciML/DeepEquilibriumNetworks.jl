@@ -227,7 +227,7 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem, alg::DE
     N = ndims(u)
     retcode = (sol.retcode == :Terminated && has_converged(du, u, alg) ? :Success : :Failure)
     _t = regularize_endpoint isa Bool ? (regularize_endpoint ? t : nothing) : t
-    regularize_endpoint = regularize_endpoint isa Bool ? (regularize_endpoint ? T(1e-5) : T(0)) : t(regularize_endpoint)
+    regularize_endpoint = regularize_endpoint isa Bool ? (regularize_endpoint ? T(1e-5) : T(0)) : T(regularize_endpoint)
 
     return EquilibriumSolution{T,N,typeof(u),typeof(du),typeof(prob),typeof(alg),typeof(_t)}(u, du, prob, alg, retcode,
                                                                                              _t, regularize_endpoint)
@@ -279,7 +279,12 @@ end
     s_val = size(_val)
     op = DiffEqSensitivity.ZygotePullbackMultiplyOperator{eltype(y),typeof(back),typeof(s_val)}(back, s_val)
 
-    b = sol.t === nothing ? vec(diffcache.dg_val) : vec(diffcache.dg_val) .+ vec(sol.λₜ ./ clear_zero.(vec(sol.resid)))
+    b = vec(diffcache.dg_val)
+    # println("Original Mean: $(mean(b)) & Residual Mean: $(mean(sol.resid)) Norm: $(norm(sol.resid))")
+    if sol.t !== nothing
+        @. b = (b + clamp(sol.λₜ ./ norm(sol.resid), -Inf, mean(b))) / 2
+    end
+    # println("Updated mean: $(mean(b))")
     linear_problem = LinearProblem(op, b)
 
     copyto!(vec(λ), solve(linear_problem, linsolve).u)

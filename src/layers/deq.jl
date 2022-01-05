@@ -52,27 +52,27 @@ function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}) where {T}
 end
 
 # For multiple argument functions
-function (deq::DeepEquilibriumNetwork)(x::AbstractMatrix{T}, args...) where {T}
+function (deq::DeepEquilibriumNetwork)(x::AbstractMatrix{T}, x1::AbstractArray{T}, args...) where {T}
     u0 = zero(x)
 
     function dudt(u, _p, t)
         deq.stats.nfe += 1
-        return first(deq.re(_p)(u, x, args...)) .- u
+        return first(deq.re(_p)(u, x, x1, args...)) .- u
     end
 
     ssprob = SteadyStateProblem(dudt, u0, deq.p)
     sol = solve(ssprob, deq.args...; u0=u0, sensealg=deq.sensealg, deq.kwargs...)
     deq.stats.nfe += 1
 
-    z_star = first(deq.re(deq.p)(sol.u, x, args...))
+    z_star = first(deq.re(deq.p)(sol.u, x, x1, args...))
 
     jac_loss = T(0)
 
     residual = if deq.residual_regularization
-        z_star .- first(deq.re(deq.p)(z_star, x, args...))
+        z_star .- first(deq.re(deq.p)(z_star, x, x1, args...))
     else
-        Zygote.@ignore z_star .- first(deq.re(deq.p)(z_star, x, args...))
+        Zygote.@ignore z_star .- first(deq.re(deq.p)(z_star, x, x1, args...))
     end
 
-    return (z_star, args...), DeepEquilibriumSolution(z_star, u0, residual, jac_loss)
+    return (z_star, x1, args...), DeepEquilibriumSolution(z_star, u0, residual, jac_loss)
 end

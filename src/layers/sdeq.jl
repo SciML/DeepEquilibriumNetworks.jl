@@ -89,38 +89,38 @@ function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(x::AbstractArray{T}) where
 end
 
 # For multiple argument functions
-function (deq::SkipDeepEquilibriumNetwork)(x::AbstractMatrix{T}, args...) where {T}
+function (deq::SkipDeepEquilibriumNetwork)(x::AbstractMatrix{T}, x1::AbstractArray{T}, args...) where {T}
     p1, p2 = deq.p[1:(deq.split_idx)], deq.p[(deq.split_idx + 1):end]
-    u0 = first(deq.re2(p2)(x, args...))
+    u0 = first(deq.re2(p2)(x, x1, args...))
 
     function dudt(u, _p, t)
         deq.stats.nfe += 1
-        return first(deq.re1(_p)(u, x, args...)) .- u
+        return first(deq.re1(_p)(u, x, x1, args...)) .- u
     end
 
     ssprob = SteadyStateProblem(dudt, u0, p1)
     sol = solve(ssprob, deq.args...; u0=u0, sensealg=deq.sensealg, deq.kwargs...)
     deq.stats.nfe += 1
 
-    z_star = first(deq.re1(p1)(sol.u, x, args...))
+    z_star = first(deq.re1(p1)(sol.u, x, x1, args...))
 
     jac_loss = T(0)
 
     residual = if deq.residual_regularization
-        z_star .- first(deq.re1(p1)(z_star, x, args...))
+        z_star .- first(deq.re1(p1)(z_star, x, x1, args...))
     else
-        Zygote.@ignore z_star .- first(deq.re1(p1)(z_star, x, args...))
+        Zygote.@ignore z_star .- first(deq.re1(p1)(z_star, x, x1, args...))
     end
 
-    return (z_star, args...), DeepEquilibriumSolution(z_star, u0, residual, jac_loss)
+    return (z_star, x1, args...), DeepEquilibriumSolution(z_star, u0, residual, jac_loss)
 end
 
-function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(x::AbstractMatrix{T}, args...) where {M,T}
-    u0 = first(deq.re1(deq.p)(x, args...))
+function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(x::AbstractMatrix{T}, x1::AbstractArray{T}, args...) where {M,T}
+    u0 = first(deq.re1(deq.p)(x, x1, args...))
 
     function dudt(u, _p, t)
         deq.stats.nfe += 1
-        return first(deq.re1(_p)(u, x, args...)) .- u
+        return first(deq.re1(_p)(u, x, x1, args...)) .- u
     end
 
     ssprob = SteadyStateProblem(dudt, u0, deq.p)
@@ -132,10 +132,10 @@ function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(x::AbstractMatrix{T}, args
     jac_loss = T(0)
 
     residual = if deq.residual_regularization
-        z_star .- first(deq.re1(deq.p)(z_star, x, args...))
+        z_star .- first(deq.re1(deq.p)(z_star, x, x1, args...))
     else
-        Zygote.@ignore z_star .- first(deq.re1(deq.p)(z_star, x, args...))
+        Zygote.@ignore z_star .- first(deq.re1(deq.p)(z_star, x, x1, args...))
     end
 
-    return (z_star, args...), DeepEquilibriumSolution(z_star, u0, residual, jac_loss)
+    return (z_star, x1, args...), DeepEquilibriumSolution(z_star, u0, residual, jac_loss)
 end

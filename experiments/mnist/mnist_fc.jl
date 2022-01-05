@@ -217,7 +217,7 @@ end
 experiment_configurations = []
 for seed in [6171, 3859, 2961]  # Generated this by randomly sampling from 1:10000
     for jac_reg in [true, false]
-        for model_type in ["skip", "vanilla"]
+        for model_type in ["skip", "vanilla", "skipnoextraparams"]
             push!(experiment_configurations, (seed, model_type, jac_reg))
         end
     end

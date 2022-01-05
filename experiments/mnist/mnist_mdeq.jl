@@ -240,10 +240,10 @@ end
 
 ## Run Experiment
 experiment_configurations = []
-for residual_regularization in [true, false]
+for residual_regularization in [false]
     for seed in [6171, 3859, 2961]  # Generated this by randomly sampling from 1:10000
         for solver_type in ["dynamicss", "ssrootfind"]
-            for model_type in ["skip", "vanilla"]
+            for model_type in ["skip", "vanilla", "skip_no_extra_params"]
                 push!(experiment_configurations, (residual_regularization, seed, model_type, solver_type))
             end
         end

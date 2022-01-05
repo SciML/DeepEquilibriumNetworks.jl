@@ -14,7 +14,7 @@ function loss_function(model::MaterialsProjectCrystalGraphConvNet{E,C}, atom_fea
                        neighbor_feature_indices, crystal_atom_indices,
                        target_standardized) where {E,C<:SkipDeepEquilibriumNetwork}
     prediction, soln = model(atom_features, neighbor_features, neighbor_feature_indices, crystal_atom_indices)
-    return mean(abs2, prediction .- target_standardized) + 1.0f-2 * mean(abs, soln.u₀ .- soln.z_star)
+    return mean(abs2, prediction .- target_standardized) + 1.0f-1 * mean(abs, soln.u₀ .- soln.z_star)
 end
 
 function train_one_epoch!(model, dataloader, ps, opt, data_μ, data_σ)
@@ -88,7 +88,7 @@ function train(name_extension::String=""; epochs, start_learning_rate, weight_de
 
     ## Model
     model = gpu(MaterialsProjectCrystalGraphConvNet(; original_atom_feature_length=92, neighbor_feature_length=41,
-                                                    deq=deq, sdeq=sdeq))
+                                                    deq=deq, sdeq=sdeq, ode_solver=BS3(), reltol=1f-1, abstol=1f-1))
 
     ## Optimizer
     ps = Flux.params(model)
@@ -105,8 +105,8 @@ function train(name_extension::String=""; epochs, start_learning_rate, weight_de
                 test_stats.nfe, test_stats.loss, test_stats.prediction_time, test_stats.prediction_time_per_batch)
 
         ## Reduce LR
-        e == 10 && (opt[3].eta = opt[3].eta / 10)
-        e == 75 && (opt[3].eta = opt[3].eta / 10)
+        e == 100 && (opt[3].eta = opt[3].eta / 10)
+        e == 200 && (opt[3].eta = opt[3].eta / 10)
     end
 
     close(lg_term)
