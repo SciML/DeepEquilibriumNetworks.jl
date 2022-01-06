@@ -136,8 +136,8 @@ function train(config::Dict, name_extension::String="")
     _xs_test, _ys_test = SVHN2.testdata(Float32)
     _xs_test = (_xs_test .- μ) ./ σ²
 
-    xs_train, ys_train = _xs_train, Float32.(Flux.onehotbatch(_ys_train, 0:9))
-    xs_test, ys_test = _xs_test, Float32.(Flux.onehotbatch(_ys_test, 0:9))
+    xs_train, ys_train = _xs_train, Float32.(Flux.onehotbatch(_ys_train, 1:10))
+    xs_test, ys_test = _xs_test, Float32.(Flux.onehotbatch(_ys_test, 1:10))
 
     traindata = (xs_train, ys_train)
     trainiter = DataParallelDataLoader(traindata; batchsize=batch_size, shuffle=true)
