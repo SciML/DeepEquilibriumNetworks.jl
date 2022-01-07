@@ -129,13 +129,11 @@ end
 
 ## Run the experiment
 experimental_configurations = []
-for seed in [11, 111]
+for seed in [1, 11, 111]
     for model_type in ["skipnoextraparams", "vanilla", "skip"]
         for jacobian_regularization in [false, true]
-            for residual_regularization in [false, true]
-                push!(experimental_configurations,
-                      (seed=seed, mtype=model_type, jacreg=jacobian_regularization, resreg=residual_regularization))
-            end
+            push!(experimental_configurations,
+                  (seed=seed, mtype=model_type, jacreg=jacobian_regularization, resreg=false))
         end
     end
 end
