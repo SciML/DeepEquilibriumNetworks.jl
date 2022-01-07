@@ -35,15 +35,18 @@ function train(config::Dict, name_extension::String="")
     ## Setup Logging & Experiment Configuration
     expt_name = "toy-$(now())-$(name_extension)"
     lg_wandb = WandbLogger(; project="FastDEQ.jl", name=expt_name, config=config)
-    lg_term = PrettyTableLogger("logs/" * expt_name * ".csv", ["Epoch Number", "Train/Time"],
+    lg_term = PrettyTableLogger("logs/" * expt_name * ".csv",
+                                ["Epoch Number", "Train/Time", "Test/NFE", "Test/Loss", "Test/Time"],
                                 ["Train/Running/NFE", "Train/Running/Loss"])
-
 
     ## Data Generation
     Random.seed!(0)
     batch_size = get_config(lg_wandb, "batch_size")
     x_data = gpu(rand(Float32, 1, get_config(lg_wandb, "data_size")) .* 2 .- 1)
-    y_data = gpu(h.(x_data))
+    y_data = gpu(h.(x_data) .+ randn(size(x_data)) .* 0.005f0)
+
+    x_data_test = gpu(rand(Float32, 1, batch_size) .* 2 .- 1)
+    y_data_test = gpu(h.(x_data_test))
 
     ## Reproducibility
     Random.seed!(get_config(lg_wandb, "seed"))
@@ -98,10 +101,15 @@ function train(config::Dict, name_extension::String="")
             ### Log the epoch loss
             epoch_loss /= size(x_data, ndims(x_data))
             epoch_nfe /= size(x_data, ndims(x_data))
+
+            start_test_time = time()
+            test_loss = loss_function.loss_function(first(model(x_data_test)), y_data_test)
+            test_time = time() - start_test_time
+
             log(lg_wandb,
                 Dict("Training/Epoch/Loss" => epoch_loss, "Training/Epoch/NFE" => epoch_nfe,
                      "Training/Epoch/Count" => epoch))
-            lg_term(epoch, epoch_time)
+            lg_term(epoch, epoch_time, get_and_clear_nfe!(model), test_loss, test_time)
         catch ex
             if ex isa Flux.Optimise.StopException
                 break
