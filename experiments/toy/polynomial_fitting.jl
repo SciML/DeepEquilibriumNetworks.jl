@@ -17,7 +17,7 @@ function get_model(hdims::Int, abstol::T, reltol::T, model_type::String, jacobia
     _deq = model_type == "vanilla" ? DeepEquilibriumNetwork : SkipDeepEquilibriumNetwork
 
     return gpu(DEQChain(Dense(1, hdims, relu; init=normal_init()),
-                        _deq(args..., get_default_dynamicss_solver(Float32(abstol), Float32(reltol), BS3());
+                        _deq(args..., get_default_dynamicss_solver(Float32(abstol), Float32(reltol), Tsit5());
                              sensealg=get_default_ssadjoint(Float32(abstol), Float32(reltol), 50), maxiters=50,
                              verbose=false, jacobian_regularization=jacobian_regularization,
                              residual_regularization=residual_regularization), Dense(hdims, 1)))
@@ -43,7 +43,7 @@ function train(config::Dict, name_extension::String="")
     Random.seed!(0)
     batch_size = get_config(lg_wandb, "batch_size")
     x_data = gpu(rand(Float32, 1, get_config(lg_wandb, "data_size")) .* 2 .- 1)
-    y_data = gpu(h.(x_data) .+ randn(size(x_data)) .* 0.005f0)
+    y_data = h.(x_data) .+ gpu(randn(size(x_data)) .* 0.005f0)
 
     x_data_test = gpu(rand(Float32, 1, batch_size) .* 2 .- 1)
     y_data_test = gpu(h.(x_data_test))
