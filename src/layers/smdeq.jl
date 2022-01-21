@@ -112,7 +112,7 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork)(x::AbstractArray{T}; only_
     dudt(u, _p, t) = vcat(Flux.flatten.(dudt_(u, _p))...) .- u
 
     x_, residual = if only_explicit
-        initial_conditions, T(0)
+        initial_conditions, zero(initial_conditions)
     else
         ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
         res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
@@ -162,7 +162,7 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{Nothing})(x::AbstractArray{
     dudt(u, _p, t) = vcat(Flux.flatten.(dudt_(u, _p))...) .- u
 
     x_, residual = if only_explicit
-        initial_conditions, T(0)
+        initial_conditions, zero(initial_conditions)
     else
         ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
         res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
