@@ -70,7 +70,7 @@ function train(config::Dict, name_extension::String="")
     ps = Flux.params(model)
     __x = first(x_data_partition)
     __y = first(y_data_partition)
-    Zygote.pullback(() -> loss_function(model, __x, __y), ps)
+    Zygote.gradient(() -> loss_function(model, __x, __y), ps)
 
     opt = ADAM(get_config(lg_wandb, "learning_rate"))
     step = 1
