@@ -56,9 +56,9 @@ end
 
 Flux.@functor DEQChain
 
-function (deq::DEQChain)(x)
+function (deq::DEQChain)(x; kwargs...)
     x1 = deq.pre_deq(x)
-    x2, deq_soln = deq.deq(x1)
+    x2, deq_soln = deq.deq(x1; kwargs...)
     x3 = deq.post_deq(x2)
     return x3, deq_soln
 end

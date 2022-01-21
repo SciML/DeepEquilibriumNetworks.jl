@@ -60,7 +60,7 @@ function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Ma
                                             nothing, (solver,), kwargs, sensealg, DEQTrainingStats(0))
 end
 
-function (mdeq::MultiScaleDeepEquilibriumNetwork)(x::AbstractArray{T}) where {T}
+function (mdeq::MultiScaleDeepEquilibriumNetwork)(x::AbstractArray{T}; only_explicit::Bool=false) where {T}
     z = zero(x)
     initial_conditions = Zygote.@ignore map(l -> l(z), map(l -> l.layers[1], mdeq.mapping_layers[1].layers))
     u_sizes = Zygote.@ignore size.(initial_conditions)

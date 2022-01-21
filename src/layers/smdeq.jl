@@ -86,7 +86,7 @@ function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers
                                                 DEQTrainingStats(0))
 end
 
-function (mdeq::MultiScaleSkipDeepEquilibriumNetwork)(x::AbstractArray{T}) where {T}
+function (mdeq::MultiScaleSkipDeepEquilibriumNetwork)(x::AbstractArray{T}; only_explicit::Bool=false) where {T}
     p1, p2, p3 = split_array_by_indices(mdeq.p, mdeq.ordered_split_idxs)
     initial_conditions = mdeq.shortcut_layers_re(p3)(x)
     u_sizes = size.(initial_conditions)
@@ -114,7 +114,8 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork)(x::AbstractArray{T}) where
     ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
     res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
 
-    x_ = dudt_(res, mdeq.p)
+    x_ = only_explicit ? initial_conditions : dudt_(res, mdeq.p)
+
     residual = if mdeq.residual_regularization
         Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
                   enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))
@@ -127,7 +128,7 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork)(x::AbstractArray{T}) where
     return x_, DeepEquilibriumSolution(x_, initial_conditions, residual, T(0))
 end
 
-function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{Nothing})(x::AbstractArray{T}) where {T}
+function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{Nothing})(x::AbstractArray{T}; only_explicit::Bool=false) where {T}
     p1, p2 = split_array_by_indices(mdeq.p, mdeq.ordered_split_idxs)
 
     _initial_conditions = Zygote.@ignore [l(x) for l in map(l -> l.layers[1], mdeq.mapping_layers[1].layers)]
@@ -159,7 +160,8 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{Nothing})(x::AbstractArray{
     ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
     res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
 
-    x_ = dudt_(res, mdeq.p)
+    x_ = only_explicit ? initial_conditions : dudt_(res, mdeq.p)
+
     residual = if mdeq.residual_regularization
         Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
                   enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))

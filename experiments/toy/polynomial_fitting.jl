@@ -1,14 +1,13 @@
 # Comparing SkipDEQ and DEQ on a Polynomial Fitting Problem
 
 ## Load Packages
-using Dates, FastDEQ, Statistics, Plots, Random, Wandb
+using Dates, FastDEQ, Statistics, Random, Wandb
 
 CUDA.allowscalar(false)
 enable_fast_mode!()
 
 ## Model and Loss Function
-function get_model(hdims::Int, abstol::T, reltol::T, model_type::String, jacobian_regularization::Bool,
-                   residual_regularization::Bool) where {T}
+function get_model(hdims::Int, abstol::T, reltol::T, model_type::String, jacobian_regularization::Bool) where {T}
     main_model = Chain(Parallel((x₁, x₂) -> relu.(x₁ .+ x₂), Dense(hdims, hdims * 2; init=normal_init()),
                                 Dense(hdims, hdims * 2; init=normal_init())),
                        Dense(hdims * 2, hdims; init=normal_init()))
@@ -19,8 +18,7 @@ function get_model(hdims::Int, abstol::T, reltol::T, model_type::String, jacobia
     return gpu(DEQChain(Dense(1, hdims, relu; init=normal_init()),
                         _deq(args..., get_default_dynamicss_solver(Float32(abstol), Float32(reltol), BS3());
                              sensealg=get_default_ssadjoint(Float32(abstol), Float32(reltol), 50), maxiters=50,
-                             verbose=false, jacobian_regularization=jacobian_regularization,
-                             residual_regularization=residual_regularization), Dense(hdims, 1)))
+                             verbose=false, jacobian_regularization=jacobian_regularization), Dense(hdims, 1)))
 end
 
 ## Utilities
@@ -36,7 +34,8 @@ function train(config::Dict, name_extension::String="")
     expt_name = "toy-$(now())-$(name_extension)"
     lg_wandb = WandbLogger(; project="FastDEQ.jl", name=expt_name, config=config)
     lg_term = PrettyTableLogger("logs/" * expt_name * ".csv",
-                                ["Epoch Number", "Train/Time", "Test/NFE", "Test/Loss", "Test/Time"],
+                                ["Epoch Number", "Train/Time", "Test/NFE", "Test/Loss", "Test/Time",
+                                 "Test/Explicit_Loss", "Test/Explicit_Time"],
                                 ["Train/Running/NFE", "Train/Running/Loss"])
 
     ## Data Generation
@@ -45,7 +44,7 @@ function train(config::Dict, name_extension::String="")
     x_data = gpu(rand(Float32, 1, get_config(lg_wandb, "data_size")) .* 2 .- 1)
     y_data = h.(x_data) .+ gpu(randn(size(x_data)) .* 0.005f0)
 
-    x_data_test = gpu(rand(Float32, 1, batch_size) .* 2 .- 1)
+    x_data_test = gpu(rand(Float32, 1, 128) .* 2 .- 1)
     y_data_test = gpu(h.(x_data_test))
 
     ## Reproducibility
@@ -57,7 +56,7 @@ function train(config::Dict, name_extension::String="")
     ## Model Setup
     model = get_model(get_config(lg_wandb, "hidden_dims"), get_config(lg_wandb, "abstol"),
                       get_config(lg_wandb, "reltol"), get_config(lg_wandb, "model_type"),
-                      get_config(lg_wandb, "jacobian_regularization"), get_config(lg_wandb, "residual_regularization"))
+                      get_config(lg_wandb, "jacobian_regularization"))
 
     model_type = get_config(lg_wandb, "model_type")
     jac_reg = get_config(lg_wandb, "jacobian_regularization")
@@ -69,6 +68,10 @@ function train(config::Dict, name_extension::String="")
 
     ## Training Loop
     ps = Flux.params(model)
+    __x = first(x_data_partition)
+    __y = first(y_data_partition)
+    Zygote.pullback(() -> loss_function(model, __x, __y), ps)
+
     opt = ADAM(get_config(lg_wandb, "learning_rate"))
     step = 1
     for epoch in 1:get_config(lg_wandb, "epochs")
@@ -98,6 +101,11 @@ function train(config::Dict, name_extension::String="")
                 epoch_nfe += nfe_counts[end] * size(x, ndims(x))
                 epoch_loss += loss * size(x, ndims(x))
             end
+
+            if epoch == get_config(lg_wandb, "epochs") ÷ 2
+                opt.eta /= 10
+            end
+
             ### Log the epoch loss
             epoch_loss /= size(x_data, ndims(x_data))
             epoch_nfe /= size(x_data, ndims(x_data))
@@ -106,10 +114,18 @@ function train(config::Dict, name_extension::String="")
             test_loss = loss_function.loss_function(first(model(x_data_test)), y_data_test)
             test_time = time() - start_test_time
 
+            start_test_time2 = time()
+            test_loss2 = if model.deq isa SkipDeepEquilibriumNetwork
+                loss_function.loss_function(first(model(x_data_test; only_explicit=true)), y_data_test)
+            else
+                0.0f0
+            end
+            test_time2 = time() - start_test_time2
+
             log(lg_wandb,
                 Dict("Training/Epoch/Loss" => epoch_loss, "Training/Epoch/NFE" => epoch_nfe,
                      "Training/Epoch/Count" => epoch))
-            lg_term(epoch, epoch_time, get_and_clear_nfe!(model), test_loss, test_time)
+            lg_term(epoch, epoch_time, get_and_clear_nfe!(model), test_loss, test_time, test_loss2, test_time2)
         catch ex
             if ex isa Flux.Optimise.StopException
                 break
@@ -130,10 +146,9 @@ end
 ## Run the experiment
 experimental_configurations = []
 for seed in [1, 11, 1111]
-    for model_type in ["skipnoextraparams", "vanilla", "skip"]
+    for model_type in ["vanilla", "skipnoextraparams", "skip"]
         for jacobian_regularization in [false, true]
-            push!(experimental_configurations,
-                  (seed=seed, mtype=model_type, jacreg=jacobian_regularization, resreg=false))
+            push!(experimental_configurations, (seed=seed, mtype=model_type, jacreg=jacobian_regularization))
         end
     end
 end
@@ -143,9 +158,8 @@ for expt in experimental_configurations
     @show name
 
     config = Dict("seed" => expt.seed, "learning_rate" => 1.0f-3, "abstol" => 1.0f-3, "reltol" => 1.0f-3,
-                  "epochs" => 300, "batch_size" => 256, "data_size" => 512, "hidden_dims" => 100,
-                  "model_type" => expt.mtype, "jacobian_regularization" => expt.jacreg,
-                  "residual_regularization" => expt.resreg)
+                  "epochs" => 300, "batch_size" => 32, "data_size" => 512, "hidden_dims" => 100,
+                  "model_type" => expt.mtype, "jacobian_regularization" => expt.jacreg)
 
     train(config, name)
 end

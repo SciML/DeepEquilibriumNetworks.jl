@@ -33,7 +33,7 @@ function DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=fal
                                   kwargs, sensealg, DEQTrainingStats(0))
 end
 
-function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}) where {T}
+function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}; only_explicit::Bool=false) where {T}
     z = zero(x)
     Zygote.@ignore deq.re(deq.p)(z, x)
 

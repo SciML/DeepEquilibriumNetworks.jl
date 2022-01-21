@@ -50,15 +50,19 @@ function SkipDeepEquilibriumNetwork(model, solver; p=nothing, jacobian_regulariz
                                       nothing, 0, (solver,), kwargs, sensealg, DEQTrainingStats(0))
 end
 
-function (deq::SkipDeepEquilibriumNetwork)(x::AbstractArray{T}) where {T}
+function (deq::SkipDeepEquilibriumNetwork)(x::AbstractArray{T}; only_explicit::Bool=false) where {T}
     p1, p2 = deq.p[1:(deq.split_idx)], deq.p[(deq.split_idx + 1):end]
     z = deq.re2(p2)(x)::typeof(x)
 
-    # Dummy call to ensure that mask is generated
-    Zygote.@ignore _ = deq.re1(p1)(z, x)
+    z_star = if only_explicit
+        z
+    else
+        # Dummy call to ensure that mask is generated
+        Zygote.@ignore _ = deq.re1(p1)(z, x)
 
-    z_star = solve_steady_state_problem(deq.re1, p1, x, z, deq.sensealg, deq.args...; dudt=nothing,
-                                        update_nfe=() -> (deq.stats.nfe += 1), deq.kwargs...)
+        solve_steady_state_problem(deq.re1, p1, x, z, deq.sensealg, deq.args...; dudt=nothing,
+                                   update_nfe=() -> (deq.stats.nfe += 1), deq.kwargs...)
+    end
 
     jac_loss = (deq.jacobian_regularization ? compute_deq_jacobian_loss(deq.re1, p1, z_star, x) : T(0)) ::T
 
@@ -71,11 +75,15 @@ function (deq::SkipDeepEquilibriumNetwork)(x::AbstractArray{T}) where {T}
     return z_star, DeepEquilibriumSolution(z_star, z, residual, jac_loss)
 end
 
-function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(x::AbstractArray{T}) where {M,T}
+function (deq::SkipDeepEquilibriumNetwork{M,Nothing})(x::AbstractArray{T}; only_explicit::Bool=false) where {M,T}
     z = deq.re1(deq.p)(zero(x), x)::typeof(x)
 
-    z_star = solve_steady_state_problem(deq.re1, deq.p, x, z, deq.sensealg, deq.args...; dudt=nothing,
-                                        update_nfe=() -> (deq.stats.nfe += 1), deq.kwargs...)
+    z_star = if only_explicit
+        z
+    else
+        solve_steady_state_problem(deq.re1, deq.p, x, z, deq.sensealg, deq.args...; dudt=nothing,
+                                   update_nfe=() -> (deq.stats.nfe += 1), deq.kwargs...)
+    end
     
     jac_loss = (deq.jacobian_regularization ? compute_deq_jacobian_loss(deq.re1, deq.p, z_star, x) : T(0)) ::T
 

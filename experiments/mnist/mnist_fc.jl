@@ -50,13 +50,13 @@ function invoke_gc()
     return nothing
 end
 
-function loss_and_accuracy(model, dataloader)
+function loss_and_accuracy(model, dataloader; kwargs...)
     matches, total_loss, total_datasize, total_nfe = 0, 0, 0, 0
     for (x, y) in dataloader
         x = gpu(x)
         y = gpu(y)
 
-        ŷ = model(x)
+        ŷ = model(x; kwargs...)
         ŷ = ŷ isa Tuple ? ŷ[1] : ŷ  # Handle SkipDEQ
         total_nfe += get_and_clear_nfe!(model) * size(x, ndims(x))
         total_loss += Flux.Losses.logitcrossentropy(ŷ, y) * size(x, ndims(x))
@@ -77,7 +77,8 @@ function train(config::Dict, name_extension::String="")
     lg_wandb = WandbLoggerMPI(; project="FastDEQ.jl", name=expt_name, config=config)
     lg_term = PrettyTableLogger("logs/" * expt_name * ".csv",
                                 ["Epoch Number", "Train/NFE", "Train/Accuracy", "Train/Loss", "Train/Time", "Test/NFE",
-                                 "Test/Accuracy", "Test/Loss", "Test/Time"],
+                                 "Test/Accuracy", "Test/Loss", "Test/Time", "Test/Accuracy_Explicit",
+                                 "Test/Loss_Explicit", "Test/Time_Explicit"],
                                 ["Train/Running/NFE", "Train/Running/Loss"])
 
     ## Reproducibility
@@ -190,10 +191,27 @@ function train(config::Dict, name_extension::String="")
                 test_loss, test_acc, test_nfe = test_vec ./ datacount_trainiter_total
             end
 
+            invoke_gc()
+            test_time2 = time()
+            test_loss2, test_acc2, test_nfe2 = if get_config(lg_wandb, "model_type") == "vanilla"
+                0, 0
+            else
+                loss_and_accuracy(model, testiter; only_explicit=true)
+            end
+            test_time2 = time() - test_time2
+
+            if MPI_COMM_SIZE > 1
+                test_vec .= [test_loss2, test_acc2, test_nfe2] .* datacount_trainiter
+                safe_reduce!(test_vec, +, 0, comm)
+                test_loss2, test_acc2, test_nfe2 = test_vec ./ datacount_trainiter_total
+            end
+
             log(lg_wandb,
                 Dict("Testing/Epoch/Count" => epoch, "Testing/Epoch/Loss" => test_loss, "Testing/Epoch/NFE" => test_nfe,
-                     "Testing/Epoch/Accuracy" => test_acc))
-            lg_term(epoch, train_nfe, train_acc, train_loss, train_time, test_nfe, test_acc, test_loss, test_time)
+                     "Testing/Epoch/Accuracy" => test_acc, "Testing/Epoch/Loss_Explicit" => test_loss2,
+                     "Testing/Epoch/Accuracy_Explicit" => test_acc2))
+            lg_term(epoch, train_nfe, train_acc, train_loss, train_time, test_nfe, test_acc, test_loss, test_time,
+                    test_acc2, test_loss2, test_time2)
 
             MPI.Barrier(comm)
         catch ex
@@ -233,9 +251,9 @@ for i in TASK_ID:NUM_TASKS:length(experiment_configurations)
         @info "Seed = $seed | Model Type = $model_type | Jacobian Regularization = $jac_reg"
     end
 
-    config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 5.0f-3, "reltol" => 5.0f-3,
-                "maxiters" => 50, "epochs" => 25, "batch_size" => 32, "eval_batch_size" => 32,
-                "model_type" => model_type, "solver_type" => "ssrootfind", "jac_reg" => jac_reg)
+    config = Dict("seed" => seed, "learning_rate" => 0.001, "abstol" => 5.0f-3, "reltol" => 5.0f-3, "maxiters" => 50,
+                  "epochs" => 25, "batch_size" => 32, "eval_batch_size" => 32, "model_type" => model_type,
+                  "solver_type" => "ssrootfind", "jac_reg" => jac_reg)
 
     model, nfe_counts = train(config, "seed-$(seed)_model-$(model_type)_jac_reg-$(jac_reg)")
 end
