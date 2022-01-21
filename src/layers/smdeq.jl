@@ -111,18 +111,22 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork)(x::AbstractArray{T}; only_
 
     dudt(u, _p, t) = vcat(Flux.flatten.(dudt_(u, _p))...) .- u
 
-    ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
-    res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
-
-    x_ = only_explicit ? initial_conditions : dudt_(res, mdeq.p)
-
-    residual = if mdeq.residual_regularization
-        Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
-                  enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))
+    x_, residual = if only_explicit
+        initial_conditions, T(0)
     else
-        Zygote.@ignore Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
-                                 enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))
+        ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
+        res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
+        x__ = dudt_(res, mdeq.p)
+        resid = if mdeq.residual_regularization
+            Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
+                      enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))
+        else
+            Zygote.@ignore Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
+                                     enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))
+        end
+        x__, resid 
     end
+
     update_is_variational_hidden_dropout_mask_reset_allowed(true)
 
     return x_, DeepEquilibriumSolution(x_, initial_conditions, residual, T(0))
@@ -157,18 +161,22 @@ function (mdeq::MultiScaleSkipDeepEquilibriumNetwork{Nothing})(x::AbstractArray{
 
     dudt(u, _p, t) = vcat(Flux.flatten.(dudt_(u, _p))...) .- u
 
-    ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
-    res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
-
-    x_ = only_explicit ? initial_conditions : dudt_(res, mdeq.p)
-
-    residual = if mdeq.residual_regularization
-        Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
-                  enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))
+    x_, residual = if only_explicit
+        initial_conditions, T(0)
     else
-        Zygote.@ignore Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
-                                 enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))
+        ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
+        res = solve(ssprob, mdeq.args...; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
+        x__ = dudt_(res, mdeq.p)
+        resid = if mdeq.residual_regularization
+            Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
+                      enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))
+        else
+            Zygote.@ignore Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
+                                     enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))
+        end
+        x__, resid 
     end
+
     update_is_variational_hidden_dropout_mask_reset_allowed(true)
 
     return x_, DeepEquilibriumSolution(x_, initial_conditions, residual, T(0))
