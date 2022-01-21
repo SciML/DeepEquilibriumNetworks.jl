@@ -514,9 +514,9 @@ version = "0.1.0"
 
 [[deps.FluxMPI]]
 deps = ["CUDA", "Flux", "MPI", "Random", "Statistics", "Zygote"]
-git-tree-sha1 = "05391253e993706831100c93c88e14ecef3e203d"
+git-tree-sha1 = "f6fe29e650c33986aae357472d1ef42cf0aebc90"
 uuid = "acf642fa-ee0e-513a-b9d5-bcd150f7ec3b"
-version = "0.1.1"
+version = "0.1.2"
 
 [[deps.Fontconfig_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Expat_jll", "FreeType2_jll", "JLLWrappers", "Libdl", "Libuuid_jll", "Pkg", "Zlib_jll"]

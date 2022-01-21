@@ -366,9 +366,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
 deps = ["ChainRulesCore", "DensityInterface", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "Test"]
-git-tree-sha1 = "08f8555cb66936b871dcfdad09a4f89e754181db"
+git-tree-sha1 = "5863b0b10512ed4add2b5ec07e335dc6121065a5"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.40"
+version = "0.25.41"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
@@ -423,9 +423,9 @@ uuid = "d4d017d3-3776-5f7e-afef-a10c40355c18"
 version = "1.11.0"
 
 [[deps.ExprTools]]
-git-tree-sha1 = "24565044e60bc48a7562e75bcf14f084901dc0b6"
+git-tree-sha1 = "56559bbef6ca5ea0c0818fa5c90320398a6fbf8d"
 uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
-version = "0.1.7"
+version = "0.1.8"
 
 [[deps.FFMPEG]]
 deps = ["FFMPEG_jll"]
@@ -514,9 +514,9 @@ version = "0.1.0"
 
 [[deps.FluxMPI]]
 deps = ["CUDA", "Flux", "MPI", "Random", "Statistics", "Zygote"]
-git-tree-sha1 = "05391253e993706831100c93c88e14ecef3e203d"
+git-tree-sha1 = "f6fe29e650c33986aae357472d1ef42cf0aebc90"
 uuid = "acf642fa-ee0e-513a-b9d5-bcd150f7ec3b"
-version = "0.1.1"
+version = "0.1.2"
 
 [[deps.Fontconfig_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Expat_jll", "FreeType2_jll", "JLLWrappers", "Libdl", "Libuuid_jll", "Pkg", "Zlib_jll"]
@@ -1840,9 +1840,9 @@ version = "0.2.0"
 
 [[deps.Wandb]]
 deps = ["Conda", "PyCall", "Random", "Requires"]
-git-tree-sha1 = "ad9a830dd7749da5bb01533804c7e8d6e130a739"
+git-tree-sha1 = "7e319c5fa62ec4c342df32e0e43d095dd64245f2"
 uuid = "ad70616a-06c9-5745-b1f1-6a5f42545108"
-version = "0.3.4"
+version = "0.3.5"
 
 [[deps.Wayland_jll]]
 deps = ["Artifacts", "Expat_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg", "XML2_jll"]
