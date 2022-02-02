@@ -2,6 +2,8 @@
 
 ![Dynamics Overview](assets/dynamics_overview.gif)
 
+Official Implementation for *Mixing Implicit and Explicit Deep Learning with Skip DEQs and Infinite Time Neural ODEs (Continuous DEQs)* (https://arxiv.org/abs/2201.12240)
+
 ## Installation
 
 This package relies on some unreleased packages which need to be manually installed
@@ -44,3 +46,63 @@ This package relies on some unreleased packages which need to be manually instal
 ## Troubleshooting
 
 1. `libhdf5.so` not found: If you have admin priviledges, just install hdf5 for your system. Else install `h5py` using Conda and export a new environment `JULIA_HDF5_PATH="<path to (ana|mini)conda>/lib"`. Next do `]build` in the Julia REPL.
+
+## Citing
+
+If you are using this project for research or other academic purposes consider citing our paper:
+
+```bibtex
+@misc{pal2022mixing,
+      title={Mixing Implicit and Explicit Deep Learning with Skip DEQs and Infinite Time Neural ODEs (Continuous DEQs)}, 
+      author={Avik Pal and Alan Edelman and Christopher Rackauckas},
+      year={2022},
+      eprint={2201.12240},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+```
+
+For specific algorithms cite:
+
+1. Deep Equilibrium Models:
+```bibtex
+@inproceedings{bai2019deep,
+  author    = {Shaojie Bai and J. Zico Kolter and Vladlen Koltun},
+  title     = {Deep Equilibrium Models},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2019},
+}
+```
+
+2. Multiscale Deep Equilibrium Models:
+```bibtex
+@inproceedings{bai2020multiscale,
+  author    = {Shaojie Bai and Vladlen Koltun and J. Zico Kolter},
+  title     = {Multiscale Deep Equilibrium Models},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2020},
+}
+```
+
+3. Jacobian Stabilization:
+```bibtex
+@inproceedings{bai2021stabilizing,
+  title     = {Stabilizing Equilibrium Models by Jacobian Regularization},
+  author    = {Shaojie Bai and Vladlen Koltun and J. Zico Kolter},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2021}
+}
+```
+
+4. Skip DEQs and Skip MDEQs:
+```bibtex
+@misc{pal2022mixing,
+      title={Mixing Implicit and Explicit Deep Learning with Skip DEQs and Infinite Time Neural ODEs (Continuous DEQs)}, 
+      author={Avik Pal and Alan Edelman and Christopher Rackauckas},
+      year={2022},
+      eprint={2201.12240},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+```
+
