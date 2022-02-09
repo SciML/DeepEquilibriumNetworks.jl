@@ -11,7 +11,6 @@ This package relies on some unreleased packages which need to be manually instal
 ```julia
 ] add https://github.com/avik-pal/FluxExperimental.jl.git
 ] add DiffEqSensitivity#ap/fastdeq
-] add https://github.com/avik-pal/Zygote.jl.git#ap/fastdeq
 ] add https://github.com/avik-pal/FastDEQ.jl
 ```
 

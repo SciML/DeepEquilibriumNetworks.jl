@@ -1,56 +1,97 @@
-# For testing purposes atm
-struct DEQSolver{M,A,AT,RT,TS} <: SteadyStateDiffEq.SteadyStateDiffEqAlgorithm
+"""
+    ContinuousDEQSolver(alg=VCABM4(); mode::Symbol=:rel_deq_default, abstol=1e-8, reltol=1e-8, tspan=Inf)
+
+Solver for Continuous DEQ Problem ([pal2022mixing](@cite)). Similar to `DynamicSS` but provides more flexibility needed
+for solving DEQ problems.
+
+## Arguments
+
+* `alg`: Algorithm to solve the ODEProblem. (Default: `VCABM4()`)
+* `mode`: Termination Mode of the solver. See below for a description of the various termination conditions (Default: `:rel_deq_default`)
+* `abstol`: Absolute tolerance for termination. (Default: `1e-8`)
+* `reltol`: Relative tolerance for termination. (Default: `1e-8`)
+* `tspan`: Time span. Users should not change this value, instead control termination through `maxiters` in `solve` (Default: `Inf`)
+
+## Termination Modes
+
+#### Termination on Absolute Tolerance
+
+* `:abs`: Terminates if ``all \\left( \\frac{\\partial u}{\\partial t} \\| \\leq abstol \\right)``
+* `:abs_norm`: Terminates if ``\\| \\frac{\\partial u}{\\partial t} \\| \\leq abstol``
+* `:abs_deq_default`: Essentially `abs_norm` + terminate if there has been no improvement for the last 30 steps + terminate if the solution blows up (diverges)
+* `:abs_deq_best`: Same as `:abs_deq_default` but uses the best solution found so far, i.e. deviates only if the solution has not converged
+
+#### Termination on Relative Tolerance
+
+* `:rel`: Terminates if ``all \\left(\\frac{\\partial u}{\\partial t} \\| \\leq reltol \\times \\| \\frac{\\partial u}{\\partial t}\\| \\right)``
+* `:rel_norm`: Terminates if ``\\| \\frac{\\partial u}{\\partial t} \\| \\leq reltol \\times \\| \\frac{\\partial u}{\\partial t} + u \\|``
+* `:rel_deq_best`: Essentially `rel_norm` + terminate if there has been no improvement for the last 30 steps + terminate if the solution blows up (diverges)
+* `:rel_deq_default`: Same as `:rel_deq_default` but uses the best solution found so far, i.e. deviates only if the solution has not converged
+
+#### Termination using both Absolute and Relative Tolerances
+
+* `:norm`: Terminates if ``\\| \\frac{\\partial u}{\\partial t} \\| \\leq reltol \\times \\| \\frac{\\partial u}{\\partial t} + u \\|`` &
+           ``\\| \\frac{\\partial u}{\\partial t} \\| \\leq abstol``
+* `fallback`: Check if all values of the derivative is close to zero wrt both relative and absolute tolerance. This is usable for small problems
+              but doesn't scale well for neural networks, and should be avoided unless absolutely necessary
+
+See also: [`DiscreteDEQSolver`](@ref)
+
+!!! note 
+    This  will be upstreamed to DiffEqSensitivity in the later releases of the package
+"""
+struct ContinuousDEQSolver{M,A,AT,RT,TS} <: SteadyStateDiffEq.SteadyStateDiffEqAlgorithm
     alg::A
     abstol::AT
     reltol::RT
     tspan::TS
 end
 
-function DEQSolver(alg; mode::Symbol=:abs_norm, abstol=1e-8, reltol=1e-8, tspan=Inf)
-    return DEQSolver{Val(mode),typeof(alg),typeof(abstol),typeof(reltol),typeof(tspan)}(alg, abstol, reltol, tspan)
+function ContinuousDEQSolver(alg=VCABM4(); mode::Symbol=:rel_deq_default, abstol=1e-8, reltol=1e-8, tspan=Inf)
+    return ContinuousDEQSolver{Val(mode),typeof(alg),typeof(abstol),typeof(reltol),typeof(tspan)}(alg, abstol, reltol, tspan)
 end
 
-function terminate_condition_reltol(integrator, abstol, reltol)
+function terminate_condition_reltol(integrator, abstol, reltol, min_t)
     return all(abs.(DiffEqBase.get_du(integrator)) .<= reltol .* abs.(integrator.u))
 end
 
-function terminate_condition_reltol_norm(integrator, abstol, reltol)
+function terminate_condition_reltol_norm(integrator, abstol, reltol, min_t)
     du = DiffEqBase.get_du(integrator)
     return norm(du) <= reltol * norm(du .+ integrator.u)
 end
 
-function terminate_condition_abstol(integrator, abstol, reltol)
+function terminate_condition_abstol(integrator, abstol, reltol, min_t)
     return all(abs.(DiffEqBase.get_du(integrator)) .<= abstol)
 end
 
-function terminate_condition_abstol_norm(integrator, abstol, reltol)
+function terminate_condition_abstol_norm(integrator, abstol, reltol, min_t)
     return norm(DiffEqBase.get_du(integrator)) <= abstol
 end
 
-function terminate_condition(integrator, abstol, reltol)
+function terminate_condition(integrator, abstol, reltol, min_t)
     return all((abs.(DiffEqBase.get_du(integrator)) .<= reltol .* abs.(integrator.u)) .&
                (abs.(DiffEqBase.get_du(integrator)) .<= abstol))
 end
 
-function terminate_condition_norm(integrator, abstol, reltol)
+function terminate_condition_norm(integrator, abstol, reltol, min_t)
     du = DiffEqBase.get_du(integrator)
     du_norm = norm(du)
     return (du_norm <= reltol * norm(du .+ integrator.u)) && (du_norm <= abstol)
 end
 
-get_terminate_condition(::DEQSolver{Val(:abs)}, args...; kwargs...) = terminate_condition_abstol
-get_terminate_condition(::DEQSolver{Val(:abs_norm)}, args...; kwargs...) = terminate_condition_abstol_norm
-get_terminate_condition(::DEQSolver{Val(:rel)}, args...; kwargs...) = terminate_condition_reltol
-get_terminate_condition(::DEQSolver{Val(:rel_norm)}, args...; kwargs...) = terminate_condition_reltol_norm
-get_terminate_condition(::DEQSolver{Val(:norm)}, args...; kwargs...) = terminate_condition_norm
-get_terminate_condition(::DEQSolver, args...; kwargs...) = terminate_condition
+get_terminate_condition(::ContinuousDEQSolver{Val(:abs)}, args...; kwargs...) = terminate_condition_abstol
+get_terminate_condition(::ContinuousDEQSolver{Val(:abs_norm)}, args...; kwargs...) = terminate_condition_abstol_norm
+get_terminate_condition(::ContinuousDEQSolver{Val(:rel)}, args...; kwargs...) = terminate_condition_reltol
+get_terminate_condition(::ContinuousDEQSolver{Val(:rel_norm)}, args...; kwargs...) = terminate_condition_reltol_norm
+get_terminate_condition(::ContinuousDEQSolver{Val(:norm)}, args...; kwargs...) = terminate_condition_norm
+get_terminate_condition(::ContinuousDEQSolver, args...; kwargs...) = terminate_condition
 
 # Termination conditions used in the original DEQ Paper
-function get_terminate_condition(::DEQSolver{Val(:abs_deq_default),A,T}, args...; kwargs...) where {A,T}
+function get_terminate_condition(::ContinuousDEQSolver{Val(:abs_deq_default),A,T}, args...; kwargs...) where {A,T}
     nstep = 0
     protective_threshold = T(1e6)
     objective_values = T[]
-    function terminate_condition_closure(integrator, abstol, reltol)
+    function terminate_condition_closure(integrator, abstol, reltol, min_t)
         du = DiffEqBase.get_du(integrator)
         objective = norm(du)
         # Main termination condition
@@ -73,11 +114,11 @@ function get_terminate_condition(::DEQSolver{Val(:abs_deq_default),A,T}, args...
     return terminate_condition_closure
 end
 
-function get_terminate_condition(::DEQSolver{Val(:rel_deq_default),A,T}, args...; kwargs...) where {A,T}
+function get_terminate_condition(::ContinuousDEQSolver{Val(:rel_deq_default),A,T}, args...; kwargs...) where {A,T}
     nstep = 0
     protective_threshold = T(1e3)
     objective_values = T[]
-    function terminate_condition_closure(integrator, abstol, reltol)
+    function terminate_condition_closure(integrator, abstol, reltol, min_t)
         du = DiffEqBase.get_du(integrator)
         u = integrator.u
         objective = norm(du) / (norm(du .+ u) + eps(T))
@@ -101,7 +142,7 @@ function get_terminate_condition(::DEQSolver{Val(:rel_deq_default),A,T}, args...
     return terminate_condition_closure
 end
 
-function get_terminate_condition(::DEQSolver{Val(:rel_deq_best),A,T}, terminate_stats::Dict, args...;
+function get_terminate_condition(::ContinuousDEQSolver{Val(:rel_deq_best),A,T}, terminate_stats::Dict, args...;
                                  kwargs...) where {A,T}
     nstep = 0
     protective_threshold = T(1e3)
@@ -110,7 +151,7 @@ function get_terminate_condition(::DEQSolver{Val(:rel_deq_best),A,T}, terminate_
     terminate_stats[:best_objective_value] = T(Inf)
     terminate_stats[:best_objective_value_iteration] = 0
 
-    function terminate_condition_closure(integrator, abstol, reltol)
+    function terminate_condition_closure(integrator, abstol, reltol, min_t)
         du = DiffEqBase.get_du(integrator)
         u = integrator.u
         objective = norm(du) / (norm(du .+ u) + eps(T))
@@ -141,7 +182,7 @@ function get_terminate_condition(::DEQSolver{Val(:rel_deq_best),A,T}, terminate_
     return terminate_condition_closure
 end
 
-function get_terminate_condition(::DEQSolver{Val(:abs_deq_best),A,T}, terminate_stats::Dict, args...;
+function get_terminate_condition(::ContinuousDEQSolver{Val(:abs_deq_best),A,T}, terminate_stats::Dict, args...;
                                  kwargs...) where {A,T}
     nstep = 0
     protective_threshold = T(1e3)
@@ -150,7 +191,7 @@ function get_terminate_condition(::DEQSolver{Val(:abs_deq_best),A,T}, terminate_
     terminate_stats[:best_objective_value] = T(Inf)
     terminate_stats[:best_objective_value_iteration] = 0
 
-    function terminate_condition_closure(integrator, abstol, reltol)
+    function terminate_condition_closure(integrator, abstol, reltol, min_t)
         du = DiffEqBase.get_du(integrator)
         objective = norm(du)
 
@@ -180,16 +221,16 @@ function get_terminate_condition(::DEQSolver{Val(:abs_deq_best),A,T}, terminate_
     return terminate_condition_closure
 end
 
-has_converged(du, u, alg::DEQSolver) = all(abs.(du) .<= alg.abstol .& abs.(du) .<= alg.reltol .* abs.(u))
-has_converged(du, u, alg::DEQSolver{Val(:norm)}) = norm(du) <= alg.abstol && norm(du) <= alg.reltol * norm(du .+ u)
-has_converged(du, u, alg::DEQSolver{Val(:rel)}) = all(abs.(du) .<= alg.reltol .* abs.(u))
-has_converged(du, u, alg::DEQSolver{Val(:rel_norm)}) = norm(du) <= alg.reltol * norm(du .+ u)
-has_converged(du, u, alg::DEQSolver{Val(:rel_deq_default)}) = norm(du) <= alg.reltol * norm(du .+ u)
-has_converged(du, u, alg::DEQSolver{Val(:rel_deq_best)}) = norm(du) <= alg.reltol * norm(du .+ u)
-has_converged(du, u, alg::DEQSolver{Val(:abs)}) = all(abs.(du) .<= alg.abstol)
-has_converged(du, u, alg::DEQSolver{Val(:abs_norm)}) = norm(du) <= alg.abstol
-has_converged(du, u, alg::DEQSolver{Val(:abs_deq_default)}) = norm(du) <= alg.abstol
-has_converged(du, u, alg::DEQSolver{Val(:abs_deq_best)}) = norm(du) <= alg.abstol
+has_converged(du, u, alg::ContinuousDEQSolver) = all(abs.(du) .<= alg.abstol .& abs.(du) .<= alg.reltol .* abs.(u))
+has_converged(du, u, alg::ContinuousDEQSolver{Val(:norm)}) = norm(du) <= alg.abstol && norm(du) <= alg.reltol * norm(du .+ u)
+has_converged(du, u, alg::ContinuousDEQSolver{Val(:rel)}) = all(abs.(du) .<= alg.reltol .* abs.(u))
+has_converged(du, u, alg::ContinuousDEQSolver{Val(:rel_norm)}) = norm(du) <= alg.reltol * norm(du .+ u)
+has_converged(du, u, alg::ContinuousDEQSolver{Val(:rel_deq_default)}) = norm(du) <= alg.reltol * norm(du .+ u)
+has_converged(du, u, alg::ContinuousDEQSolver{Val(:rel_deq_best)}) = norm(du) <= alg.reltol * norm(du .+ u)
+has_converged(du, u, alg::ContinuousDEQSolver{Val(:abs)}) = all(abs.(du) .<= alg.abstol)
+has_converged(du, u, alg::ContinuousDEQSolver{Val(:abs_norm)}) = norm(du) <= alg.abstol
+has_converged(du, u, alg::ContinuousDEQSolver{Val(:abs_deq_default)}) = norm(du) <= alg.abstol
+has_converged(du, u, alg::ContinuousDEQSolver{Val(:abs_deq_best)}) = norm(du) <= alg.abstol
 
 struct EquilibriumSolution{T,N,uType,R,P,A,TEnd} <: SciMLBase.AbstractNonlinearSolution{T,N}
     u::uType
@@ -206,7 +247,7 @@ function transform_solution(soln::EquilibriumSolution)
     return DiffEqBase.build_solution(soln.prob, soln.alg, soln.u, soln.resid; retcode=soln.retcode)
 end
 
-function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem, alg::DEQSolver, args...;
+function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem, alg::ContinuousDEQSolver, args...;
                             regularize_endpoint=false, kwargs...)
     tspan = alg.tspan isa Tuple ? alg.tspan : convert.(real(eltype(prob.u0)), (zero(alg.tspan), alg.tspan))
     _prob = ODEProblem(prob.f, prob.u0, tspan, prob.p)
