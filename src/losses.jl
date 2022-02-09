@@ -1,3 +1,9 @@
+"""
+    SupervisedLossContainer(loss_function)
+    SupervisedLossContainer(loss_function, λ, λⱼ)
+
+A container class for supervised loss functions.
+"""
 Base.@kwdef struct SupervisedLossContainer{L,T}
     loss_function::L
     λ::T = 0.0f0
@@ -19,17 +25,17 @@ function (lc::SupervisedLossContainer)(model::Union{DeepEquilibriumNetwork,SkipD
     return lc.loss_function(ŷ, y) + lc(soln)
 end
 
-# function (lc::SupervisedLossContainer)(model::Union{MultiScaleDeepEquilibriumNetwork,
-#                                                     MultiScaleSkipDeepEquilibriumNetwork}, x, ys::Tuple; kwargs...)
-#     yŝ, soln = model(x; kwargs...)
-#     return mapreduce(lc.loss_function, +, ys, yŝ) + lc(soln)
-# end
+function (lc::SupervisedLossContainer)(model::Union{MultiScaleDeepEquilibriumNetwork,
+                                                    MultiScaleSkipDeepEquilibriumNetwork}, x, ys::Tuple; kwargs...)
+    yŝ, soln = model(x; kwargs...)
+    return mapreduce(lc.loss_function, +, ys, yŝ) + lc(soln)
+end
 
-# function (lc::SupervisedLossContainer)(model::Union{MultiScaleDeepEquilibriumNetwork,
-#                                                     MultiScaleSkipDeepEquilibriumNetwork}, x, y; kwargs...)
-#     yŝ, soln = model(x; kwargs...)
-#     return sum(Base.Fix2(lc.loss_function, y), yŝ) + lc(soln)
-# end
+function (lc::SupervisedLossContainer)(model::Union{MultiScaleDeepEquilibriumNetwork,
+                                                    MultiScaleSkipDeepEquilibriumNetwork}, x, y; kwargs...)
+    yŝ, soln = model(x; kwargs...)
+    return sum(Base.Fix2(lc.loss_function, y), yŝ) + lc(soln)
+end
 
 # Default fallback
 function (lc::SupervisedLossContainer)(model, x, y; kwargs...)
