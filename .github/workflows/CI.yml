@@ -29,7 +29,7 @@ jobs:
             ${{ runner.os }}-test-
             ${{ runner.os }}-
       - name: Install dependencies
-        run: julia --project=. -e 'using Pkg; Pkg.add("https://github.com/avik-pal/FluxExperimental.jl.git"); Pkg.add("https://github.com/SciML/DiffEqSensitivity.jl.git#ap/fastdeq"); Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/avik-pal/FluxExperimental.jl"); Pkg.add(url="https://github.com/SciML/DiffEqSensitivity.jl", rev="ap/fastdeq"); Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         with:
