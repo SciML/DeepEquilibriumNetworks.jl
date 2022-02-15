@@ -1,6 +1,6 @@
 using Documenter, DocumenterCitations, FastDEQ
 
-bib = CitationBibliography("ref.bib", sorting = :nyt)
+bib = CitationBibliography(joinpath(@__DIR__, "docs", "ref.bib"), sorting = :nyt)
 
 makedocs(
     bib,
