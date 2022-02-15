@@ -102,8 +102,8 @@ using Test
                                                   Dense(2, 4, tanh_fast) Dense(2, 3, tanh_fast) NoOpLayer() Dense(2, 1, tanh_fast);
                                                   Dense(1, 4, tanh_fast) Dense(1, 3, tanh_fast) Dense(1, 2, tanh_fast) NoOpLayer()],
                                                   ContinuousDEQSolver(;abstol=0.1f0, reltol=0.1f0)))
-    x = gpu(rand(4, 2))
-    y = tuple([gpu(rand(i, 2)) for i in 4:-1:1]...)
+    x = gpu(rand(Float32, 4, 2))
+    y = tuple([gpu(rand(Float32, i, 2)) for i in 4:-1:1]...)
     sol = model(x)
     ps = Flux.params(model)
     gs = Flux.gradient(() -> mse_loss_function(model, x, y), ps)
@@ -124,8 +124,8 @@ using Test
                                                      (Dense(4, 4, tanh_fast), Dense(4, 3, tanh_fast),
                                                       Dense(4, 2, tanh_fast), Dense(4, 1, tanh_fast)),
                                                      ContinuousDEQSolver(;abstol=0.1f0, reltol=0.1f0)))
-    x = gpu(rand(4, 2))
-    y = tuple([gpu(rand(i, 2)) for i in 4:-1:1]...)
+    x = gpu(rand(Float32, 4, 2))
+    y = tuple([gpu(rand(Float32, i, 2)) for i in 4:-1:1]...)
     sol = model(x)
     ps = Flux.params(model)
     gs = Flux.gradient(() -> mse_loss_function(model, x, y), ps)
@@ -144,8 +144,8 @@ using Test
                                                       Dense(2, 4, tanh_fast) Dense(2, 3, tanh_fast) NoOpLayer() Dense(2, 1, tanh_fast);
                                                       Dense(1, 4, tanh_fast) Dense(1, 3, tanh_fast) Dense(1, 2, tanh_fast) NoOpLayer()],
                                                      ContinuousDEQSolver(;abstol=0.1f0, reltol=0.1f0)))
-    x = gpu(rand(4, 2))
-    y = tuple([gpu(rand(i, 2)) for i in 4:-1:1]...)
+    x = gpu(rand(Float32, 4, 2))
+    y = tuple([gpu(rand(Float32, i, 2)) for i in 4:-1:1]...)
     sol = model(x)
     ps = Flux.params(model)
     gs = Flux.gradient(() -> mse_loss_function(model, x, y), ps)
