@@ -24,3 +24,8 @@ makedocs(
         "References" => "references.md",
     ]
 )
+
+deploydocs(
+   repo = "github.com/SciML/FastDEQ.jl.git";
+   push_preview = true
+)
