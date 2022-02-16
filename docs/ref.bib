@@ -1,0 +1,65 @@
+@article{pal2022mixing,
+      title={Mixing Implicit and Explicit Deep Learning with Skip DEQs and Infinite Time Neural ODEs (Continuous DEQs)}, 
+      author={Avik Pal and Alan Edelman and Christopher Rackauckas},
+      year={2022},
+      eprint={2201.12240},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+
+@article{baideep2019,
+	title = {Deep {Equilibrium} {Models}},
+	url = {http://arxiv.org/abs/1909.01377},
+	abstract = {We present a new approach to modeling sequential data: the deep equilibrium model (DEQ). Motivated by an observation that the hidden layers of many existing deep sequence models converge towards some ﬁxed point, we propose the DEQ approach that directly ﬁnds these equilibrium points via root-ﬁnding. Such a method is equivalent to running an inﬁnite depth (weight-tied) feedforward network, but has the notable advantage that we can analytically backpropagate through the equilibrium point using implicit differentiation. Using this approach, training and prediction in these networks require only constant memory, regardless of the effective “depth” of the network. We demonstrate how DEQs can be applied to two state-of-the-art deep sequence models: self-attention transformers and trellis networks. On large-scale language modeling tasks, such as the WikiText-103 benchmark, we show that DEQs 1) often improve performance over these stateof-the-art models (for similar parameter counts); 2) have similar computational requirements to existing models; and 3) vastly reduce memory consumption (often the bottleneck for training large sequence models), demonstrating an up-to 88\% memory reduction in our experiments. The code is available at https://github. com/locuslab/deq.},
+	language = {en},
+	urldate = {2021-09-13},
+	journal = {arXiv:1909.01377 [cs, stat]},
+	author = {Bai, Shaojie and Kolter, J. Zico and Koltun, Vladlen},
+	month = oct,
+	year = {2019},
+	note = {arXiv: 1909.01377},
+	keywords = {Statistics - Machine Learning, Computer Science - Machine Learning},
+	annote = {Comment: NeurIPS 2019 Spotlight Oral},
+	file = {Bai et al. - 2019 - Deep Equilibrium Models.pdf:files/245/Bai et al. - 2019 - Deep Equilibrium Models.pdf:application/pdf},
+}
+
+@article{baimultiscale2020,
+	title = {Multiscale {Deep} {Equilibrium} {Models}},
+	url = {http://arxiv.org/abs/2006.08656},
+	abstract = {We propose a new class of implicit networks, the multiscale deep equilibrium model (MDEQ), suited to large-scale and highly hierarchical pattern recognition domains. An MDEQ directly solves for and backpropagates through the equilibrium points of multiple feature resolutions simultaneously, using implicit differentiation to avoid storing intermediate states (and thus requiring only O(1) memory consumption). These simultaneously-learned multi-resolution features allow us to train a single model on a diverse set of tasks and loss functions, such as using a single MDEQ to perform both image classiﬁcation and semantic segmentation. We illustrate the effectiveness of this approach on two large-scale vision tasks: ImageNet classiﬁcation and semantic segmentation on high-resolution images from the Cityscapes dataset. In both settings, MDEQs are able to match or exceed the performance of recent competitive computer vision models: the ﬁrst time such performance and scale have been achieved by an implicit deep learning approach. The code and pre-trained models are at https://github.com/locuslab/mdeq.},
+	language = {en},
+	urldate = {2021-09-14},
+	journal = {arXiv:2006.08656 [cs, stat]},
+	author = {Bai, Shaojie and Koltun, Vladlen and Kolter, J. Zico},
+	month = nov,
+	year = {2020},
+	note = {arXiv: 2006.08656},
+	keywords = {Statistics - Machine Learning, Computer Science - Machine Learning, Computer Science - Computer Vision and Pattern Recognition},
+	annote = {Comment: NeurIPS 2020 Oral},
+	file = {Bai et al. - 2020 - Multiscale Deep Equilibrium Models.pdf:files/248/Bai et al. - 2020 - Multiscale Deep Equilibrium Models.pdf:application/pdf},
+}
+
+@article{johnson2012notes,
+  title={Notes on adjoint methods for 18.335},
+  author={Johnson, Steven G},
+  journal={Introduction to Numerical Methods},
+  year={2006}
+}
+
+@article{broyden1965class,
+  title={A class of methods for solving nonlinear simultaneous equations},
+  author={Broyden, Charles G},
+  journal={Mathematics of computation},
+  volume={19},
+  number={92},
+  pages={577--593},
+  year={1965},
+  publisher={JSTOR}
+}
+
+@article{bai2021stabilizing,
+  title={Stabilizing equilibrium models by jacobian regularization},
+  author={Bai, Shaojie and Koltun, Vladlen and Kolter, J Zico},
+  journal={arXiv preprint arXiv:2106.14342},
+  year={2021}
+}

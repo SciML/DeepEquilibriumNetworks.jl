@@ -1,78 +1,81 @@
-struct DeepEquilibriumNetwork{J,R,M,P,RE,A,S,K} <: AbstractDeepEquilibriumNetwork
+"""
+    DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=false,
+                           p=nothing, sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+                           kwargs...)
+
+Deep Equilibrium Network as proposed in [baideep2019](@cite)
+
+## Arguments
+
+* `model`: Explicit Neural Network which takes 2 inputs
+* `solver`: Solver for the optimization problem (See: [`ContinuousDEQSolver`](@ref) & [`DiscreteDEQSolver`](@ref))
+* `jacobian_regularization`: If true, Jacobian Loss is computed and stored in the [`DeepEquilibriumSolution`](@ref)
+* `p`: Optional parameters for the `model`
+* `sensealg`: See [`SteadyStateAdjoint`](@ref)
+* `kwargs`: Additional Parameters that are directly passed to `solve`
+
+## Example
+
+```julia
+model = DeepEquilibriumNetwork(
+    Parallel(
+        +,
+        Dense(2, 2; bias=false),
+        Dense(2, 2; bias=false)
+    ),
+    ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0)
+)
+
+model(rand(Float32, 2, 1))
+```
+
+See also: [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref), [`MultiScaleSkipDeepEquilibriumNetwork`](@ref)
+"""
+struct DeepEquilibriumNetwork{J,M,P,RE,A,S,K} <: AbstractDeepEquilibriumNetwork
     jacobian_regularization::Bool
-    residual_regularization::Bool
     model::M
     p::P
     re::RE
-    args::A
+    solver::A
     kwargs::K
     sensealg::S
     stats::DEQTrainingStats
 
-    function DeepEquilibriumNetwork(jacobian_regularization, residual_regularization, model, p, re, args, kwargs,
-                                    sensealg, stats)
+    function DeepEquilibriumNetwork(jacobian_regularization, model, p, re, solver, kwargs, sensealg, stats)
         _p, re = destructure_parameters(model)
         p = p === nothing ? _p : convert(typeof(_p), p)
 
-        return new{jacobian_regularization,residual_regularization,typeof(model),typeof(p),typeof(re),typeof(args),
-                   typeof(sensealg),typeof(kwargs)}(jacobian_regularization, residual_regularization, model, p, re,
-                                                    args, kwargs, sensealg, stats)
+        return new{jacobian_regularization,typeof(model),typeof(p),typeof(re),typeof(solver),
+                   typeof(sensealg),typeof(kwargs)}(jacobian_regularization, model, p, re,
+                                                    solver, kwargs, sensealg, stats)
     end
 end
 
 Flux.@functor DeepEquilibriumNetwork
 
-function Base.show(io::IO, l::DeepEquilibriumNetwork{J,R}) where {J,R}
-    return print(io, "DeepEquilibriumNetwork(jacobian_regularization = $J, residual_regularization = $R) ",
+function Base.show(io::IO, l::DeepEquilibriumNetwork{J}) where {J}
+    return print(io, "DeepEquilibriumNetwork(jacobian_regularization = $J) ",
                  string(length(l.p)), " Trainable Parameters")
 end
 
-function DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=false, residual_regularization::Bool=false,
-                                p=nothing, sensealg=get_default_ssadjoint(0.1f0, 0.1f0, 10), kwargs...)
-    return DeepEquilibriumNetwork(jacobian_regularization, residual_regularization, model, p, nothing, (solver,),
+function DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=false,
+                                p=nothing, sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10), kwargs...)
+    return DeepEquilibriumNetwork(jacobian_regularization, model, p, nothing, solver,
                                   kwargs, sensealg, DEQTrainingStats(0))
 end
 
-function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}; only_explicit::Bool=false) where {T}
+function (deq::DeepEquilibriumNetwork)(x::AbstractArray{T}) where {T}
     z = zero(x)
     Zygote.@ignore deq.re(deq.p)(z, x)
 
-    z_star = solve_steady_state_problem(deq.re, deq.p, x, z, deq.sensealg, deq.args...; dudt=nothing,
+    current_nfe = deq.stats.nfe
+
+    z_star = solve_steady_state_problem(deq.re, deq.p, x, z, deq.sensealg, deq.solver; dudt=nothing,
                                         update_nfe=() -> (deq.stats.nfe += 1), deq.kwargs...)
 
     jac_loss = (deq.jacobian_regularization ? compute_deq_jacobian_loss(deq.re, deq.p, z_star, x) : T(0))::T
 
-    residual = if deq.residual_regularization
-        z_star .- deq.re(deq.p)(z_star, x)
-    else
-        Zygote.@ignore z_star .- deq.re(deq.p)(z_star, x)
-    end
+    residual = Zygote.@ignore z_star .- deq.re(deq.p)(z_star, x)
 
-    return z_star, DeepEquilibriumSolution(z_star, z, residual, jac_loss)
-end
-
-# For multiple argument functions
-function (deq::DeepEquilibriumNetwork)(x::AbstractMatrix{T}, x1::AbstractArray{T}, args...) where {T}
-    u0 = zero(x)
-
-    function dudt(u, _p, t)
-        deq.stats.nfe += 1
-        return first(deq.re(_p)(u, x, x1, args...)) .- u
-    end
-
-    ssprob = SteadyStateProblem(dudt, u0, deq.p)
-    sol = solve(ssprob, deq.args...; u0=u0, sensealg=deq.sensealg, deq.kwargs...)
-    deq.stats.nfe += 1
-
-    z_star = first(deq.re(deq.p)(sol.u, x, x1, args...))
-
-    jac_loss = T(0)
-
-    residual = if deq.residual_regularization
-        z_star .- first(deq.re(deq.p)(z_star, x, x1, args...))
-    else
-        Zygote.@ignore z_star .- first(deq.re(deq.p)(z_star, x, x1, args...))
-    end
-
-    return (z_star, x1, args...), DeepEquilibriumSolution(z_star, u0, residual, jac_loss)
+    return z_star, DeepEquilibriumSolution(z_star, z, residual, jac_loss, deq.stats.nfe - current_nfe)
 end

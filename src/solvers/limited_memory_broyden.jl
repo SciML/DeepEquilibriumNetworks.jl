@@ -1,12 +1,33 @@
 # Limited Memory Broyden
-## Reference: https://arxiv.org/pdf/2006.08656.pdf
-struct LimitedMemoryBroydenCache{uT,vT,F,X} <: IterativeDEQSolver
+struct LimitedMemoryBroydenCache{uT,vT,F,X}
     Us::uT
     VTs::vT
     fx_::F
     x::X
 end
 
+"""
+    LimitedMemoryBroydenSolver(; T=Float32, device, original_dims::Tuple{Int,Int}, batch_size, maxiters::Int=50,
+                               ϵ::Real=1e-6, criteria::Symbol=:reltol, abstol::Union{Real,Nothing}=nothing,
+                               reltol::Union{Real,Nothing}=nothing
+
+Limited Memory Broyden Solver ([baimultiscale2020](@cite)) for solving Discrete DEQs.
+
+## Arguments
+
+* `T`: The type of the elements of the vectors. (Default: `Float32`)
+* `device`: The device to use. Pass `gpu` to use the GPU else pass `cpu`.
+* `original_dims`: Dimensions to reshape the arrays into (excluding the batch dimension).
+* `batch_size`: The batch size of the problem. Your inputs can have a different batch size, but having
+                them match allows us to efficiently cache internal statistics without reallocation.
+* `maxiters`: Maximum number of iterations to run.
+* `ϵ`: Tolerance for convergence.
+* `criteria`: The criteria to use for convergence. Can be `:reltol` or `:abstol`.
+* `abstol`: Absolute tolerance.
+* `reltol`: Relative tolerance.
+
+See also: [`BroydenSolver`](@ref)
+"""
 struct LimitedMemoryBroydenSolver{C<:LimitedMemoryBroydenCache,RT<:Union{AbstractFloat,Nothing},
                                   AT<:Union{AbstractFloat,Nothing}}
     cache::C

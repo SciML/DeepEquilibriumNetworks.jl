@@ -2,3 +2,5 @@
 wandb/
 .vscode
 data/
+/Manifest.toml
+build

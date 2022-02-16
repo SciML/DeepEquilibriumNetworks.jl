@@ -1,6 +1,6 @@
 # Broyden
 ## NOTE: For the time being it is better to use `LimitedMemoryBroydenSolver`
-struct BroydenCache{J,F,X} <: IterativeDEQSolver
+struct BroydenCache{J,F,X}
     Jinv::J
     fx::F
     Δfx::F
@@ -19,6 +19,26 @@ end
 
 BroydenCache(vec_length::Int, device) = BroydenCache(device(zeros(vec_length)))
 
+"""
+    BroydenSolver(; T=Float32, device, original_dims::Tuple{Int,Int}, batch_size, maxiters::Int=50, ϵ::Real=1e-6,
+                  abstol::Union{Real,Nothing}=nothing, reltol::Union{Real,Nothing}=nothing)
+
+Broyden Solver ([broyden1965class](@cite)) for solving Discrete DEQs. It is recommended to use [`LimitedMemoryBroydenSolver`](@ref) for better performance.
+
+## Arguments
+
+* `T`: The type of the elements of the vectors. (Default: `Float32`)
+* `device`: The device to use. Pass `gpu` to use the GPU else pass `cpu`.
+* `original_dims`: Dimensions to reshape the arrays into (excluding the batch dimension).
+* `batch_size`: The batch size of the problem. Your inputs can have a different batch size, but having
+                them match allows us to efficiently cache internal statistics without reallocation.
+* `maxiters`: Maximum number of iterations to run.
+* `ϵ`: Tolerance for convergence.
+* `abstol`: Absolute tolerance.
+* `reltol`: Relative tolerance. (This value is ignored by `BroydenSolver` at the moment)
+
+See also: [`LimitedMemoryBroydenSolver`](@ref)
+"""
 struct BroydenSolver{C<:BroydenCache,T<:Real}
     cache::C
     maxiters::Int
@@ -26,12 +46,12 @@ struct BroydenSolver{C<:BroydenCache,T<:Real}
     ϵ::T
 end
 
-function BroydenSolver(; T=Float32, device, original_dims, batch_size, maxiters::Int=50, ϵ::Real=1e-6,
+function BroydenSolver(; T=Float32, device, original_dims::Tuple{Int,Int}, batch_size, maxiters::Int=50, ϵ::Real=1e-6,
                        abstol::Union{Real,Nothing}=nothing, reltol::Union{Real,Nothing}=nothing)
     ϵ = abstol !== nothing ? abstol : ϵ
 
     if reltol !== nothing
-        @warn maxlog = 1 "reltol is set to $reltol, but `limited_memory_broyden` ignores this value"
+        @warn "reltol is set to $reltol, but `BroydenSolver` ignores this value" maxlog=1
     end
 
     x = device(zeros(T, prod(original_dims) * batch_size))
