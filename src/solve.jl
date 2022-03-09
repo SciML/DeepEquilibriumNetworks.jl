@@ -16,17 +16,17 @@ for solving DEQ problems.
 
 #### Termination on Absolute Tolerance
 
-* `:abs`: Terminates if ``all \\left( \\frac{\\partial u}{\\partial t} \\| \\leq abstol \\right)``
+* `:abs`: Terminates if ``all \\left( | \\frac{\\partial u}{\\partial t} | \\leq abstol \\right)``
 * `:abs_norm`: Terminates if ``\\| \\frac{\\partial u}{\\partial t} \\| \\leq abstol``
 * `:abs_deq_default`: Essentially `abs_norm` + terminate if there has been no improvement for the last 30 steps + terminate if the solution blows up (diverges)
 * `:abs_deq_best`: Same as `:abs_deq_default` but uses the best solution found so far, i.e. deviates only if the solution has not converged
 
 #### Termination on Relative Tolerance
 
-* `:rel`: Terminates if ``all \\left(\\frac{\\partial u}{\\partial t} \\| \\leq reltol \\times \\| \\frac{\\partial u}{\\partial t}\\| \\right)``
+* `:rel`: Terminates if ``all \\left(| \\frac{\\partial u}{\\partial t} | \\leq reltol \\times | u | \\right)``
 * `:rel_norm`: Terminates if ``\\| \\frac{\\partial u}{\\partial t} \\| \\leq reltol \\times \\| \\frac{\\partial u}{\\partial t} + u \\|``
-* `:rel_deq_best`: Essentially `rel_norm` + terminate if there has been no improvement for the last 30 steps + terminate if the solution blows up (diverges)
-* `:rel_deq_default`: Same as `:rel_deq_default` but uses the best solution found so far, i.e. deviates only if the solution has not converged
+* `:rel_deq_default`: Essentially `rel_norm` + terminate if there has been no improvement for the last 30 steps + terminate if the solution blows up (diverges)
+* `:rel_deq_best`: Same as `:rel_deq_default` but uses the best solution found so far, i.e. deviates only if the solution has not converged
 
 #### Termination using both Absolute and Relative Tolerances
 
