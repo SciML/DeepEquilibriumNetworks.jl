@@ -56,9 +56,9 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T}, ps::Nam
 
     prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps)
     sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
-    z_star, st_ = dudt_(sol.u, ps, nothing)::Tuple{NTuple{N,typeof(x)},typeof(st.model)}
+    z_star, st_ = dudt_(sol.u, ps, nothing)
 
-    residual = Zygote.@ignore dudt(sol.u, ps, nothing) ::typeof(x)
+    residual = Zygote.@ignore dudt(sol.u, ps, nothing)
 
     @set! st.model = st_
 
@@ -137,9 +137,9 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh})(
 
     prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps.model)
     sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
-    z_star, st_ = dudt_(sol.u, ps.model, nothing)::Tuple{NTuple{N,typeof(x)},typeof(st.model)}
+    z_star, st_ = dudt_(sol.u, ps.model, nothing)
 
-    residual = Zygote.@ignore dudt(sol.u, ps.model, nothing) ::typeof(x)
+    residual = Zygote.@ignore dudt(sol.u, ps.model, nothing)
 
     @set! st.model = st_
 

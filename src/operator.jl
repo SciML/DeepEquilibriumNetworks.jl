@@ -22,4 +22,4 @@ function Base.:*(L::ZygotePullbackMultiplyOperator, x::AbstractVector)
     return L.f(reshape(x, L.s))[1]
 end
 
-SciMLBase.isinplace(z::ZygotePullbackMultiplyOperator, ::Int64) = false 
+SciMLBase.isinplace(z::ZygotePullbackMultiplyOperator, ::Int64) = false

@@ -26,7 +26,7 @@ Initializes the weights of the network with a normal distribution. For DEQs the 
 if we use this as the Initialization
 """
 function NormalInitializer(μ = 0.0f0, σ² = 0.01f0)
-    return (rng::AbstractRNG, dims...) -> randn(rng, dims...) .* σ² .+ μ
+    return (rng::AbstractRNG, dims...) -> randn(rng, Float32, dims...) .* σ² .+ μ
 end
 
 # For MultiScale DEQs

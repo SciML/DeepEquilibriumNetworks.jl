@@ -38,7 +38,7 @@ const EFL = ExplicitFluxLayers
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end
 
-    @info "Testing SkipDEQ "
+    @info "Testing SkipDEQV2"
     model = DEQChain(
         EFL.Dense(2, 2),
         SkipDeepEquilibriumNetwork(
@@ -154,7 +154,7 @@ const EFL = ExplicitFluxLayers
         sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end
 
-    @info "Testing MultiScaleSkipDEQ"
+    @info "Testing MultiScaleSkipDEQV2"
     model = MultiScaleSkipDeepEquilibriumNetwork(
         (
             EFL.Parallel(+, EFL.Dense(4, 4, tanh), EFL.Dense(4, 4, tanh)),
