@@ -1,48 +1,50 @@
 module FastDEQ
 
-using CUDA, DiffEqBase, DiffEqCallbacks, DiffEqSensitivity, Flux, FluxExperimental, LinearAlgebra, LinearSolve,
-      OrdinaryDiffEq, SciMLBase, Statistics, SteadyStateDiffEq, UnPack, Zygote
+using CUDA,
+    DiffEqBase,
+    DiffEqCallbacks,
+    DiffEqSensitivity,
+    Flux,
+    LinearAlgebra,
+    LinearSolve,
+    OrdinaryDiffEq,
+    SciMLBase,
+    Statistics,
+    SteadyStateDiffEq,
+    UnPack,
+    Zygote,
+    ExplicitFluxLayers,
+    Functors,
+    ChainRulesCore,
+    Setfield
 
-abstract type AbstractDeepEquilibriumNetwork end
+import ExplicitFluxLayers:
+    AbstractExplicitLayer, initialparameters, initialstates, createcache, parameterlength, statelength, cachesize
+import Random: AbstractRNG
 
-function Base.show(io::IO, l::AbstractDeepEquilibriumNetwork)
-    return print(io, string(typeof(l).name.name), "() ", string(length(l.p)), " Trainable Parameters")
-end
+include("operator.jl")
 
-Flux.trainable(d::AbstractDeepEquilibriumNetwork) = (d.p,)
-
-Base.deepcopy(op::DiffEqSensitivity.ZygotePullbackMultiplyOperator) = op
+include("solvers/continuous.jl")
+include("solvers/discrete.jl")
 
 include("solve.jl")
 include("utils.jl")
 
-include("solvers/broyden.jl")
-include("solvers/limited_memory_broyden.jl")
-
-include("models/basics.jl")
-
+include("layers/core.jl")
 include("layers/jacobian_stabilization.jl")
-include("layers/utils.jl")
 include("layers/deq.jl")
-include("layers/sdeq.jl")
 include("layers/mdeq.jl")
-include("layers/smdeq.jl")
+include("layers/chain.jl")
 
-include("models/chain.jl")
-
-include("losses.jl")
+include("adjoint.jl")
 
 # DEQ Solvers
 export ContinuousDEQSolver, DiscreteDEQSolver, BroydenSolver, LimitedMemoryBroydenSolver
 
 # Utils
-export NormalInitializer, SteadyStateAdjoint, get_and_clear_nfe!, compute_deq_jacobian_loss, DeepEquilibriumSolution, SupervisedLossContainer
+export NormalInitializer, SteadyStateAdjoint, compute_deq_jacobian_loss, DeepEquilibriumSolution
 
-# Layers
-export MultiParallelNet
-
-# DEQ Layers
-export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork, MultiScaleDeepEquilibriumNetwork, MultiScaleSkipDeepEquilibriumNetwork
-export DEQChain
+export DeepEquilibriumNetwork,
+    SkipDeepEquilibriumNetwork, MultiScaleDeepEquilibriumNetwork, MultiScaleSkipDeepEquilibriumNetwork, DEQChain
 
 end

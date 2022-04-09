@@ -1,131 +1,149 @@
-"""
-    MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix, solver;
-                                     post_fuse_layers::Union{Tuple,Nothing}=nothing, p=nothing,
-                                     sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10), kwargs...)
-
-Multiscale Deep Equilibrium Network as proposed in [baimultiscale2020](@cite)
-
-## Arguments
-
-* `main_layers`: Tuple of Explicit Neural Networks. The first network needs to take 2 inputs, the other ones only take 1 input
-* `mapping_layers`: Matrix of Explicit Neural Networks. The ``(i, j)^{th}`` network takes the output of ``i^{th}`` `main_layer`
-                    and passes it to the ``j^{th}`` `main_layer`
-* `solver`: Solver for the optimization problem (See: [`ContinuousDEQSolver`](@ref) & [`DiscreteDEQSolver`](@ref))
-* `post_fuse_layers`: Tuple of Explicit Neural Networks. Applied after the `mapping_layers` (Default: `nothing`)
-* `p`: Optional parameters for the `model`
-* `sensealg`: See [`SteadyStateAdjoint`](@ref)
-* `kwargs`: Additional Parameters that are directly passed to `solve`
-
-## Example
-
-```julia
-model = MultiScaleDeepEquilibriumNetwork(
-    (
-        Parallel(+, Dense(4, 4, tanh_fast), Dense(4, 4, tanh_fast)),
-        Dense(3, 3, tanh_fast), Dense(2, 2, tanh_fast),
-        Dense(1, 1, tanh_fast)
-    ),
-    [
-        NoOpLayer() Dense(4, 3, tanh_fast) Dense(4, 2, tanh_fast) Dense(4, 1, tanh_fast);
-        Dense(3, 4, tanh_fast) NoOpLayer() Dense(3, 2, tanh_fast) Dense(3, 1, tanh_fast);
-        Dense(2, 4, tanh_fast) Dense(2, 3, tanh_fast) NoOpLayer() Dense(2, 1, tanh_fast);
-        Dense(1, 4, tanh_fast) Dense(1, 3, tanh_fast) Dense(1, 2, tanh_fast) NoOpLayer()
-    ],
-    ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0),
-)
-
-model(rand(Float32, 4, 1))
-```
-
-See also: [`DeepEquilibriumNetwork`](@ref), [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleSkipDeepEquilibriumNetwork`](@ref)
-"""
-struct MultiScaleDeepEquilibriumNetwork{N,M1<:Parallel,M2<:Union{Chain,FChain},RE1,RE2,P,A,K,S} <:
-       AbstractDeepEquilibriumNetwork
-    main_layers::M1
-    mapping_layers::M2
-    main_layers_re::RE1
-    mapping_layers_re::RE2
-    p::P
-    ordered_split_idxs::NTuple{N,Int}
+struct MultiScaleDeepEquilibriumNetwork{N,L,M,A,S,K} <: AbstractDeepEquilibriumNetwork
+    model::M
     solver::A
-    kwargs::K
     sensealg::S
-    stats::DEQTrainingStats
-
-    function MultiScaleDeepEquilibriumNetwork(main_layers::Parallel, mapping_layers::Union{Chain,FChain}, re1, re2,
-                                              p, ordered_split_idxs, solver::A, kwargs::K, sensealg::S, stats) where {A,K,S}
-        @assert length(mapping_layers) == 2
-        @assert mapping_layers[1] isa MultiParallelNet
-
-        p_main_layers, re_main_layers = destructure_parameters(main_layers)
-        p_mapping_layers, re_mapping_layers = destructure_parameters(mapping_layers)
-
-        ordered_split_idxs = tuple(cumsum([0, length(p_main_layers), length(p_mapping_layers)])...)
-
-        p = p === nothing ? vcat(p_main_layers, p_mapping_layers) : convert(typeof(p_main_layers), p)
-
-        return new{length(ordered_split_idxs),
-                   typeof.((main_layers, mapping_layers, re_main_layers, re_mapping_layers, p))...,
-                   A,K,S}(main_layers, mapping_layers, re_main_layers, re_mapping_layers, p, ordered_split_idxs,
-                          solver, kwargs, sensealg, stats)
-    end
+    scales::NTuple{N,NTuple{L,Int64}}
+    kwargs::K
 end
 
-Flux.@functor MultiScaleDeepEquilibriumNetwork
+function initialstates(rng::AbstractRNG, deq::MultiScaleDeepEquilibriumNetwork)
+    return (model=initialstates(rng, deq.model), split_idxs=Tuple(vcat(0, cumsum(prod.(deq.scales))...)))
+end
 
-function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix, solver;
-                                          post_fuse_layers::Union{Tuple,Nothing}=nothing, p=nothing,
-                                          sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10), kwargs...)
-    mapping_layers = if post_fuse_layers === nothing
-        @assert size(mapping_layers, 1) == size(mapping_layers, 2) == length(main_layers)
-        FChain(MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...), NoOpLayer())
+function MultiScaleDeepEquilibriumNetwork(
+    main_layers::Tuple,
+    mapping_layers::Matrix,
+    post_fuse_layer::Union{Nothing,Tuple},
+    solver,
+    scales;
+    sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+    kwargs...,
+)
+    l1 = ExplicitFluxLayers.Parallel(nothing, main_layers...)
+    l2 = ExplicitFluxLayers.BranchLayer(
+        ExplicitFluxLayers.Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...
+    )
+    model = if post_fuse_layer === nothing
+        ExplicitFluxLayers.Chain(l1, l2)
     else
-        @assert size(mapping_layers, 1) == size(mapping_layers, 2) == length(main_layers) == length(post_fuse_layers)
-        FChain(MultiParallelNet(Parallel.(+, map(x -> tuple(x...), eachcol(mapping_layers)))...),
-               Parallel(flatten_merge, post_fuse_layers...))
+        l3 = ExplicitFluxLayers.Parallel(nothing, post_fuse_layer...)
+        ExplicitFluxLayers.Chain(l1, l2, l3)
     end
-
-    main_layers = Parallel(flatten_merge, main_layers...)
-
-    return MultiScaleDeepEquilibriumNetwork(main_layers, mapping_layers, nothing, nothing, p,
-                                            nothing, solver, kwargs, sensealg, DEQTrainingStats(0))
+    return MultiScaleDeepEquilibriumNetwork(model, solver, sensealg, scales, kwargs)
 end
 
-function (mdeq::MultiScaleDeepEquilibriumNetwork)(x::AbstractArray{T}) where {T}
-    current_nfe = mdeq.stats.nfe
+function get_initial_condition_mdeq(scales::NTuple, x::AbstractArray{T,N}, st::NamedTuple{fields}) where {T,N,fields}
+    if hasproperty(st, :initial_condition) && size(st.initial_condition, 2) == size(x, N)
+        return st.initial_condition, st
+    end
+    u0 = vcat(map(scale -> fill!(similar(x, prod(scale), size(x, N)), T(0)), scales)...)
+    st = merge((initial_condition=u0,), st)
+    return u0, st
+end
 
-    z = zero(x)
-    initial_conditions = Zygote.@ignore map(l -> l(z), map(l -> l.layers[1], mdeq.mapping_layers[1].layers))
-    u_sizes = Zygote.@ignore size.(initial_conditions)
-    u_split_idxs = Zygote.@ignore vcat(0, cumsum(length.(initial_conditions) .÷ size(x, ndims(x)))...)
-    u0 = Zygote.@ignore vcat(Flux.flatten.(initial_conditions)...)
+Zygote.@nograd get_initial_condition_mdeq
 
-    N = length(u_sizes)
-    update_is_variational_hidden_dropout_mask_reset_allowed(false)
+function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T}, ps::NamedTuple, st::NamedTuple) where {N,T}
+    z, st = get_initial_condition_mdeq(deq.scales, x, st)
 
-    function dudt_(u, _p)
-        mdeq.stats.nfe += 1
-
-        uₛ = split_array_by_indices(u, u_split_idxs)
-        p1, p2 = split_array_by_indices(_p, mdeq.ordered_split_idxs)
-
-        u_reshaped = ntuple(i -> reshape(uₛ[i], u_sizes[i]), N)
-
-        main_layers_output = mdeq.main_layers_re(p1)((u_reshaped[1], x), u_reshaped[2:end]...)
-
-        return mdeq.mapping_layers_re(p2)(main_layers_output)
+    function dudt_(u, p, t)
+        u_split = split_and_reshape(u, st.split_idxs, deq.scales)
+        u_, st_ = deq.model(((u_split[1], x), u_split[2:N]...), p, st.model)
+        return u_, st_
     end
 
-    dudt(u, _p, t) = vcat(Flux.flatten.(dudt_(u, _p))...) .- u
+    dudt(u, p, t) = vcat(Flux.flatten.(dudt_(u, p, t)[1])...) .- u
 
-    ssprob = SteadyStateProblem(dudt, u0, mdeq.p)
-    res = solve(ssprob, mdeq.solver; u0=u0, sensealg=mdeq.sensealg, mdeq.kwargs...).u
+    prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps)
+    sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
+    z_star, st_ = dudt_(sol.u, ps, nothing)::Tuple{NTuple{N,typeof(x)},typeof(st.model)}
 
-    x_ = dudt_(res, mdeq.p)
+    residual = Zygote.@ignore dudt(sol.u, ps, nothing) ::typeof(x)
 
-    residual = Zygote.@ignore Tuple(map((iu) -> reshape(iu[2], u_sizes[iu[1]]),
-                                    enumerate(split_array_by_indices(dudt(res, mdeq.p, nothing), u_split_idxs))))
-    update_is_variational_hidden_dropout_mask_reset_allowed(true)
+    @set! st.model = st_
 
-    return x_, DeepEquilibriumSolution(x_, initial_conditions, residual, T(0), mdeq.stats.nfe - current_nfe)
+    return (
+        (z_star, DeepEquilibriumSolution(vcat(Flux.flatten.(z_star)...), z, residual, 0.0f0, sol.destats.nf + 1)), st
+    )
+end
+
+struct MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh,A,S,K} <: AbstractSkipDeepEquilibriumNetwork
+    model::M
+    shortcut::Sh
+    solver::A
+    sensealg::S
+    scales::NTuple{N,NTuple{L,Int64}}
+    kwargs::K
+end
+
+function initialstates(rng::AbstractRNG, deq::MultiScaleSkipDeepEquilibriumNetwork)
+    return (
+        model=initialstates(rng, deq.model),
+        shortcut=initialstates(rng, deq.shortcut),
+        split_idxs=Tuple(vcat(0, cumsum(prod.(deq.scales))...)),
+    )
+end
+
+function MultiScaleSkipDeepEquilibriumNetwork(
+    main_layers::Tuple,
+    mapping_layers::Matrix,
+    post_fuse_layer::Union{Nothing,Tuple},
+    shortcut_layers::Union{Nothing,Tuple},
+    solver,
+    scales;
+    sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+    kwargs...,
+)
+    l1 = ExplicitFluxLayers.Parallel(nothing, main_layers...)
+    l2 = ExplicitFluxLayers.BranchLayer(
+        ExplicitFluxLayers.Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...
+    )
+    model = if post_fuse_layer === nothing
+        ExplicitFluxLayers.Chain(l1, l2)
+    else
+        l3 = ExplicitFluxLayers.Parallel(nothing, post_fuse_layer...)
+        ExplicitFluxLayers.Chain(l1, l2, l3)
+    end
+    shortcut = if shortcut_layers === nothing
+        nothing
+    else
+        ExplicitFluxLayers.Parallel(nothing, shortcut_layers...)
+    end
+    return MultiScaleSkipDeepEquilibriumNetwork(model, shortcut, solver, sensealg, scales, kwargs)
+end
+
+function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh})(
+    x::AbstractArray{T}, ps::NamedTuple, st::NamedTuple
+) where {N,L,M,Sh,T}
+    z, st = if Sh == Nothing
+        u0, st_ = get_initial_condition_mdeq(deq.scales, x, st)
+        u0_ = split_and_reshape(u0, st.split_idxs, deq.scales)
+        z0, st__ = deq.model(((u0_[1], x), u0_[2:N]...), ps.model, st_.model)
+        @set! st_.model = st__
+        (vcat(Flux.flatten.(z0)...), st_)
+    else
+        z0, st_ = deq.shortcut(x, ps.shortcut, st.shortcut)
+        @set! st.shortcut = st_
+        (vcat(Flux.flatten.(z0)...), st)
+    end
+
+    function dudt_(u, p, t)
+        u_split = split_and_reshape(u, st.split_idxs, deq.scales)
+        u_, st_ = deq.model(((u_split[1], x), u_split[2:N]...), p, st.model)
+        return u_, st_
+    end
+
+    dudt(u, p, t) = vcat(Flux.flatten.(dudt_(u, p, t)[1])...) .- u
+
+    prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps.model)
+    sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
+    z_star, st_ = dudt_(sol.u, ps.model, nothing)::Tuple{NTuple{N,typeof(x)},typeof(st.model)}
+
+    residual = Zygote.@ignore dudt(sol.u, ps.model, nothing) ::typeof(x)
+
+    @set! st.model = st_
+
+    return (
+        (z_star, DeepEquilibriumSolution(vcat(Flux.flatten.(z_star)...), z, residual, 0.0f0, sol.destats.nf + 1)), st
+    )
 end
