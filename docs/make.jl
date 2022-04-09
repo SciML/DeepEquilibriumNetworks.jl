@@ -9,7 +9,7 @@ makedocs(
     clean = true,
     doctest = false,
     modules = [FastDEQ],
-    format = Documenter.HTML(#  analytics = "",
+    format = Documenter.HTML(analytics = "UA-90474609-3",
                              #  assets = ["assets/favicon.ico"],
                              canonical="https://fastdeq.sciml.ai/stable/"),
     pages = [
