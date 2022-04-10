@@ -332,14 +332,9 @@ function get_model(
         y__ = Float32.(Flux.onehotbatch([1], 0:9)) |> device
         model(x__, ps, st)
         clean_println("Forward Pass Warmup Completed")
-        _, back = Flux.pullback(ps) do p
-            (y, soln), st_ = model(x__, p, st)
-            return (
-                Flux.logitcrossentropy(y, y__) + sum(abs2, soln.z_star .- soln.u₀),
-                st_
-            )
-        end
-        back((1.0f0, nothing))
+        lfn = loss_function(:CIFAR10, model_type)
+        (l, _, _), back = Flux.pullback(p -> lfn(x__, y__, model, p, st), ps)
+        back((one(l), nothing, nothing))
         clean_println("Backward Pass Warmup Completed")
     end
 

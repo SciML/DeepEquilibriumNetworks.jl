@@ -6,13 +6,13 @@ import MLDataUtils: nobs, getobs
 
 const EFL = ExplicitFluxLayers
 
-# get_model
-include("models.jl")
 # PrettyTableLogger
 include("logging.jl")
+# train, loss_function
+include("train.jl")
+# get_model
+include("models.jl")
 # get_dataloaders
 include("dataloaders.jl")
-
-include("train.jl")
 
 end

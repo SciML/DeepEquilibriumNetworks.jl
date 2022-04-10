@@ -1,9 +1,14 @@
+evaluate(model, ps, st, ::Nothing, device) = nothing
+
 function evaluate(model, ps, st, dataloader, device)
-    matches, total_loss, total_datasize, total_nfe = 0, 0, 0, 0
+    matches, total_loss, total_datasize, total_nfe, total_time = 0, 0, 0, 0, 0
     for (x, y) in dataloader
         x = device(x)
         y = device(y)
-        (ŷ, soln), st = model(x, ps, st)
+
+        start_time = time()
+        (ŷ, soln), _ = model(x, ps, st)
+        total_time += time() - start_time
 
         total_nfe += soln.nfe * size(x, ndims(x))
         total_loss += Flux.Losses.logitcrossentropy(ŷ, y) * size(x, ndims(x))
@@ -11,14 +16,98 @@ function evaluate(model, ps, st, dataloader, device)
         total_datasize += size(x, ndims(x))
     end
     return (
-        (
-            loss=total_loss / total_datasize,
-            accuracy=matches / total_datasize,
-            mean_nfe=total_nfe / total_datasize
-        ),
-        st
+        loss=total_loss / total_datasize,
+        accuracy=matches / total_datasize,
+        mean_nfe=total_nfe / total_datasize,
+        total_time=total_time,
     )
 end
 
-function train_one_epoch()
+function train_one_epoch(model, ps, st, loss_function, opt_state, dataloader, device, lg::PrettyTableLogger)
+    total_time = 0
+
+    for (x, y) in dataloader
+        x = device(x)
+        y = device(y)
+
+        # Compute Loss + Backprop + Update
+        start_time = time()
+
+        (loss, st, nfe), back = Flux.pullback(p -> loss_function(x, y, model, p, st), ps)
+        gs, = back(one(loss))
+        ps, opt_state = Optimisers.update!(opt_state, ps, gs)
+
+        total_time += time() - start_time
+
+        # Logging
+        lg(; records=Dict("Train/Running/NFE" => nfe, "Train/Running/Loss" => loss))
+    end
+
+    return ps, st, opt_state, (total_time=total_time,)
+end
+
+function loss_function(dataset::Symbol, model_type::Symbol)
+    if dataset ∈ (:CIFAR10,)
+        function loss_function_closure(x, y, model, ps, st)
+            (ŷ, soln), st_ = model(x, ps, st)
+            loss = if model_type == :vanilla
+                Flux.Losses.logitcrossentropy(ŷ, y)
+            else
+                Flux.Losses.logitcrossentropy(ŷ, y) + Flux.Losses.mse(soln.u₀, soln.z_star)
+            end
+            return loss, st_, soln.nfe
+        end
+        return loss_function_closure
+    else
+        throw(ArgumentError("$dataset - $model_type not yet supported"))
+    end
+end
+
+function train(
+    model,
+    ps,
+    st,
+    loss_function,
+    opt,
+    train_dataloader,
+    val_dataloader,
+    test_dataloader,
+    device,
+    nepochs,
+    lg::PrettyTableLogger;
+    distributed::Bool=false,
+    cleanup_function=identity
+)
+    # TODO: Saving model weights
+    opt_state = Optimisers.setup(opt, ps)
+
+    for epoch in 1:nepochs
+        # Run a cleanup function
+        cleanup_function()
+
+        # Train 1 epoch
+        ps, st, opt_state, training_stats = train_one_epoch(
+            model, ps, st, loss_function, opt_state, train_dataloader, device, lg
+        )
+
+        # Evaluate
+        train_eval_stats = evaluate(model, ps, st, train_dataloader, device)
+        val_eval_stats = evaluate(model, ps, st, val_dataloader, device)
+        test_eval_stats = evaluate(model, ps, st, test_dataloader, device)
+
+        train_stats, val_stats, test_stats = if distributed
+            # TODO: Implement syncing the statistics
+            error("Distributed Training not yet implemented")
+        else
+            (
+                (train_eval_stats.mean_nfe, train_eval_stats.accuracy, train_eval_stats.loss, train_eval_stats.total_time),
+                val_eval_stats === nothing ? () : (val_eval_stats.mean_nfe, val_eval_stats.accuracy, val_eval_stats.loss, val_eval_stats.total_time),
+                test_eval_stats === nothing ? () : (test_eval_stats.mean_nfe, test_eval_stats.accuracy, test_eval_stats.loss, test_eval_stats.total_time),
+            )
+        end
+
+        lg(epoch, train_stats..., training_stats.total_time, val_stats..., test_stats...)
+    end
+
+    return ps, st, opt_state
 end

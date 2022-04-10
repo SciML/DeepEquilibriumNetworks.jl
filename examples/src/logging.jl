@@ -131,7 +131,3 @@ function Base.close(pl::PrettyTableLogger)
     pl.fio === nothing || close(pl.fio)
     return nothing
 end
-
-function Base.show(io, pl::PrettyTableLogger)
-    print(io, "PrettyTableLogger(", pl.fio, ")")
-end

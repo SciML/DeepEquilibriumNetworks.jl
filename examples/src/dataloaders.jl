@@ -12,11 +12,11 @@ getobs(d::MLDatasetsImageData, i::Int, ::ObsDim.Undefined) = (d.images[i], d.lab
 getobs(d::MLDatasetsImageData, i::Int) = (d.images[i], d.labels[i])
 
 function get_dataloaders(
-    dataset::Symbol; μ=nothing, σ²=nothing, distributed=false, train_batchsize::Int64, test_batchsize::Int64
+    dataset::Symbol; μ=nothing, σ²=nothing, distributed=false, train_batchsize::Int64, eval_batchsize::Int64
 )
     (x_train, y_train), (x_test, y_test), μ, σ², nclasses = if dataset == :CIFAR10
-        μ = μ === nothing ? reshape([0.4914, 0.4822, 0.4465], 1, 1, :, 1) : μ
-        σ² = σ² === nothing ? reshape([0.2023, 0.1994, 0.2010], 1, 1, :, 1) : σ²
+        μ = μ === nothing ? reshape([0.4914f0, 0.4822f0, 0.4465f0], 1, 1, :, 1) : μ
+        σ² = σ² === nothing ? reshape([0.2023f0, 0.1994f0, 0.2010f0], 1, 1, :, 1) : σ²
         CIFAR10.traindata(Float32), CIFAR10.testdata(Float32), μ, σ², 10
     else
         throw(ArgumentError("Not yet implemented for $dataset"))
@@ -32,5 +32,5 @@ function get_dataloaders(
     test_dataset = MLDatasetsImageData(x_test, y_test)
     test_dataset = distributed ? DistributedDataContainer(test_dataset) : test_dataset
 
-    return (DataLoader(train_dataset, train_batchsize), DataLoader(test_dataset, test_batchsize))
+    return (DataLoader(train_dataset, train_batchsize), DataLoader(test_dataset, eval_batchsize))
 end
