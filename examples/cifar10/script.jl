@@ -1,4 +1,4 @@
-using FastDEQExperiments, Flux, CUDA, Optimisers
+using FastDEQExperiments, Flux, CUDA, Optimisers, Dates
 
 ## TODO: Distributed Training
 
@@ -29,7 +29,7 @@ config = Dict(
     "weight_decay" => 0.0000025,
 )
 
-expt_name = "cifar-10_seed-$(config["seed"])_model-$(config["model_type"])_continuous-$(config["continuous"])"
+expt_name = "cifar-10_seed-$(config["seed"])_model-$(config["model_type"])_continuous-$(config["continuous"])_now-$(now())"
 
 # Training
 function train_model(config, expt_name)
@@ -90,5 +90,9 @@ function train_model(config, expt_name)
     )
 
     # Close Logger and Flush Data to disk
-    return Base.close(lg)
+    Base.close(lg)
+
+    return model, cpu(ps), cpu(st), st_opt
 end
+
+model, ps, st, st_opt = train_model(config, expt_name)
