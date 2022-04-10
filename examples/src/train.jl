@@ -35,7 +35,7 @@ function train_one_epoch(model, ps, st, loss_function, opt_state, dataloader, de
 
         (loss, st, nfe), back = Flux.pullback(p -> loss_function(x, y, model, p, st), ps)
         gs, = back((one(loss), nothing, nothing))
-        ps, opt_state = Optimisers.update!(opt_state, ps, gs)
+        opt_state, ps = Optimisers.update!(opt_state, ps, gs)
 
         total_time += time() - start_time
 
