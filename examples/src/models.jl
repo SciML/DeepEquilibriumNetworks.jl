@@ -222,6 +222,9 @@ function get_model(
     maxiters::Int,
     abstol,
     reltol,
+    seed,
+    device=gpu,
+    warmup::Bool=true,  # Helps reduce time for Zygote to compile gradients first time
 )
     initial_layers = EFL.Chain(
         conv3x3(3 => 24; initW=NormalInitializer()),
@@ -320,5 +323,25 @@ function get_model(
         throw(ArgumentError("`model_type` must be one of `[:skip, :skipv2, :vanilla]`"))
     end
 
-    return DEQChain(initial_layers, deq, final_layers)
+    model = DEQChain(initial_layers, deq, final_layers)
+    ps, st = EFL.setup(MersenneTwister(seed), model) .|> device
+
+    if warmup
+        clean_println("Starting Model Warmup")
+        x__ = randn(Float32, 32, 32, 3, 1) |> device
+        y__ = Float32.(Flux.onehotbatch([1], 0:9)) |> device
+        model(x__, ps, st)
+        clean_println("Forward Pass Warmup Completed")
+        _, back = Flux.pullback(ps) do p
+            (y, soln), st_ = model(x__, p, st)
+            return (
+                Flux.logitcrossentropy(y, y__) + sum(abs2, soln.z_star .- soln.u₀),
+                st_
+            )
+        end
+        back((1.0f0, nothing))
+        clean_println("Backward Pass Warmup Completed")
+    end
+
+    return model, ps, st
 end
