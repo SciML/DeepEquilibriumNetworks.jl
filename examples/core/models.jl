@@ -79,8 +79,8 @@ function ResidualBlockV1(
 )
     inplanes, outplanes = mapping
     inner_planes = outplanes * deq_expand
-    conv1 = (n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; initW=NormalInitializer(), bias=true)
-    conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; initW=NormalInitializer(), bias=true)
+    conv1 = (n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; initW=NormalInitializer(), bias=false)
+    conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; initW=NormalInitializer(), bias=false)
 
     conv1, conv2 = if weight_norm
         EFL.WeightNorm(conv1, (:weight,)), EFL.WeightNorm(conv2, (:weight,))
@@ -126,8 +126,8 @@ function ResidualBlockV2(
 )
     inplanes, outplanes = mapping
     inner_planes = outplanes * deq_expand
-    conv1 = (n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; initW=NormalInitializer(), bias=true)
-    conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; initW=NormalInitializer(), bias=true)
+    conv1 = (n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; initW=NormalInitializer(), bias=false)
+    conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; initW=NormalInitializer(), bias=false)
 
     conv1, conv2 = if weight_norm
         EFL.WeightNorm(conv1, (:weight,)), EFL.WeightNorm(conv2, (:weight,))
