@@ -443,9 +443,7 @@ version = "0.3.2"
 
 [[deps.FastDEQ]]
 deps = ["CUDA", "ChainRulesCore", "DataLoaders", "DiffEqBase", "DiffEqCallbacks", "DiffEqSensitivity", "ExplicitFluxLayers", "Flux", "Functors", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "Random", "Reexport", "Requires", "SciMLBase", "Setfield", "Statistics", "SteadyStateDiffEq", "UnPack", "Zygote"]
-git-tree-sha1 = "23164863ce195e94e8e5edc643e8af6b60cc8402"
-repo-rev = "ap/efl"
-repo-url = ".."
+path = ".."
 uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 version = "0.1.0"
 
