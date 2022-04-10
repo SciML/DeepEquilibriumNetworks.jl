@@ -24,9 +24,9 @@ function evaluate(model, ps, st, dataloader, device)
 end
 
 function train_one_epoch(model, ps, st, loss_function, opt_state, dataloader, device, lg::PrettyTableLogger)
-    total_time = 0
+    total_time, dlen = 0, length(dataloader)
 
-    for (x, y) in dataloader
+    for (i, (x, y)) in enumerate(dataloader)
         x = device(x)
         y = device(y)
 
@@ -38,6 +38,10 @@ function train_one_epoch(model, ps, st, loss_function, opt_state, dataloader, de
         opt_state, ps = Optimisers.update!(opt_state, ps, gs)
 
         total_time += time() - start_time
+
+        if local_rank() == 0 && i % 25 == 1
+            clean_println("    [$(i)/$(dlen)] data processed. Loss: $(loss). Time Taken: $(total_time)")
+        end
 
         # Logging
         lg(; records=Dict("Train/Running/NFE" => nfe, "Train/Running/Loss" => loss))
@@ -82,18 +86,23 @@ function train(
     opt_state = Optimisers.setup(opt, ps)
 
     for epoch in 1:nepochs
-        # Run a cleanup function
-        cleanup_function()
+        if local_rank() == 0
+            clean_println("Epoch [$(epoch) / $(nepochs)]")
+        end
 
         # Train 1 epoch
         ps, st, opt_state, training_stats = train_one_epoch(
             model, ps, st, loss_function, opt_state, train_dataloader, device, lg
         )
+        cleanup_function()
 
         # Evaluate
         train_eval_stats = evaluate(model, ps, st, train_dataloader, device)
+        cleanup_function()
         val_eval_stats = evaluate(model, ps, st, val_dataloader, device)
+        cleanup_function()
         test_eval_stats = evaluate(model, ps, st, test_dataloader, device)
+        cleanup_function()
 
         train_stats, val_stats, test_stats = if distributed
             # TODO: Implement syncing the statistics
