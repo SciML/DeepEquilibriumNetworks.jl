@@ -39,7 +39,7 @@ function train_one_epoch(model, ps, st, loss_function, opt_state, dataloader, de
 
         total_time += time() - start_time
 
-        if local_rank() == 0 && i % 25 == 1
+        if _should_log() && i % 25 == 1
             clean_println("    [$(i)/$(dlen)] data processed. Loss: $(loss). Time Taken: $(total_time)")
         end
 
@@ -86,7 +86,7 @@ function train(
     opt_state = Optimisers.setup(opt, ps)
 
     for epoch in 1:nepochs
-        if local_rank() == 0
+        if _should_log()
             clean_println("Epoch [$(epoch) / $(nepochs)]")
         end
 
