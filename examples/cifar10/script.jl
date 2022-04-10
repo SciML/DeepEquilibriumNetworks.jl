@@ -1,6 +1,7 @@
-using FastDEQExperiments, Flux, CUDA, Optimisers, Dates
+using FastDEQExperiments, Flux, CUDA, Optimisers, Dates, FluxMPI
 
-## TODO: Distributed Training
+## Distributed Training
+# FluxMPI.Init(verbose=true)
 
 # Setup
 CUDA.versioninfo()
@@ -22,8 +23,8 @@ config = Dict(
     "maxiters" => 20,
     "epochs" => 50,
     "dropout_rate" => 0.25,
-    "batchsize" => 256,
-    "eval_batchsize" => 256,
+    "batchsize" => 128,
+    "eval_batchsize" => 128,
     "model_type" => :skip,
     "continuous" => true,
     "weight_decay" => 0.0000025,
@@ -39,17 +40,13 @@ function train_model(config, expt_name)
         joinpath("logs/", expt_name * ".csv"),
         [
             "Epoch Number",
-            "Train/NFE",
-            "Train/Accuracy",
-            "Train/Loss",
-            "Train/Eval Time",
             "Train/Time",
             "Test/NFE",
             "Test/Accuracy",
             "Test/Loss",
             "Test/Time",
         ],
-        ["Train/Running/NFE", "Train/Running/Loss"],
+        ["Train/Running/NFE", "Train/Running/Loss", "Train/Running/Accuracy"],
     );
 
     # Model Setup

@@ -33,15 +33,13 @@ function train_one_epoch(model, ps, st, loss_function, opt_state, dataloader, de
         # Compute Loss + Backprop + Update
         start_time = time()
 
-        (loss, st, nfe), back = Flux.pullback(p -> loss_function(x, y, model, p, st), ps)
-        gs, = back((one(loss), nothing, nothing))
+        (loss, ŷ, st, nfe), back = Flux.pullback(p -> loss_function(x, y, model, p, st), ps)
+        gs, = back((one(loss), nothing, nothing, nothing))
         opt_state, ps = Optimisers.update!(opt_state, ps, gs)
 
         total_time += time() - start_time
 
-        if _should_log() && i % 25 == 1
-            clean_println("    [$(i)/$(dlen)] data processed. Loss: $(loss). Time Taken: $(total_time)")
-        end
+        matches += sum(argmax.(eachcol(cpu(ŷ))) .== Flux.onecold(cpu(y)))
 
         # Logging
         lg(; records=Dict("Train/Running/NFE" => nfe, "Train/Running/Loss" => loss))
@@ -59,7 +57,7 @@ function loss_function(dataset::Symbol, model_type::Symbol)
             else
                 Flux.Losses.logitcrossentropy(ŷ, y) + Flux.Losses.mse(soln.u₀, soln.z_star)
             end
-            return loss, st_, soln.nfe
+            return loss, ŷ, st_, soln.nfe
         end
         return loss_function_closure
     else
@@ -86,10 +84,6 @@ function train(
     opt_state = Optimisers.setup(opt, ps)
 
     for epoch in 1:nepochs
-        if _should_log()
-            clean_println("Epoch [$(epoch) / $(nepochs)]")
-        end
-
         # Train 1 epoch
         ps, st, opt_state, training_stats = train_one_epoch(
             model, ps, st, loss_function, opt_state, train_dataloader, device, lg
@@ -97,25 +91,22 @@ function train(
         cleanup_function()
 
         # Evaluate
-        train_eval_stats = evaluate(model, ps, st, train_dataloader, device)
-        cleanup_function()
         val_eval_stats = evaluate(model, ps, st, val_dataloader, device)
         cleanup_function()
         test_eval_stats = evaluate(model, ps, st, test_dataloader, device)
         cleanup_function()
 
-        train_stats, val_stats, test_stats = if distributed
+        val_stats, test_stats = if distributed
             # TODO: Implement syncing the statistics
             error("Distributed Training not yet implemented")
         else
             (
-                (train_eval_stats.mean_nfe, train_eval_stats.accuracy, train_eval_stats.loss, train_eval_stats.total_time),
                 val_eval_stats === nothing ? () : (val_eval_stats.mean_nfe, val_eval_stats.accuracy, val_eval_stats.loss, val_eval_stats.total_time),
                 test_eval_stats === nothing ? () : (test_eval_stats.mean_nfe, test_eval_stats.accuracy, test_eval_stats.loss, test_eval_stats.total_time),
             )
         end
 
-        lg(epoch, train_stats..., training_stats.total_time, val_stats..., test_stats...)
+        lg(epoch, training_stats.total_time, val_stats..., test_stats...)
     end
 
     return ps, st, opt_state

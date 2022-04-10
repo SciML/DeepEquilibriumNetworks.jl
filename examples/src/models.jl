@@ -333,8 +333,8 @@ function get_model(
         model(x__, ps, st)
         clean_println("Forward Pass Warmup Completed")
         lfn = loss_function(:CIFAR10, model_type)
-        (l, _, _), back = Flux.pullback(p -> lfn(x__, y__, model, p, st), ps)
-        back((one(l), nothing, nothing))
+        (l, _, _, _), back = Flux.pullback(p -> lfn(x__, y__, model, p, st), ps)
+        back((one(l), nothing, nothing, nothing))
         clean_println("Backward Pass Warmup Completed")
     end
 
