@@ -24,9 +24,9 @@ function evaluate(model, ps, st, dataloader, device)
 end
 
 function train_one_epoch(model, ps, st, loss_function, opt_state, dataloader, device, lg::PrettyTableLogger)
-    total_time, dlen = 0, length(dataloader)
+    total_time = 0
 
-    for (i, (x, y)) in enumerate(dataloader)
+    for (x, y) in dataloader
         x = device(x)
         y = device(y)
 
@@ -39,10 +39,10 @@ function train_one_epoch(model, ps, st, loss_function, opt_state, dataloader, de
 
         total_time += time() - start_time
 
-        matches += sum(argmax.(eachcol(cpu(ŷ))) .== Flux.onecold(cpu(y)))
+        acc = sum(argmax.(eachcol(cpu(ŷ))) .== Flux.onecold(cpu(y))) / size(x, 4)
 
         # Logging
-        lg(; records=Dict("Train/Running/NFE" => nfe, "Train/Running/Loss" => loss))
+        lg(; records=Dict("Train/Running/NFE" => nfe, "Train/Running/Loss" => loss, "Train/Running/Accuracy" => acc))
     end
 
     return ps, st, opt_state, (total_time=total_time,)
@@ -78,7 +78,7 @@ function train(
     nepochs,
     lg::PrettyTableLogger;
     distributed::Bool=false,
-    cleanup_function=identity
+    cleanup_function=identity,
 )
     # TODO: Saving model weights
     opt_state = Optimisers.setup(opt, ps)
@@ -101,8 +101,16 @@ function train(
             error("Distributed Training not yet implemented")
         else
             (
-                val_eval_stats === nothing ? () : (val_eval_stats.mean_nfe, val_eval_stats.accuracy, val_eval_stats.loss, val_eval_stats.total_time),
-                test_eval_stats === nothing ? () : (test_eval_stats.mean_nfe, test_eval_stats.accuracy, test_eval_stats.loss, test_eval_stats.total_time),
+                if val_eval_stats === nothing
+                    ()
+                else
+                    (val_eval_stats.mean_nfe, val_eval_stats.accuracy, val_eval_stats.loss, val_eval_stats.total_time)
+                end,
+                if test_eval_stats === nothing
+                    ()
+                else
+                    (test_eval_stats.mean_nfe, test_eval_stats.accuracy, test_eval_stats.loss, test_eval_stats.total_time)
+                end,
             )
         end
 
