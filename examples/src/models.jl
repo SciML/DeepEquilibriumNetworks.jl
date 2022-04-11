@@ -275,7 +275,7 @@ function get_model(
 
     solver = if continuous
         ContinuousDEQSolver(
-            VCABM4();
+            VCABM3();
             mode=:rel_deq_best,
             abstol=abstol,
             reltol=reltol,

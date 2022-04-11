@@ -1,10 +1,3 @@
-# ----------------------------------- #
-# ------ Precompilation in HPC ------ #
-d = strip(String(read(`mktemp -d`)))
-mkdir(joinpath(d, "compiled"))
-pushfirst!(DEPOT_PATH, d)
-#------------------------------------ #
-
 using FastDEQExperiments, Flux, CUDA, Optimisers, Dates, FluxMPI
 
 # Distributed Training
@@ -75,7 +68,7 @@ function train_model(config, expt_name)
         ps,
         st,
         FastDEQExperiments.loss_function(:CIFAR10, config["model_type"]),
-        Optimisers.ADAM(config["learning_rate"]),
+        Optimisers.ADAMW(config["learning_rate"], (0.9f0, 0.999f0), config["weight_decay"]),
         train_dataloader,
         nothing,
         test_dataloader,
