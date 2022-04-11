@@ -17,17 +17,17 @@ end
 # Hyperparameters
 config = Dict(
     "seed" => 0,
-    "learning_rate" => 0.001,
+    "learning_rate" => 0.001f0,
     "abstol" => 5.0f-2,
     "reltol" => 5.0f-2,
     "maxiters" => 20,
     "epochs" => 50,
-    "dropout_rate" => 0.25,
+    "dropout_rate" => 0.25f0,
     "batchsize" => 64,
     "eval_batchsize" => 64,
     "model_type" => :skip,
     "continuous" => true,
-    "weight_decay" => 0.0000025,
+    "weight_decay" => 0.0000025f0,
 )
 
 expt_name = "cifar-10_seed-$(config["seed"])_model-$(config["model_type"])_continuous-$(config["continuous"])_now-$(now())"
