@@ -1,3 +1,10 @@
+# ----------------------------------- #
+# ------ Precompilation in HPC ------ #
+d = strip(String(read(`mktemp -d`)))
+mkdir(joinpath(d, "compiled"))
+pushfirst!(DEPOT_PATH, d)
+#------------------------------------ #
+
 using FastDEQExperiments, Flux, CUDA, Optimisers, Dates, FluxMPI
 
 # Distributed Training
