@@ -1,7 +1,7 @@
 using FastDEQExperiments, Flux, CUDA, Optimisers, Dates, FluxMPI
 
-## Distributed Training
-# FluxMPI.Init(verbose=true)
+# Distributed Training
+FluxMPI.Init(; verbose=true)
 
 # Setup
 CUDA.versioninfo()
@@ -23,8 +23,8 @@ config = Dict(
     "maxiters" => 20,
     "epochs" => 50,
     "dropout_rate" => 0.25,
-    "batchsize" => 128,
-    "eval_batchsize" => 128,
+    "batchsize" => 64,
+    "eval_batchsize" => 64,
     "model_type" => :skip,
     "continuous" => true,
     "weight_decay" => 0.0000025,
@@ -38,16 +38,9 @@ function train_model(config, expt_name)
     mkpath("logs/")
     lg = FastDEQExperiments.PrettyTableLogger(
         joinpath("logs/", expt_name * ".csv"),
-        [
-            "Epoch Number",
-            "Train/Time",
-            "Test/NFE",
-            "Test/Accuracy",
-            "Test/Loss",
-            "Test/Time",
-        ],
+        ["Epoch Number", "Train/Time", "Test/NFE", "Test/Accuracy", "Test/Loss", "Test/Time"],
         ["Train/Running/NFE", "Train/Running/Loss", "Train/Running/Accuracy"],
-    );
+    )
 
     # Model Setup
     model, ps, st = FastDEQExperiments.get_model(
@@ -66,7 +59,7 @@ function train_model(config, expt_name)
 
     # Get Dataloaders
     train_dataloader, test_dataloader = FastDEQExperiments.get_dataloaders(
-        :CIFAR10; distributed=false, train_batchsize=config["batchsize"], eval_batchsize=config["eval_batchsize"]
+        :CIFAR10; train_batchsize=config["batchsize"], eval_batchsize=config["eval_batchsize"]
     )
 
     # Train
@@ -83,7 +76,6 @@ function train_model(config, expt_name)
         config["epochs"],
         lg;
         cleanup_function=invoke_gc,
-        distributed=false,
     )
 
     # Close Logger and Flush Data to disk

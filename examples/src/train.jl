@@ -1,3 +1,22 @@
+is_distributed() = FluxMPI.Initialized() && total_workers() > 1
+
+_get_loggable_stats(::Nothing) = ()
+
+function _get_loggable_stats(stats::NamedTuple)
+    if is_distributed()
+        arr = [stats.mean_nfe, stats.accuracy, stats.loss, stats.total_datasize]
+        FluxMPI.MPIExtensions.Reduce!(arr, +, 0, FluxMPI.MPI.COMM_WORLD)
+        return ((arr[1:3] ./ arr[4])..., stats.total_time)
+    else
+        return (
+            stats.mean_nfe / stats.total_datasize,
+            stats.accuracy / stats.total_datasize,
+            stats.loss / stats.total_datasize,
+            stats.total_time,
+        )
+    end
+end
+
 evaluate(model, ps, st, ::Nothing, device) = nothing
 
 function evaluate(model, ps, st, dataloader, device)
@@ -15,12 +34,7 @@ function evaluate(model, ps, st, dataloader, device)
         matches += sum(argmax.(eachcol(ŷ)) .== Flux.onecold(cpu(y)))
         total_datasize += size(x, ndims(x))
     end
-    return (
-        loss=total_loss / total_datasize,
-        accuracy=matches / total_datasize,
-        mean_nfe=total_nfe / total_datasize,
-        total_time=total_time,
-    )
+    return (loss=total_loss, accuracy=matches, mean_nfe=total_nfe, total_time=total_time, total_datasize=total_datasize)
 end
 
 function train_one_epoch(model, ps, st, loss_function, opt_state, dataloader, device, lg::PrettyTableLogger)
@@ -77,11 +91,12 @@ function train(
     device,
     nepochs,
     lg::PrettyTableLogger;
-    distributed::Bool=false,
     cleanup_function=identity,
 )
+    cleanup_function()
     # TODO: Saving model weights
     opt_state = Optimisers.setup(opt, ps)
+    opt_state = is_distributed() ? FluxMPI.synchronize!(opt_state; root_rank=0) : opt_state
 
     for epoch in 1:nepochs
         # Train 1 epoch
@@ -91,28 +106,10 @@ function train(
         cleanup_function()
 
         # Evaluate
-        val_eval_stats = evaluate(model, ps, st, val_dataloader, device)
+        val_stats = _get_loggable_stats(evaluate(model, ps, st, val_dataloader, device))
         cleanup_function()
-        test_eval_stats = evaluate(model, ps, st, test_dataloader, device)
+        test_stats = _get_loggable_stats(evaluate(model, ps, st, test_dataloader, device))
         cleanup_function()
-
-        val_stats, test_stats = if distributed
-            # TODO: Implement syncing the statistics
-            error("Distributed Training not yet implemented")
-        else
-            (
-                if val_eval_stats === nothing
-                    ()
-                else
-                    (val_eval_stats.mean_nfe, val_eval_stats.accuracy, val_eval_stats.loss, val_eval_stats.total_time)
-                end,
-                if test_eval_stats === nothing
-                    ()
-                else
-                    (test_eval_stats.mean_nfe, test_eval_stats.accuracy, test_eval_stats.loss, test_eval_stats.total_time)
-                end,
-            )
-        end
 
         lg(epoch, training_stats.total_time, val_stats..., test_stats...)
     end

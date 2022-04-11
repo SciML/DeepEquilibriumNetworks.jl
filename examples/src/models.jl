@@ -275,7 +275,7 @@ function get_model(
 
     solver = if continuous
         ContinuousDEQSolver(
-            VCABM3();
+            VCABM4();
             mode=:rel_deq_best,
             abstol=abstol,
             reltol=reltol,
@@ -336,6 +336,14 @@ function get_model(
         (l, _, _, _), back = Flux.pullback(p -> lfn(x__, y__, model, p, st), ps)
         back((one(l), nothing, nothing, nothing))
         clean_println("Backward Pass Warmup Completed")
+    end
+
+    ps, st = if is_distributed()
+        ps_ = FluxMPI.synchronize!(ps; root_rank=0)
+        st_ = FluxMPI.synchronize!(st; root_rank=0)
+        ps_, st_
+    else
+        ps, st
     end
 
     return model, ps, st

@@ -12,7 +12,7 @@ getobs(d::MLDatasetsImageData, i::Int, ::ObsDim.Undefined) = (d.images[i], d.lab
 getobs(d::MLDatasetsImageData, i::Int) = (d.images[i], d.labels[i])
 
 function get_dataloaders(
-    dataset::Symbol; μ=nothing, σ²=nothing, distributed=false, train_batchsize::Int64, eval_batchsize::Int64
+    dataset::Symbol; μ=nothing, σ²=nothing, train_batchsize::Int64, eval_batchsize::Int64
 )
     (x_train, y_train), (x_test, y_test), μ, σ², nclasses = if dataset == :CIFAR10
         μ = μ === nothing ? reshape([0.4914f0, 0.4822f0, 0.4465f0], 1, 1, :, 1) : μ
@@ -28,9 +28,9 @@ function get_dataloaders(
     y_test = Float32.(Flux.onehotbatch(y_test, 0:(nclasses - 1)))
 
     train_dataset = shuffleobs(MLDatasetsImageData(x_train, y_train))
-    train_dataset = distributed ? DistributedDataContainer(train_dataset) : train_dataset
+    train_dataset = is_distributed() ? DistributedDataContainer(train_dataset) : train_dataset
     test_dataset = MLDatasetsImageData(x_test, y_test)
-    test_dataset = distributed ? DistributedDataContainer(test_dataset) : test_dataset
+    test_dataset = is_distributed() ? DistributedDataContainer(test_dataset) : test_dataset
 
     return (DataLoader(train_dataset, train_batchsize), DataLoader(test_dataset, eval_batchsize))
 end
