@@ -1,6 +1,17 @@
 module FastDEQExperiments
 
-using FastDEQ, ExplicitFluxLayers, Random, Flux, OrdinaryDiffEq, FluxMPI, Format, MLDatasets, MLDataUtils, DataLoaders, Optimisers
+using FastDEQ,
+    ExplicitFluxLayers,
+    Random,
+    Flux,
+    OrdinaryDiffEq,
+    FluxMPI,
+    Format,
+    MLDatasets,
+    MLDataUtils,
+    DataLoaders,
+    Optimisers,
+    MPI
 import LearnBase: ObsDim
 import MLDataUtils: nobs, getobs
 

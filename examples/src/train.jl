@@ -5,7 +5,7 @@ _get_loggable_stats(::Nothing) = ()
 function _get_loggable_stats(stats::NamedTuple)
     if is_distributed()
         arr = [stats.mean_nfe, stats.accuracy, stats.loss, stats.total_datasize]
-        FluxMPI.MPIExtensions.Reduce!(arr, +, 0, FluxMPI.MPI.COMM_WORLD)
+        MPI.Reduce!(arr, +, 0, MPI.COMM_WORLD)
         return ((arr[1:3] ./ arr[4])..., stats.total_time)
     else
         return (
