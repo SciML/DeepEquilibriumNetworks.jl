@@ -27,7 +27,6 @@ config = Dict(
     "eval_batchsize" => 64,
     "model_type" => :skip,
     "continuous" => true,
-    "weight_decay" => 0.0000025f0,
 )
 
 expt_name = "cifar-10_seed-$(config["seed"])_model-$(config["model_type"])_continuous-$(config["continuous"])_now-$(now())"
@@ -68,7 +67,7 @@ function train_model(config, expt_name)
         ps,
         st,
         FastDEQExperiments.loss_function(:CIFAR10, config["model_type"]),
-        Optimisers.ADAMW(config["learning_rate"], (0.9f0, 0.999f0), config["weight_decay"]),
+        Optimisers.ADAM(config["learning_rate"], (0.9f0, 0.999f0)),
         train_dataloader,
         nothing,
         test_dataloader,
