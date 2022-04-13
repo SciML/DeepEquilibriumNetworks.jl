@@ -1,26 +1,22 @@
 # Building Blocks
 ## Helpful Functional Wrappers
 function conv1x1(mapping, activation=identity; stride::Int=1, bias=false, kwargs...)
-    return EFL.Conv((1, 1), mapping, activation; stride=stride, pad=0, bias=bias, kwargs...)
+    return EFL.Conv((1, 1), mapping, activation; stride=stride, pad=0, bias=bias, initW=NormalInitializer(), kwargs...)
 end
 
 function conv3x3(mapping, activation=identity; stride::Int=1, bias=false, kwargs...)
-    return EFL.Conv((3, 3), mapping, activation; stride=stride, pad=1, bias=bias, kwargs...)
+    return EFL.Conv((3, 3), mapping, activation; stride=stride, pad=1, bias=bias, initW=NormalInitializer(), kwargs...)
 end
 
 function conv5x5(mapping, activation=identity; stride::Int=1, bias=false, kwargs...)
-    return EFL.Conv((5, 5), mapping, activation; stride=stride, pad=2, bias=bias, kwargs...)
+    return EFL.Conv((5, 5), mapping, activation; stride=stride, pad=2, bias=bias, initW=NormalInitializer(), kwargs...)
 end
 
 reassociate(x::NTuple{2,<:AbstractArray}, y) = (x[1], (x[2], y))
 
 ## Downsample Module
-function downsample_module(mapping, resolution_mapping, activation; group_count=8)
-    in_resolution, out_resolution = resolution_mapping
+function downsample_module(mapping, level_diff, activation; group_count=8)
     in_channels, out_channels = mapping
-    @assert in_resolution > out_resolution
-    @assert ispow2(in_resolution ÷ out_resolution)
-    level_diff = Int(log2(in_resolution ÷ out_resolution))
 
     function intermediate_mapping(i)
         if in_channels * (2^level_diff) == out_channels
@@ -33,19 +29,15 @@ function downsample_module(mapping, resolution_mapping, activation; group_count=
     layers = EFL.AbstractExplicitLayer[]
     for i in 1:level_diff
         inchs, outchs = intermediate_mapping(i)
-        push!(layers, conv3x3(inchs => outchs; stride=2, initW=NormalInitializer()))
+        push!(layers, conv3x3(inchs => outchs; stride=2))
         push!(layers, EFL.GroupNorm(outchs, group_count, activation; affine=true, track_stats=false))
     end
     return EFL.Chain(layers...)
 end
 
 ## Upsample Module
-function upsample_module(mapping, resolution_mapping, activation; upsample_mode::Symbol=:nearest, group_count=8)
-    in_resolution, out_resolution = resolution_mapping
+function upsample_module(mapping, level_diff, activation; upsample_mode::Symbol=:nearest, group_count=8)
     in_channels, out_channels = mapping
-    @assert in_resolution < out_resolution
-    @assert ispow2(out_resolution ÷ in_resolution)
-    level_diff = Int(log2(out_resolution ÷ in_resolution))
 
     function intermediate_mapping(i)
         if out_channels * (2^level_diff) == in_channels
@@ -58,7 +50,7 @@ function upsample_module(mapping, resolution_mapping, activation; upsample_mode:
     layers = EFL.AbstractExplicitLayer[]
     for i in 1:level_diff
         inchs, outchs = intermediate_mapping(i)
-        push!(layers, conv1x1(inchs => outchs; initW=NormalInitializer()))
+        push!(layers, conv1x1(inchs => outchs))
         push!(layers, EFL.GroupNorm(outchs, group_count, activation; affine=true, track_stats=false))
         push!(layers, EFL.Upsample(upsample_mode; scale=2))
     end
@@ -79,11 +71,11 @@ function ResidualBlockV1(
 )
     inplanes, outplanes = mapping
     inner_planes = outplanes * deq_expand
-    conv1 = (n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; initW=NormalInitializer(), bias=false)
-    conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; initW=NormalInitializer(), bias=false)
+    conv1 = (n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; bias=false)
+    conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; bias=false)
 
     conv1, conv2 = if weight_norm
-        EFL.WeightNorm(conv1, (:weight,)), EFL.WeightNorm(conv2, (:weight,))
+        EFL.WeightNorm(conv1, (:weight,), (4,)), EFL.WeightNorm(conv2, (:weight,), (4,))
     else
         conv1, conv2
     end
@@ -122,15 +114,15 @@ function ResidualBlockV2(
     dropout_rate::Real=0.0f0,
     gn_affine::Bool=true,
     weight_norm::Bool=true,
-    gn_track_stats::Bool=false,
+    gn_track_stats::Bool=true,
 )
     inplanes, outplanes = mapping
     inner_planes = outplanes * deq_expand
-    conv1 = (n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; initW=NormalInitializer(), bias=false)
-    conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; initW=NormalInitializer(), bias=false)
+    conv1 = (n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; bias=false)
+    conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; bias=false)
 
     conv1, conv2 = if weight_norm
-        EFL.WeightNorm(conv1, (:weight,)), EFL.WeightNorm(conv2, (:weight,))
+        EFL.WeightNorm(conv1, (:weight,), (4,)), EFL.WeightNorm(conv2, (:weight,), (4,))
     else
         conv1, conv2
     end
@@ -155,7 +147,7 @@ end
 function BottleneckBlockV1(mapping::Pair, expansion::Int=4; bn_track_stats::Bool=true, bn_affine::Bool=true)
     rescale = if first(mapping) != last(mapping) * expansion
         EFL.Chain(
-            conv1x1(first(mapping) => last(mapping) * expansion; initW=NormalInitializer()),
+            conv1x1(first(mapping) => last(mapping) * expansion),
             EFL.BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
         )
     else
@@ -163,9 +155,7 @@ function BottleneckBlockV1(mapping::Pair, expansion::Int=4; bn_track_stats::Bool
     end
 
     return EFL.Chain(
-        EFL.Parallel(
-            reassociate, EFL.BranchLayer(rescale, conv1x1(mapping; initW=NormalInitializer())), EFL.NoOpLayer()
-        ),
+        EFL.Parallel(reassociate, EFL.BranchLayer(rescale, conv1x1(mapping)), EFL.NoOpLayer()),
         EFL.Parallel(
             +,
             EFL.NoOpLayer(),
@@ -173,9 +163,9 @@ function BottleneckBlockV1(mapping::Pair, expansion::Int=4; bn_track_stats::Bool
                 EFL.WrappedFunction(y2i -> y2i[1] .+ y2i[2]),  # Since injection could be a scalar
                 EFL.Chain(
                     EFL.BatchNorm(last(mapping), gelu; affine=bn_affine, track_stats=bn_track_stats),
-                    conv3x3(last(mapping) => last(mapping) * expansion; initW=NormalInitializer()),
+                    conv3x3(last(mapping) => last(mapping) * expansion),
                     EFL.BatchNorm(last(mapping) * expansion, gelu; track_stats=bn_track_stats, affine=bn_affine),
-                    conv1x1(last(mapping) * expansion => last(mapping) * expansion; initW=NormalInitializer()),
+                    conv1x1(last(mapping) * expansion => last(mapping) * expansion),
                     EFL.BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
                 ),
             ),
@@ -187,7 +177,7 @@ end
 function BottleneckBlockV2(mapping::Pair, expansion::Int=4; bn_track_stats::Bool=true, bn_affine::Bool=true)
     rescale = if first(mapping) != last(mapping) * expansion
         EFL.Chain(
-            conv1x1(first(mapping) => last(mapping) * expansion; initW=NormalInitializer()),
+            conv1x1(first(mapping) => last(mapping) * expansion),
             EFL.BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
         )
     else
@@ -199,11 +189,11 @@ function BottleneckBlockV2(mapping::Pair, expansion::Int=4; bn_track_stats::Bool
             +,
             rescale,
             EFL.Chain(
-                conv1x1(mapping; initW=NormalInitializer()),
+                conv1x1(mapping),
                 EFL.BatchNorm(last(mapping), gelu; affine=bn_affine, track_stats=bn_track_stats),
-                conv3x3(last(mapping) => last(mapping) * expansion; initW=NormalInitializer()),
+                conv3x3(last(mapping) => last(mapping) * expansion),
                 EFL.BatchNorm(last(mapping) * expansion, gelu; track_stats=bn_track_stats, affine=bn_affine),
-                conv1x1(last(mapping) * expansion => last(mapping) * expansion; initW=NormalInitializer()),
+                conv1x1(last(mapping) * expansion => last(mapping) * expansion),
                 EFL.BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
             ),
         ),
@@ -212,88 +202,131 @@ function BottleneckBlockV2(mapping::Pair, expansion::Int=4; bn_track_stats::Bool
 end
 
 # Dataset Specific Models
-## CIFAR10 -- MultiScaleDEQ
+get_model(econfig::ExperimentConfiguration, args...; kwargs...) = get_model(econfig.model_config, args...; kwargs...)
+
 function get_model(
-    ::Val{:CIFAR10};
-    dropout_rate,
-    group_count=8,
-    model_type::Symbol,
-    continuous::Bool=true,
-    maxiters::Int,
-    abstol,
-    reltol,
-    seed,
+    config::ImageClassificationModelConfiguration;
+    seed::Int,
     device=gpu,
-    warmup::Bool=true,  # Helps reduce time for Zygote to compile gradients first time
+    warmup::Bool=true,  # Helps reduce Zygote compile times
 )
-    initial_layers = EFL.Chain(
-        conv3x3(3 => 24; initW=NormalInitializer()),
-        EFL.BatchNorm(24, gelu; track_stats=true, affine=true),
-        conv3x3(24 => 24; initW=NormalInitializer()),
-        EFL.BatchNorm(24, gelu; track_stats=true, affine=true),
-    )
+    init_channel_size = config.num_channels[1]
 
-    main_layers = (
-        ResidualBlockV1(24 => 24; dropout_rate, num_gn_groups=group_count),  # 32 x 32
-        ResidualBlockV1(24 => 24; dropout_rate, num_gn_groups=group_count),  # 16 x 16
-    )
-
-    mapping_layers = [
-        EFL.NoOpLayer() downsample_module(24 => 24, 32 => 16, gelu; group_count=group_count)
-        upsample_module(24 => 24, 16 => 32, gelu; group_count=group_count, upsample_mode=:nearest) EFL.NoOpLayer()
+    downsample_layers = [
+        conv3x3(3 => init_channel_size; stride=config.downsample_times >= 1 ? 2 : 1),
+        EFL.BatchNorm(init_channel_size, relu; affine=true),
+        conv3x3(init_channel_size => init_channel_size; stride=config.downsample_times >= 2 ? 2 : 1),
+        EFL.BatchNorm(init_channel_size, relu; affine=true),
     ]
+    for _ in 3:(config.downsample_times)
+        append!(
+            downsample_layers,
+            [
+                conv3x3(init_channel_size => init_channel_size; stride=2),
+                EFL.BatchNorm(init_channel_size, relu; affine=true),
+            ],
+        )
+    end
+    downsample = EFL.Chain(downsample_layers...)
 
-    post_fuse_layers = (
+    stage0 = if config.downsample_times == 0 && config.num_branches <= 2
+        EFL.NoOpLayer()
+    else
+        EFL.Chain(
+            conv1x1(init_channel_size => init_channel_size; bias=false),
+            EFL.BatchNorm(init_channel_size, relu; affine=true),
+        )
+    end
+
+    initial_layers = EFL.Chain(downsample, stage0)
+
+    main_layers = Tuple(
+        ResidualBlockV1(
+            config.num_channels[i] => config.num_channels[i];
+            deq_expand=config.expansion_factor,
+            dropout_rate=config.dropout_rate,
+            num_gn_groups=config.group_count,
+            n_big_kernels=config.big_kernels[i],
+        ) for i in 1:(config.num_branches)
+    )
+
+    mapping_layers = Matrix{EFL.AbstractExplicitLayer}(undef, config.num_branches, config.num_branches)
+    for i in 1:(config.num_branches)
+        for j in 1:(config.num_branches)
+            if i == j
+                mapping_layers[i, j] = EFL.NoOpLayer()
+            elseif i < j
+                mapping_layers[i, j] = downsample_module(
+                    config.num_channels[i] => config.num_channels[j], j - i, gelu; group_count=config.group_count
+                )
+            else
+                mapping_layers[i, j] = upsample_module(
+                    config.num_channels[i] => config.num_channels[j],
+                    i - j,
+                    gelu;
+                    group_count=config.group_count,
+                    upsample_mode=:nearest,
+                )
+            end
+        end
+    end
+
+    post_fuse_layers = Tuple(
         EFL.Chain(
             EFL.WrappedFunction(Base.Fix1(broadcast, gelu)),
-            conv1x1(24 => 24; initW=NormalInitializer()),
-            EFL.GroupNorm(24, group_count ÷ 2; affine=true, track_stats=false),
-        ),
-        EFL.Chain(
-            EFL.WrappedFunction(Base.Fix1(broadcast, gelu)),
-            conv1x1(24 => 24; initW=NormalInitializer()),
-            EFL.GroupNorm(24, group_count ÷ 2; affine=true, track_stats=false),
-        ),
+            conv1x1(config.num_channels[i] => config.num_channels[i]),
+            EFL.GroupNorm(config.num_channels[i], config.group_count ÷ 2; affine=true, track_stats=false),
+        ) for i in 1:(config.num_branches)
+    )
+
+    increment_modules = EFL.Parallel(
+        nothing,
+        [BottleneckBlockV2(config.num_channels[i] => config.head_channels[i]) for i in 1:(config.num_branches)]...,
+    )
+
+    downsample_modules = EFL.PairwiseFusion(
+        config.fuse_method == :sum ? (+) : error("Only `fuse_method` = `:sum` is supported"),
+        [
+            EFL.Chain(
+                conv3x3(config.head_channels[i] * 4 => config.head_channels[i + 1] * 4; stride=2, bias=true),
+                EFL.BatchNorm(config.head_channels[i + 1] * 4, gelu; track_stats=true, affine=true),
+            ) for i in 1:(config.num_branches - 1)
+        ]...,
     )
 
     final_layers = EFL.Chain(
-        EFL.Parallel(
-            +,
-            EFL.Chain(
-                BottleneckBlockV2(24 => 8),
-                conv3x3(8 * 4 => 16 * 4; stride=2, initW=NormalInitializer()),
-                EFL.BatchNorm(16 * 4, gelu; track_stats=true, affine=true),
-            ),
-            BottleneckBlockV2(24 => 16, 4),
-        ),
-        conv1x1(16 * 4 => 200; initW=NormalInitializer()),
-        EFL.BatchNorm(200, gelu; track_stats=true, affine=true),
+        increment_modules,
+        downsample_modules,
+        conv1x1(config.head_channels[config.num_branches] * 4 => config.final_channelsize; bias=true),
+        EFL.BatchNorm(config.final_channelsize, gelu; track_stats=true, affine=true),
         EFL.GlobalMeanPool(),
         EFL.FlattenLayer(),
-        EFL.Dense(200, 10),
+        EFL.Dense(config.final_channelsize, config.num_classes),
     )
 
-    solver = if continuous
+    solver = if config.continuous
         ContinuousDEQSolver(
-            VCABM3();
-            mode=:rel_deq_best,
-            abstol=abstol,
-            reltol=reltol,
-            abstol_termination=abstol,
-            reltol_termination=reltol,
+            config.ode_solver;
+            mode=config.stop_mode,
+            abstol=config.abstol,
+            reltol=config.reltol,
+            abstol_termination=config.abstol,
+            reltol_termination=config.reltol,
         )
     else
         error("Discrete Solvers have not been updated yet")
     end
 
-    sensealg = SteadyStateAdjoint(abstol, reltol, min(maxiters, 15))
+    sensealg = SteadyStateAdjoint(config.abstol, config.reltol, config.bwd_maxiters)
 
-    deq = if model_type ∈ (:skip, :skipv2)
-        shortcut = if model_type == :skip
-            (
-            ResidualBlockV2(24 => 24; num_gn_groups=group_count),
-            downsample_module(24 => 24, 32 => 16, gelu; group_count=group_count),
-        )
+    deq = if config.model_type ∈ (:skip, :skipv2)
+        shortcut = if config.model_type == :skip
+            # (
+            #     ResidualBlockV2(24 => 24; num_gn_groups=group_count),
+            #     downsample_module(24 => 24, 32 => 16, gelu; group_count=group_count),
+            # )
+            # Not yet implemented for the general case
+            nothing
         else
             nothing
         end
@@ -303,19 +336,19 @@ function get_model(
             post_fuse_layers,
             shortcut,
             solver,
-            ((32, 32, 24), (16, 16, 24));
-            maxiters=maxiters,
+            compute_feature_scales(config);
+            maxiters=config.fwd_maxiters,
             sensealg=sensealg,
             verbose=false,
         )
-    elseif model_type == :vanilla
-        MultiScaleSkipDeepEquilibriumNetwork(
+    elseif config.model_type == :vanilla
+        MultiScaleDeepEquilibriumNetwork(
             main_layers,
             mapping_layers,
             post_fuse_layers,
             solver,
-            ((32, 32, 24), (16, 16, 24));
-            maxiters=maxiters,
+            compute_feature_scales(config);
+            maxiters=config.fwd_maxiters,
             sensealg=sensealg,
             verbose=false,
         )
@@ -324,15 +357,15 @@ function get_model(
     end
 
     model = DEQChain(initial_layers, deq, final_layers)
-    ps, st = EFL.setup(MersenneTwister(seed), model) .|> device
+    ps, st = device.(EFL.setup(MersenneTwister(seed), model))
 
     if warmup
         clean_println("Starting Model Warmup")
-        x__ = randn(Float32, 32, 32, 3, 1) |> device
-        y__ = Float32.(Flux.onehotbatch([1], 0:9)) |> device
+        x__ = device(randn(Float32, config.image_size..., 3, 1))
+        y__ = device(Float32.(Flux.onehotbatch([1], 0:9)))
         model(x__, ps, st)
         clean_println("Forward Pass Warmup Completed")
-        lfn = loss_function(:CIFAR10, model_type)
+        lfn = loss_function(config, model_type)
         (l, _, _, _), back = Flux.pullback(p -> lfn(x__, y__, model, p, st), ps)
         back((one(l), nothing, nothing, nothing))
         clean_println("Backward Pass Warmup Completed")

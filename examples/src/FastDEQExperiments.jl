@@ -11,7 +11,8 @@ using FastDEQ,
     MLDataUtils,
     DataLoaders,
     Optimisers,
-    MPI
+    MPI,
+    CUDA
 import LearnBase: ObsDim
 import MLDataUtils: nobs, getobs
 
@@ -19,6 +20,8 @@ const EFL = ExplicitFluxLayers
 
 # PrettyTableLogger
 include("logging.jl")
+# get_model_config
+include("config.jl")
 # train, loss_function
 include("train.jl")
 # get_model
