@@ -18,19 +18,32 @@ end
 function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T}, ps::NamedTuple, st::NamedTuple) where {J,T}
     z = zero(x)
 
+    if !iszero(st.fixed_depth)
+        # Pretraining without Fixed Point Solving
+        st_ = st.model
+        z_star = z
+        for _ ∈ 1:st.fixed_depth
+            z_star, st_ = deq.model((z_star, x), ps.model, st_)
+        end
+        @set! st.model = st_
+
+        return (z_star, DeepEquilibriumSolution(z_star, z, z, 0.0f0, st.fixed_depth)), st
+    end
+
     function dudt(u, p, t)
-        u_, _ = deq.model((u, x), p, st)
+        u_, _ = deq.model((u, x), p, st.model)
         return u_ .- u
     end
 
-    prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps)
+    prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps.model)
     sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
-    z_star, st_ = deq.model((sol.u, x), ps, st)
+    z_star, st_ = deq.model((sol.u, x), ps.model, st.model)
 
-    jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps, st, z_star, x) : T(0))
-    residual = Zygote.@ignore z_star .- deq.model((z_star, x), ps, st)[1]
+    jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps.model, st.model, z_star, x) : T(0))
+    residual = Zygote.@ignore z_star .- deq.model((z_star, x), ps.model, st.model)[1]
+    @set! st.model = st_ :: typeof(st.model)
 
-    return (z_star, DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J)), st_
+    return (z_star, DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J)), st
 end
 
 struct SkipDeepEquilibriumNetwork{J,M,Sh,A,S,K} <: AbstractSkipDeepEquilibriumNetwork
@@ -63,6 +76,18 @@ function (deq::SkipDeepEquilibriumNetwork{J,M,S})(x::AbstractArray{T}, ps::Named
         deq.shortcut(x, ps.shortcut, st.shortcut)
     end
     @set! st.shortcut = st__
+
+    if !iszero(st.fixed_depth)
+        # Pretraining without Fixed Point Solving
+        st_ = st.model
+        z_star = z
+        for _ ∈ 1:st.fixed_depth
+            z_star, st_ = deq.model((z_star, x), ps.model, st_)
+        end
+        @set! st.model = st_
+
+        return (z_star, DeepEquilibriumSolution(z_star, z, z, 0.0f0, st.fixed_depth)), st
+    end
 
     function dudt(u, p, t)
         u_, = deq.model((u, x), p, st.model)

@@ -7,7 +7,7 @@ struct MultiScaleDeepEquilibriumNetwork{N,L,M,A,S,K} <: AbstractDeepEquilibriumN
 end
 
 function initialstates(rng::AbstractRNG, deq::MultiScaleDeepEquilibriumNetwork)
-    return (model=initialstates(rng, deq.model), split_idxs=Tuple(vcat(0, cumsum(prod.(deq.scales))...)))
+    return (model=initialstates(rng, deq.model), split_idxs=Tuple(vcat(0, cumsum(prod.(deq.scales))...)), fixed_depth=0)
 end
 
 function MultiScaleDeepEquilibriumNetwork(
@@ -46,6 +46,19 @@ Zygote.@nograd get_initial_condition_mdeq
 function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T}, ps::NamedTuple, st::NamedTuple) where {N,T}
     z, st = get_initial_condition_mdeq(deq.scales, x, st)
 
+    if !iszero(st.fixed_depth)
+        z_star = split_and_reshape(z, st.split_idxs, deq.scales)
+        st_ = st.model
+
+        for _ ∈ 1:st.fixed_depth
+            z_star, st_ = deq.model(((z_star[1], x), z_star[2:N]...), ps.model, st_)
+        end
+
+        @set! st.model = st_
+
+        return (z_star, DeepEquilibriumSolution(vcat(Flux.flatten.(z_star)...), z, z, 0.0f0, st.fixed_depth)), st
+    end
+
     function dudt_(u, p, t)
         u_split = split_and_reshape(u, st.split_idxs, deq.scales)
         u_, st_ = deq.model(((u_split[1], x), u_split[2:N]...), p, st.model)
@@ -54,11 +67,11 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T}, ps::Nam
 
     dudt(u, p, t) = vcat(Flux.flatten.(dudt_(u, p, t)[1])...) .- u
 
-    prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps)
+    prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps.model)
     sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
-    z_star, st_ = dudt_(sol.u, ps, nothing)
+    z_star, st_ = dudt_(sol.u, ps.model, nothing)
 
-    residual = Zygote.@ignore dudt(sol.u, ps, nothing)
+    residual = Zygote.@ignore dudt(sol.u, ps.model, nothing)
 
     @set! st.model = st_
 
@@ -125,6 +138,19 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh})(
         z0, st_ = deq.shortcut(x, ps.shortcut, st.shortcut)
         @set! st.shortcut = st_
         (vcat(Flux.flatten.(z0)...), st)
+    end
+
+    if !iszero(st.fixed_depth)
+        z_star = split_and_reshape(z, st.split_idxs, deq.scales)
+        st_ = st.model
+
+        for _ ∈ 1:st.fixed_depth
+            z_star, st_ = deq.model(((z_star[1], x), z_star[2:N]...), ps.model, st_)
+        end
+
+        @set! st.model = st_
+
+        return (z_star, DeepEquilibriumSolution(vcat(Flux.flatten.(z_star)...), z, z, 0.0f0, st.fixed_depth)), st
     end
 
     function dudt_(u, p, t)
