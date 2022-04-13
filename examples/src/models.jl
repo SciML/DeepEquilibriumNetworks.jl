@@ -137,8 +137,7 @@ function ResidualBlockV2(
         conv1,
         gn1,
         conv2,
-        EFL.BranchLayer(downsample, dropout),
-        EFL.Parallel(+, EFL.NoOpLayer(), gn2),
+        EFL.Parallel(+, downsample, EFL.Chain(dropout, gn2)),
         EFL.WrappedFunction(Base.Fix1(broadcast, gelu)),
         gn3,
     )
@@ -321,12 +320,14 @@ function get_model(
 
     deq = if config.model_type ∈ (:skip, :skipv2)
         shortcut = if config.model_type == :skip
-            # (
-            #     ResidualBlockV2(24 => 24; num_gn_groups=group_count),
-            #     downsample_module(24 => 24, 32 => 16, gelu; group_count=group_count),
-            # )
-            # Not yet implemented for the general case
-            nothing
+            slayers = EFL.AbstractExplicitLayer[ResidualBlockV2(config.num_channels[1] => config.num_channels[1])]
+            for i in 1:(config.num_branches - 1)
+                push!(
+                    slayers,
+                    downsample_module(config.num_channels[1] => config.num_channels[i + 1], 1, gelu; group_count=config.group_count),
+                )
+            end
+            tuple(slayers...)
         else
             nothing
         end
