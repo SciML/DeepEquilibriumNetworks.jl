@@ -365,7 +365,7 @@ function get_model(
         y__ = device(Float32.(Flux.onehotbatch([1], 0:9)))
         model(x__, ps, st)
         clean_println("Forward Pass Warmup Completed")
-        lfn = loss_function(config, model_type)
+        lfn = loss_function(config)
         (l, _, _, _), back = Flux.pullback(p -> lfn(x__, y__, model, p, st), ps)
         back((one(l), nothing, nothing, nothing))
         clean_println("Backward Pass Warmup Completed")
