@@ -47,7 +47,7 @@ function train_model(config, expt_name)
 
     # Get Dataloaders
     train_dataloader, test_dataloader = FastDEQExperiments.get_dataloaders(
-        :CIFAR10; train_batchsize=config["batchsize"], eval_batchsize=config["eval_batchsize"]
+        :CIFAR10; train_batchsize=expt_config.train_batchsize, eval_batchsize=expt_config.eval_batchsize
     )
 
     # Train
