@@ -1,7 +1,5 @@
 using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
 
-const EFL = ExplicitFluxLayers
-
 @testset "FastDEQ.jl" begin
     seed = 0
 
@@ -16,6 +14,11 @@ const EFL = ExplicitFluxLayers
     ps, st = gpu.(EFL.setup(MersenneTwister(seed), model))
     x = gpu(rand(MersenneTwister(seed + 1), Float32, 2, 1))
     y = gpu(rand(MersenneTwister(seed + 2), Float32, 2, 1))
+
+    gs = gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)
+
+    @info "Testing DEQ without Fixed Point Iterations"
+    st = EFL.update_state(st, :fixed_depth, 5)
 
     gs = gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)
 
@@ -38,6 +41,14 @@ const EFL = ExplicitFluxLayers
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end
 
+    @info "Testing SkipDEQ without Fixed Point Iterations"
+    st = EFL.update_state(st, :fixed_depth, 5)
+
+    gs = gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
+
     @info "Testing SkipDEQV2"
     model = DEQChain(
         EFL.Dense(2, 2),
@@ -51,6 +62,14 @@ const EFL = ExplicitFluxLayers
     ps, st = gpu.(EFL.setup(MersenneTwister(seed), model))
     x = gpu(rand(MersenneTwister(seed + 1), Float32, 2, 1))
     y = gpu(rand(MersenneTwister(seed + 2), Float32, 2, 1))
+
+    gs = gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
+
+    @info "Testing SkipDEQV2 without Fixed Point Iterations"
+    st = EFL.update_state(st, :fixed_depth, 5)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -124,6 +143,14 @@ const EFL = ExplicitFluxLayers
         sum(Base.Fix1(sum, abs2), ŷ .- y)
     end
 
+    @info "Testing MultiScaleDEQ without Fixed Point Iterations"
+    st = EFL.update_state(st, :fixed_depth, 5)
+
+    gs = gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(Base.Fix1(sum, abs2), ŷ .- y)
+    end
+
     @info "Testing MultiScaleSkipDEQ"
     model = MultiScaleSkipDeepEquilibriumNetwork(
         (
@@ -154,6 +181,14 @@ const EFL = ExplicitFluxLayers
         sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end
 
+    @info "Testing MultiScaleSkipDEQ without Fixed Point Iterations"
+    st = EFL.update_state(st, :fixed_depth, 5)
+
+    gs = gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
+
     @info "Testing MultiScaleSkipDEQV2"
     model = MultiScaleSkipDeepEquilibriumNetwork(
         (
@@ -178,6 +213,14 @@ const EFL = ExplicitFluxLayers
     ps, st = gpu.(EFL.setup(MersenneTwister(seed), model))
     x = gpu(rand(MersenneTwister(seed + 1), Float32, 4, 2))
     y = tuple([gpu(rand(MersenneTwister(seed + 1 + i), Float32, i, 2)) for i in 4:-1:1]...)
+
+    gs = gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
+
+    @info "Testing MultiScaleSkipDEQV2 without Fixed Point Iterations"
+    st = EFL.update_state(st, :fixed_depth, 5)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
