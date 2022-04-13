@@ -58,7 +58,7 @@ function get_model_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 fuse_method=:sum,
                 final_channelsize=200,
                 fwd_maxiters=18,
-                bwd_maiters=20,
+                bwd_maxiters=20,
                 kwargs...
             )
         elseif model_size == :LARGE
@@ -82,7 +82,7 @@ function get_model_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 fuse_method=:sum,
                 final_channelsize=1680,
                 fwd_maxiters=18,
-                bwd_maiters=20,
+                bwd_maxiters=20,
                 kwargs...
             )
         else
