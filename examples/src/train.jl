@@ -85,7 +85,7 @@ function train_one_epoch(
         # especially with the MPI-UCX CUDA.jl mempool issue
         iteration_count += 1
         st = econfig.pretrain_steps == iteration_count ? EFL.update_state(st, :fixed_depth, 0) : st
-        iteration_count % 25 == 0 && invoke_gc()
+        iteration_count % 5 == 0 && invoke_gc()
 
         x = device(x)
         y = device(y)
