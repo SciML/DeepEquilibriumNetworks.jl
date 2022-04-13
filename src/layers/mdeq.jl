@@ -94,6 +94,7 @@ function initialstates(rng::AbstractRNG, deq::MultiScaleSkipDeepEquilibriumNetwo
         model=initialstates(rng, deq.model),
         shortcut=initialstates(rng, deq.shortcut),
         split_idxs=Tuple(vcat(0, cumsum(prod.(deq.scales))...)),
+        fixed_depth=0
     )
 end
 
