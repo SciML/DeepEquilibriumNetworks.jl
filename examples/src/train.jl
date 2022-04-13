@@ -80,7 +80,7 @@ function train_one_epoch(
 )
     total_time = 0
 
-    for (x, y) in enumerate(dataloader)
+    for (x, y) in dataloader
         # Without this we might frequently run out of memory
         # especially with the MPI-UCX CUDA.jl mempool issue
         iteration_count += 1
