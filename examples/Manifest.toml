@@ -390,7 +390,7 @@ version = "0.0.29+0"
 
 [[deps.ExplicitFluxLayers]]
 deps = ["CUDA", "ChainRulesCore", "FillArrays", "Flux", "Functors", "LinearAlgebra", "NNlib", "NNlibCUDA", "Octavian", "Random", "Setfield", "SparseArrays", "Statistics"]
-git-tree-sha1 = "e911998f524df4fbccc4f9978d4c686462c62ee2"
+git-tree-sha1 = "76d1d41d26fd2eec2ca4bc1f5780b51ee8064ef2"
 repo-rev = "ap/sparse"
 repo-url = "https://github.com/avik-pal/ExplicitFluxLayers.jl.git"
 uuid = "aafdbc67-5cd5-409a-82a0-ebc47ac8091e"

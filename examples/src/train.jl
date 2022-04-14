@@ -1,9 +1,3 @@
-function invoke_gc()
-    GC.gc(true)
-    CUDA.reclaim()
-    return nothing
-end
-
 function construct_optimiser(config::ExperimentConfiguration)
     opt = if config.optimiser == :ADAM
         Optimisers.ADAM(config.eta)
@@ -60,7 +54,7 @@ function evaluate(model, ps, st, dataloader, device)
 
         total_nfe += soln.nfe * size(x, ndims(x))
         total_loss += Flux.Losses.logitcrossentropy(ŷ, y) * size(x, ndims(x))
-        matches += sum(argmax.(eachcol(ŷ)) .== Flux.onecold(cpu(y)))
+        matches += sum(argmax.(eachcol(cpu(ŷ))) .== Flux.onecold(cpu(y)))
         total_datasize += size(x, ndims(x))
     end
     return (loss=total_loss, accuracy=matches, mean_nfe=total_nfe, total_time=total_time, total_datasize=total_datasize)
@@ -81,12 +75,6 @@ function train_one_epoch(
     total_time = 0
 
     for (x, y) in dataloader
-        # Without this we might frequently run out of memory
-        # especially with the MPI-UCX CUDA.jl mempool issue
-        iteration_count += 1
-        st = econfig.pretrain_steps == iteration_count ? EFL.update_state(st, :fixed_depth, 0) : st
-        iteration_count % 5 == 0 && invoke_gc()
-
         x = device(x)
         y = device(y)
 
@@ -100,6 +88,14 @@ function train_one_epoch(
         total_time += time() - start_time
 
         acc = sum(argmax.(eachcol(cpu(ŷ))) .== Flux.onecold(cpu(y))) / size(x, 4)
+
+        # Relieve GC Pressure
+        relieve_gc_pressure((gs, ŷ, x, y))
+        # Without this we might frequently run out of memory
+        # especially with the MPI-UCX CUDA.jl mempool issue
+        iteration_count += 1
+        st = econfig.pretrain_steps == iteration_count ? EFL.update_state(st, :fixed_depth, 0) : st
+        iteration_count % 25 == 0 && invoke_gc()
 
         # Logging
         lg(; records=Dict("Train/Running/NFE" => nfe, "Train/Running/Loss" => loss, "Train/Running/Accuracy" => acc))
