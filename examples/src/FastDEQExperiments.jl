@@ -12,7 +12,9 @@ using FastDEQ,
     DataLoaders,
     Optimisers,
     MPI,
-    CUDA
+    CUDA,
+    Setfield,
+    ParameterSchedulers
 import LearnBase: ObsDim
 import MLDataUtils: nobs, getobs
 

@@ -364,21 +364,22 @@ function get_model(
         clean_println("Starting Model Warmup")
         x__ = device(randn(Float32, config.image_size..., 3, 1))
         y__ = device(Float32.(Flux.onehotbatch([1], 0:9)))
-        model(x__, ps, st)
-        clean_println("Forward Pass Warmup Completed")
 
-        st_ = EFL.update_state(st, :fixed_depth, config.num_layers)
+        st_ = EFL.update_state(st, :fixed_depth, 2)
         model(x__, ps, st_)
         clean_println("Forward Pass (Pretraining) Warmup Completed")
 
-        lfn = loss_function(config)
-        (l, _, _, _), back = Flux.pullback(p -> lfn(x__, y__, model, p, st), ps)
-        back((one(l), nothing, nothing, nothing))
-        clean_println("Backward Pass Warmup Completed")
+        model(x__, ps, st)
+        clean_println("Forward Pass Warmup Completed")
 
+        lfn = loss_function(config)
         (l, _, _, _), back = Flux.pullback(p -> lfn(x__, y__, model, p, st_), ps)
         back((one(l), nothing, nothing, nothing))
         clean_println("Backward Pass (Pretraining) Warmup Completed")
+
+        (l, _, _, _), back = Flux.pullback(p -> lfn(x__, y__, model, p, st), ps)
+        back((one(l), nothing, nothing, nothing))
+        clean_println("Backward Pass Warmup Completed")
 
         invoke_gc()
     end

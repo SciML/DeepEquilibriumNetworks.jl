@@ -1,3 +1,18 @@
+function update_lr(st::ST, eta) where {ST}
+    if hasfield(ST, :eta)
+        @set! st.eta = eta
+    end
+    return st
+end
+
+update_lr(st::Optimisers.OptimiserChain, eta) = update_lr.(st.opts, eta)
+
+function update_lr(st::Optimisers.Leaf, eta)
+    @set! st.rule = update_lr(st.rule, eta)
+end
+
+update_lr(st_opt::NamedTuple, eta) = fmap(l -> update_lr(l, eta), st_opt)
+
 function construct_optimiser(config::ExperimentConfiguration)
     opt = if config.optimiser == :ADAM
         Optimisers.ADAM(config.eta)
@@ -18,7 +33,15 @@ function construct_optimiser(config::ExperimentConfiguration)
         opt = Optimisers.OptimiserChain(opt, Optimisers.WeightDecay(config.weight_decay))
     end
 
-    return opt
+    sched = if config.lr_scheduler == :COSINE
+        ParameterSchedulers.Stateful(ParameterSchedulers.Cos(config.eta, 1.0f-6, config.nepochs))
+    elseif config.lr_scheduler == :CONSTANT
+        ParameterSchedulers.Stateful(ParameterSchedulers.Constant(config.eta))
+    else
+        throw(ArgumentError("`config.lr_scheduler` must be either `:COSINE` or `:CONSTANT`"))
+    end
+
+    return opt, sched
 end
 
 is_distributed() = FluxMPI.Initialized() && total_workers() > 1
@@ -89,13 +112,16 @@ function train_one_epoch(
 
         acc = sum(argmax.(eachcol(cpu(ŷ))) .== Flux.onecold(cpu(y))) / size(x, 4)
 
-        # Relieve GC Pressure
-        relieve_gc_pressure((gs, ŷ, x, y))
-        # Without this we might frequently run out of memory
-        # especially with the MPI-UCX CUDA.jl mempool issue
         iteration_count += 1
         st = econfig.pretrain_steps == iteration_count ? EFL.update_state(st, :fixed_depth, 0) : st
-        iteration_count % 25 == 0 && invoke_gc()
+        if iteration_count % 25 == 0
+            # Without this we might frequently run out of memory
+            # Disabling CUDA Mempool with MPI seems to help but it
+            # also slows down the overall code
+            # Relieve GC Pressure
+            relieve_gc_pressure((gs, ŷ, x, y))
+            invoke_gc()
+        end
 
         # Logging
         lg(; records=Dict("Train/Running/NFE" => nfe, "Train/Running/Loss" => loss, "Train/Running/Accuracy" => acc))
@@ -106,13 +132,13 @@ end
 
 loss_function(e::ExperimentConfiguration, args...; kwargs...) = loss_function(e.model_config, args...; kwargs...)
 
-function loss_function(c::ImageClassificationModelConfiguration; λ_skip=1.0f0)
+function loss_function(c::ImageClassificationModelConfiguration; λ_skip=1.0f-2)
     function loss_function_closure(x, y, model, ps, st)
         (ŷ, soln), st_ = model(x, ps, st)
         loss = if c.model_type == :vanilla
             Flux.Losses.logitcrossentropy(ŷ, y)
         else
-            Flux.Losses.logitcrossentropy(ŷ, y) + λ_skip * Flux.Losses.mae(soln.u₀, soln.z_star)
+            Flux.Losses.logitcrossentropy(ŷ, y) + λ_skip * Flux.Losses.mae(soln.u₀, Flux.Zygote.dropgrad(soln.z_star))
         end
         return loss, ŷ, st_, soln.nfe
     end
@@ -125,6 +151,7 @@ function train(
     st,
     loss_function,
     opt,
+    scheduler,
     train_dataloader,
     val_dataloader,
     test_dataloader,
@@ -155,6 +182,10 @@ function train(
         invoke_gc()
 
         lg(epoch, training_stats.total_time, val_stats..., test_stats...)
+
+        # Run ParameterScheduler
+        eta_new = ParameterSchedulers.next!(scheduler)
+        opt_state = update_lr(opt_state, eta_new)
     end
 
     return ps, st, opt_state

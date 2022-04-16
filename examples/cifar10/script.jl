@@ -56,7 +56,7 @@ function train_model(config, expt_name)
         ps,
         st,
         FastDEQExperiments.loss_function(expt_config),
-        FastDEQExperiments.construct_optimiser(expt_config),
+        FastDEQExperiments.construct_optimiser(expt_config)...,
         train_dataloader,
         nothing,
         test_dataloader,
