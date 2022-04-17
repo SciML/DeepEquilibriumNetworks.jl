@@ -12,7 +12,7 @@ config = Dict(
     "seed" => 0,
     "abstol" => 5.0f-2,
     "reltol" => 5.0f-2,
-    "model_type" => :skip,
+    "model_type" => :SKIP,
     "continuous" => true,
     "model_size" => :TINY,
 )
@@ -35,6 +35,8 @@ function train_model(config, expt_name)
         config["model_size"];
         model_type = config["model_type"],
         continuous = config["continuous"],
+        abstol = config["abstol"],
+        reltol = config["reltol"],
     )
 
     # Model Setup

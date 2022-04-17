@@ -71,8 +71,8 @@ function ResidualBlockV1(
 )
     inplanes, outplanes = mapping
     inner_planes = outplanes * deq_expand
-    conv1 = (n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; bias=false)
-    conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; bias=false)
+    conv1 = (n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; bias=true)
+    conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; bias=true)
 
     conv1, conv2 = if weight_norm
         EFL.WeightNorm(conv1, (:weight,), (4,)), EFL.WeightNorm(conv2, (:weight,), (4,))
@@ -80,8 +80,8 @@ function ResidualBlockV1(
         conv1, conv2
     end
 
-    gn1 = EFL.GroupNorm(inner_planes, num_gn_groups, gelu; affine=gn_affine, track_stats=gn_track_stats)
-    gn2 = EFL.GroupNorm(outplanes, num_gn_groups, gelu; affine=gn_affine, track_stats=gn_track_stats)
+    gn1 = EFL.GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
+    gn2 = EFL.GroupNorm(outplanes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
     gn3 = EFL.GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
 
     dropout = iszero(dropout_rate) ? EFL.NoOpLayer() : EFL.Dropout(dropout_rate)
@@ -100,7 +100,7 @@ function ResidualBlockV1(
                 gn2,
             ),  # For (y2, injection)
         ),
-        EFL.WrappedFunction(Base.Fix1(broadcast, gelu)),
+        EFL.WrappedFunction(Base.Fix1(broadcast, relu)),
         gn3,
     )
 end
@@ -118,8 +118,8 @@ function ResidualBlockV2(
 )
     inplanes, outplanes = mapping
     inner_planes = outplanes * deq_expand
-    conv1 = (n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; bias=false)
-    conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; bias=false)
+    conv1 = (n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; bias=true)
+    conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; bias=true)
 
     conv1, conv2 = if weight_norm
         EFL.WeightNorm(conv1, (:weight,), (4,)), EFL.WeightNorm(conv2, (:weight,), (4,))
@@ -127,8 +127,8 @@ function ResidualBlockV2(
         conv1, conv2
     end
 
-    gn1 = EFL.GroupNorm(inner_planes, num_gn_groups, gelu; affine=gn_affine, track_stats=gn_track_stats)
-    gn2 = EFL.GroupNorm(outplanes, num_gn_groups, gelu; affine=gn_affine, track_stats=gn_track_stats)
+    gn1 = EFL.GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
+    gn2 = EFL.GroupNorm(outplanes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
     gn3 = EFL.GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
 
     dropout = iszero(dropout_rate) ? EFL.NoOpLayer() : EFL.Dropout(dropout_rate)
@@ -138,7 +138,7 @@ function ResidualBlockV2(
         gn1,
         conv2,
         EFL.Parallel(+, downsample, EFL.Chain(dropout, gn2)),
-        EFL.WrappedFunction(Base.Fix1(broadcast, gelu)),
+        EFL.WrappedFunction(Base.Fix1(broadcast, relu)),
         gn3,
     )
 end
@@ -161,15 +161,15 @@ function BottleneckBlockV1(mapping::Pair, expansion::Int=4; bn_track_stats::Bool
             EFL.Chain(
                 EFL.WrappedFunction(y2i -> y2i[1] .+ y2i[2]),  # Since injection could be a scalar
                 EFL.Chain(
-                    EFL.BatchNorm(last(mapping), gelu; affine=bn_affine, track_stats=bn_track_stats),
+                    EFL.BatchNorm(last(mapping), relu; affine=bn_affine, track_stats=bn_track_stats),
                     conv3x3(last(mapping) => last(mapping) * expansion),
-                    EFL.BatchNorm(last(mapping) * expansion, gelu; track_stats=bn_track_stats, affine=bn_affine),
+                    EFL.BatchNorm(last(mapping) * expansion, relu; track_stats=bn_track_stats, affine=bn_affine),
                     conv1x1(last(mapping) * expansion => last(mapping) * expansion),
                     EFL.BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
                 ),
             ),
         ),
-        EFL.WrappedFunction(Base.Fix1(broadcast, gelu)),
+        EFL.WrappedFunction(Base.Fix1(broadcast, relu)),
     )
 end
 
@@ -189,14 +189,14 @@ function BottleneckBlockV2(mapping::Pair, expansion::Int=4; bn_track_stats::Bool
             rescale,
             EFL.Chain(
                 conv1x1(mapping),
-                EFL.BatchNorm(last(mapping), gelu; affine=bn_affine, track_stats=bn_track_stats),
+                EFL.BatchNorm(last(mapping), relu; affine=bn_affine, track_stats=bn_track_stats),
                 conv3x3(last(mapping) => last(mapping) * expansion),
-                EFL.BatchNorm(last(mapping) * expansion, gelu; track_stats=bn_track_stats, affine=bn_affine),
+                EFL.BatchNorm(last(mapping) * expansion, relu; track_stats=bn_track_stats, affine=bn_affine),
                 conv1x1(last(mapping) * expansion => last(mapping) * expansion),
                 EFL.BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
             ),
         ),
-        EFL.WrappedFunction(Base.Fix1(broadcast, gelu)),
+        EFL.WrappedFunction(Base.Fix1(broadcast, relu)),
     )
 end
 
@@ -256,13 +256,13 @@ function get_model(
                 mapping_layers[i, j] = EFL.NoOpLayer()
             elseif i < j
                 mapping_layers[i, j] = downsample_module(
-                    config.num_channels[i] => config.num_channels[j], j - i, gelu; group_count=config.group_count
+                    config.num_channels[i] => config.num_channels[j], j - i, relu; group_count=config.group_count
                 )
             else
                 mapping_layers[i, j] = upsample_module(
                     config.num_channels[i] => config.num_channels[j],
                     i - j,
-                    gelu;
+                    relu;
                     group_count=config.group_count,
                     upsample_mode=:nearest,
                 )
@@ -272,7 +272,7 @@ function get_model(
 
     post_fuse_layers = Tuple(
         EFL.Chain(
-            EFL.WrappedFunction(Base.Fix1(broadcast, gelu)),
+            EFL.WrappedFunction(Base.Fix1(broadcast, relu)),
             conv1x1(config.num_channels[i] => config.num_channels[i]),
             EFL.GroupNorm(config.num_channels[i], config.group_count ÷ 2; affine=true, track_stats=false),
         ) for i in 1:(config.num_branches)
@@ -288,7 +288,7 @@ function get_model(
         [
             EFL.Chain(
                 conv3x3(config.head_channels[i] * 4 => config.head_channels[i + 1] * 4; stride=2, bias=true),
-                EFL.BatchNorm(config.head_channels[i + 1] * 4, gelu; track_stats=true, affine=true),
+                EFL.BatchNorm(config.head_channels[i + 1] * 4, relu; track_stats=true, affine=true),
             ) for i in 1:(config.num_branches - 1)
         ]...,
     )
@@ -297,7 +297,7 @@ function get_model(
         increment_modules,
         downsample_modules,
         conv1x1(config.head_channels[config.num_branches] * 4 => config.final_channelsize; bias=true),
-        EFL.BatchNorm(config.final_channelsize, gelu; track_stats=true, affine=true),
+        EFL.BatchNorm(config.final_channelsize, relu; track_stats=true, affine=true),
         EFL.GlobalMeanPool(),
         EFL.FlattenLayer(),
         EFL.Dense(config.final_channelsize, config.num_classes),
@@ -307,8 +307,8 @@ function get_model(
         ContinuousDEQSolver(
             config.ode_solver;
             mode=config.stop_mode,
-            abstol=config.abstol,
-            reltol=config.reltol,
+            abstol=1f-5, #config.abstol,
+            reltol=1f-5, #config.reltol,
             abstol_termination=config.abstol,
             reltol_termination=config.reltol,
         )
@@ -318,13 +318,18 @@ function get_model(
 
     sensealg = SteadyStateAdjoint(config.abstol, config.reltol, config.bwd_maxiters)
 
-    deq = if config.model_type ∈ (:skip, :skipv2)
-        shortcut = if config.model_type == :skip
+    deq = if config.model_type ∈ (:SKIP, :SKIPV2)
+        shortcut = if config.model_type == :SKIP
             slayers = EFL.AbstractExplicitLayer[ResidualBlockV2(config.num_channels[1] => config.num_channels[1])]
             for i in 1:(config.num_branches - 1)
                 push!(
                     slayers,
-                    downsample_module(config.num_channels[1] => config.num_channels[i + 1], 1, gelu; group_count=config.group_count),
+                    downsample_module(
+                        config.num_channels[1] => config.num_channels[i + 1],
+                        1,
+                        relu;
+                        group_count=config.group_count,
+                    ),
                 )
             end
             tuple(slayers...)
@@ -342,7 +347,7 @@ function get_model(
             sensealg=sensealg,
             verbose=false,
         )
-    elseif config.model_type == :vanilla
+    elseif config.model_type == :VANILLA
         MultiScaleDeepEquilibriumNetwork(
             main_layers,
             mapping_layers,
@@ -354,7 +359,7 @@ function get_model(
             verbose=false,
         )
     else
-        throw(ArgumentError("`model_type` must be one of `[:skip, :skipv2, :vanilla]`"))
+        throw(ArgumentError("`model_type` must be one of `[:SKIP, :SKIPV2, :VANILLA]`"))
     end
 
     model = DEQChain(initial_layers, deq, final_layers)

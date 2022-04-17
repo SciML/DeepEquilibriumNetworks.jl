@@ -66,13 +66,14 @@ end
 evaluate(model, ps, st, ::Nothing, device) = nothing
 
 function evaluate(model, ps, st, dataloader, device)
+    st_eval = EFL.testmode(st)
     matches, total_loss, total_datasize, total_nfe, total_time = 0, 0, 0, 0, 0
     for (x, y) in dataloader
         x = device(x)
         y = device(y)
 
         start_time = time()
-        (ŷ, soln), _ = model(x, ps, st)
+        (ŷ, soln), _ = model(x, ps, st_eval)
         total_time += time() - start_time
 
         total_nfe += soln.nfe * size(x, ndims(x))
@@ -135,7 +136,7 @@ loss_function(e::ExperimentConfiguration, args...; kwargs...) = loss_function(e.
 function loss_function(c::ImageClassificationModelConfiguration; λ_skip=1.0f-2)
     function loss_function_closure(x, y, model, ps, st)
         (ŷ, soln), st_ = model(x, ps, st)
-        loss = if c.model_type == :vanilla
+        loss = if c.model_type == :VANILLA
             Flux.Losses.logitcrossentropy(ŷ, y)
         else
             Flux.Losses.logitcrossentropy(ŷ, y) + λ_skip * Flux.Losses.mae(soln.u₀, Flux.Zygote.dropgrad(soln.z_star))
