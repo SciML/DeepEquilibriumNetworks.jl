@@ -4,20 +4,7 @@ using FastDEQExperiments, Flux, CUDA, Optimisers, Dates, FluxMPI
 FluxMPI.Init(; verbose=true)
 
 # Setup
-CUDA.math_mode!(CUDA.FAST_MATH)
 CUDA.allowscalar(false)
-
-# Hyperparameters
-config = Dict(
-    "seed" => 0,
-    "abstol" => 5.0f-2,
-    "reltol" => 5.0f-2,
-    "model_type" => :SKIP,
-    "continuous" => true,
-    "model_size" => :TINY,
-)
-
-expt_name = "cifar-10_seed-$(config["seed"])_model-$(config["model_type"])_continuous-$(config["continuous"])_now-$(now())"
 
 # Training
 function train_model(config, expt_name)
@@ -74,4 +61,25 @@ function train_model(config, expt_name)
     return model, cpu(ps), cpu(st), st_opt
 end
 
-model, ps, st, st_opt = train_model(config, expt_name)
+# Experiment Configurations
+configs = []
+for seed in [6171, 3859, 2961], model_type in [:VANILLA, :SKIP, :SKIPV2], model_size in [:TINY, :LARGE]
+    push!(
+        configs,
+        Dict(
+            "seed" => seed,
+            "abstol" => 5.0f-2,
+            "reltol" => 5.0f-2,
+            "model_type" => model_type,
+            "continuous" => true,
+            "model_size" => model_size,
+        )
+    )
+end
+
+# Training
+for config in configs
+    expt_name = "cifar-10_seed-$(config["seed"])_model-$(config["model_type"])_continuous-$(config["continuous"])_now-$(now())"
+    FastDEQExperiments._should_log() && println("Starting Experiment: " * expt_name)
+    model, ps, st, st_opt = train_model(config, expt_name)
+end

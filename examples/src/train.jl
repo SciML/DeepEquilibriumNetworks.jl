@@ -133,13 +133,13 @@ end
 
 loss_function(e::ExperimentConfiguration, args...; kwargs...) = loss_function(e.model_config, args...; kwargs...)
 
-function loss_function(c::ImageClassificationModelConfiguration; λ_skip=1.0f-2)
+function loss_function(c::ImageClassificationModelConfiguration; λ_skip=1.0f-3)
     function loss_function_closure(x, y, model, ps, st)
         (ŷ, soln), st_ = model(x, ps, st)
         loss = if c.model_type == :VANILLA
             Flux.Losses.logitcrossentropy(ŷ, y)
         else
-            Flux.Losses.logitcrossentropy(ŷ, y) + λ_skip * Flux.Losses.mae(soln.u₀, Flux.Zygote.dropgrad(soln.z_star))
+            Flux.Losses.logitcrossentropy(ŷ, y) + λ_skip * Flux.Losses.mse(soln.u₀, soln.z_star)
         end
         return loss, ŷ, st_, soln.nfe
     end
