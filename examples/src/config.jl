@@ -211,7 +211,7 @@ function get_experiment_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 eval_batchsize=64,
                 train_batchsize=64,
                 nepochs=75, # For 4 GPUs
-                pretrain_steps=0 ÷ (is_distributed() ? total_workers() : 1),
+                pretrain_steps=3000 ÷ (is_distributed() ? total_workers() : 1),
                 lr_scheduler=:COSINE,
                 optimiser=:ADAM,
                 eta=0.001f0 / 2 * (is_distributed() ? total_workers() : 1),

@@ -326,7 +326,7 @@ function get_model(
                     slayers,
                     downsample_module(
                         config.num_channels[1] => config.num_channels[i + 1],
-                        1,
+                        i,
                         relu;
                         group_count=config.group_count,
                     ),
