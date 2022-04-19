@@ -188,9 +188,11 @@ Base.@kwdef struct ExperimentConfiguration{M<:AbstractTaskModelConfiguration}
 
     # Eval
     eval_batchsize::Int
+    eval_datasize_per_process::Int
 
     # Train
     train_batchsize::Int
+    train_datasize_per_process::Int
     nepochs::Int
     pretrain_steps::Int
 
@@ -217,7 +219,9 @@ function get_experiment_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 eta=0.001f0 / 2 * (is_distributed() ? total_workers() : 1),
                 weight_decay=0.0f0,
                 momentum=0.9f0,
-                nesterov=true
+                nesterov=true,
+                eval_datasize_per_process=10000 ÷ (is_distributed() ? total_workers() : 1),
+                train_datasize_per_process=50000 ÷ (is_distributed() ? total_workers() : 1),
             )
         elseif model_size == :LARGE
             return ExperimentConfiguration(
@@ -231,7 +235,9 @@ function get_experiment_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 eta=0.001f0 / 4 * (is_distributed() ? total_workers() : 1),
                 weight_decay=0.0f0,
                 momentum=0.9f0,
-                nesterov=true
+                nesterov=true,
+                eval_datasize_per_process=10000 ÷ (is_distributed() ? total_workers() : 1),
+                train_datasize_per_process=50000 ÷ (is_distributed() ? total_workers() : 1),
             )
         else
             throw(ArgumentError("`model_size` must be one of `[:TINY, :LARGE]`"))
@@ -249,7 +255,9 @@ function get_experiment_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 eta=0.05f0 / 4 * (is_distributed() ? total_workers() : 1),
                 weight_decay=0.00005f0,
                 momentum=0.9f0,
-                nesterov=true
+                nesterov=true,
+                eval_datasize_per_process=50000 ÷ (is_distributed() ? total_workers() : 1),
+                train_datasize_per_process=1281166 ÷ (is_distributed() ? total_workers() : 1),
             )
         elseif model_size == :LARGE
             return ExperimentConfiguration(
@@ -263,7 +271,9 @@ function get_experiment_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 eta=0.05f0 / 4 * (is_distributed() ? total_workers() : 1),
                 weight_decay=0.00005f0,
                 momentum=0.9f0,
-                nesterov=true
+                nesterov=true,
+                eval_datasize_per_process=50000 ÷ (is_distributed() ? total_workers() : 1),
+                train_datasize_per_process=1281166 ÷ (is_distributed() ? total_workers() : 1),
             )
         elseif model_size == :XL
             return ExperimentConfiguration(
@@ -277,7 +287,9 @@ function get_experiment_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 eta=0.05f0 / 8 * (is_distributed() ? total_workers() : 1),
                 weight_decay=0.00005f0,
                 momentum=0.9f0,
-                nesterov=true
+                nesterov=true,
+                eval_datasize_per_process=50000 ÷ (is_distributed() ? total_workers() : 1),
+                train_datasize_per_process=1281166 ÷ (is_distributed() ? total_workers() : 1),
             )
         else
             throw(ArgumentError("`model_size` must be one of `[:SMALL, :LARGE, :XL]`"))

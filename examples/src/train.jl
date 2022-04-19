@@ -34,7 +34,11 @@ function construct_optimiser(config::ExperimentConfiguration)
     end
 
     sched = if config.lr_scheduler == :COSINE
-        ParameterSchedulers.Stateful(ParameterSchedulers.Cos(config.eta, 1.0f-6, config.nepochs))
+        ParameterSchedulers.Stateful(
+            ParameterSchedulers.Cos(
+                config.eta, 1.0f-6, config.nepochs * (config.train_datasize_per_process ÷ config.train_batchsize)
+            ),
+        )
     elseif config.lr_scheduler == :CONSTANT
         ParameterSchedulers.Stateful(ParameterSchedulers.Constant(config.eta))
     else
@@ -90,6 +94,7 @@ function train_one_epoch(
     st,
     loss_function,
     opt_state,
+    scheduler,
     dataloader,
     device,
     lg::PrettyTableLogger,
@@ -124,11 +129,15 @@ function train_one_epoch(
             invoke_gc()
         end
 
+        # Run ParameterScheduler
+        eta_new = ParameterSchedulers.next!(scheduler)
+        opt_state = update_lr(opt_state, eta_new)
+
         # Logging
         lg(; records=Dict("Train/Running/NFE" => nfe, "Train/Running/Loss" => loss, "Train/Running/Accuracy" => acc))
     end
 
-    return ps, st, opt_state, iteration_count, (total_time=total_time,)
+    return ps, st, opt_state, scheduler, iteration_count, (total_time=total_time,)
 end
 
 loss_function(e::ExperimentConfiguration, args...; kwargs...) = loss_function(e.model_config, args...; kwargs...)
@@ -171,8 +180,8 @@ function train(
 
     for epoch in 1:nepochs
         # Train 1 epoch
-        ps, st, opt_state, iteration_count, training_stats = train_one_epoch(
-            model, ps, st, loss_function, opt_state, train_dataloader, device, lg, econfig, iteration_count
+        ps, st, opt_state, scheduler, iteration_count, training_stats = train_one_epoch(
+            model, ps, st, loss_function, opt_state, scheduler, train_dataloader, device, lg, econfig, iteration_count
         )
         invoke_gc()
 
@@ -183,10 +192,6 @@ function train(
         invoke_gc()
 
         lg(epoch, training_stats.total_time, val_stats..., test_stats...)
-
-        # Run ParameterScheduler
-        eta_new = ParameterSchedulers.next!(scheduler)
-        opt_state = update_lr(opt_state, eta_new)
     end
 
     return ps, st, opt_state
