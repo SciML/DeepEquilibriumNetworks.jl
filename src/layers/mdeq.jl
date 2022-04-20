@@ -43,7 +43,7 @@ end
 
 Zygote.@nograd get_initial_condition_mdeq
 
-function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T}, ps::NamedTuple, st::NamedTuple) where {N,T}
+function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T}, ps::ComponentArray, st::NamedTuple) where {N,T}
     z, st = get_initial_condition_mdeq(deq.scales, x, st)
 
     if !iszero(st.fixed_depth)
@@ -51,7 +51,7 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T}, ps::Nam
         st_ = st.model
 
         for _ ∈ 1:st.fixed_depth
-            z_star, st_ = deq.model(((z_star[1], x), z_star[2:N]...), ps.model, st_)
+            z_star, st_ = deq.model(((z_star[1], x), z_star[2:N]...), ps, st_)
         end
 
         @set! st.model = st_
@@ -67,11 +67,11 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T}, ps::Nam
 
     dudt(u, p, t) = vcat(Flux.flatten.(dudt_(u, p, t)[1])...) .- u
 
-    prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps.model)
+    prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps)
     sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
-    z_star, st_ = dudt_(sol.u, ps.model, nothing)
+    z_star, st_ = dudt_(sol.u, ps, nothing)
 
-    residual = Zygote.@ignore dudt(sol.u, ps.model, nothing)
+    residual = dudt(sol.u, ps, nothing)
 
     @set! st.model = st_
 
@@ -127,7 +127,7 @@ function MultiScaleSkipDeepEquilibriumNetwork(
 end
 
 function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh})(
-    x::AbstractArray{T}, ps::NamedTuple, st::NamedTuple
+    x::AbstractArray{T}, ps::ComponentArray, st::NamedTuple
 ) where {N,L,M,Sh,T}
     z, st = if Sh == Nothing
         u0, st_ = get_initial_condition_mdeq(deq.scales, x, st)
@@ -166,7 +166,7 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh})(
     sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
     z_star, st_ = dudt_(sol.u, ps.model, nothing)
 
-    residual = Zygote.@ignore dudt(sol.u, ps.model, nothing)
+    residual = dudt(sol.u, ps.model, nothing)
 
     @set! st.model = st_
 

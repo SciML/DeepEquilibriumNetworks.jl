@@ -15,7 +15,7 @@ function DeepEquilibriumNetwork(
     )
 end
 
-function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T}, ps::NamedTuple, st::NamedTuple) where {J,T}
+function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T}, ps::ComponentArray, st::NamedTuple) where {J,T}
     z = zero(x)
 
     if !iszero(st.fixed_depth)
@@ -23,7 +23,7 @@ function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T}, ps::NamedTuple, s
         st_ = st.model
         z_star = z
         for _ ∈ 1:st.fixed_depth
-            z_star, st_ = deq.model((z_star, x), ps.model, st_)
+            z_star, st_ = deq.model((z_star, x), ps, st_)
         end
         @set! st.model = st_
 
@@ -35,13 +35,13 @@ function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T}, ps::NamedTuple, s
         return u_ .- u
     end
 
-    prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps.model)
+    prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps)
     sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
-    z_star, st_ = deq.model((sol.u, x), ps.model, st.model)
+    z_star, st_ = deq.model((sol.u, x), ps, st.model)
 
-    jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps.model, st.model, z_star, x) : T(0))
-    residual = Zygote.@ignore z_star .- deq.model((z_star, x), ps.model, st.model)[1]
-    @set! st.model = st_ :: typeof(st.model)
+    jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps, st.model, z_star, x) : T(0))
+    residual = z_star .- deq.model((z_star, x), ps, st.model)[1]
+    @set! st.model = st_
 
     return (z_star, DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J)), st
 end
@@ -69,7 +69,7 @@ function SkipDeepEquilibriumNetwork(
     )
 end
 
-function (deq::SkipDeepEquilibriumNetwork{J,M,S})(x::AbstractArray{T}, ps::NamedTuple, st::NamedTuple) where {J,M,S,T}
+function (deq::SkipDeepEquilibriumNetwork{J,M,S})(x::AbstractArray{T}, ps::ComponentArray, st::NamedTuple) where {J,M,S,T}
     z, st__ = if S == Nothing
         deq.model((zero(x), x), ps.model, st.model)
     else
@@ -99,7 +99,7 @@ function (deq::SkipDeepEquilibriumNetwork{J,M,S})(x::AbstractArray{T}, ps::Named
     z_star, st_ = deq.model((sol.u, x), ps.model, st.model)
 
     jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps.model, st.model, z_star, x) : T(0))
-    residual = Zygote.@ignore z_star .- deq.model((z_star, x), ps.model, st.model)[1]
+    residual = z_star .- deq.model((z_star, x), ps.model, st.model)[1]
     @set! st.model = st_ :: typeof(st.model)
 
     return (z_star, DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J)), st

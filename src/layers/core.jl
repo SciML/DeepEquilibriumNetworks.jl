@@ -1,31 +1,16 @@
-abstract type AbstractDeepEquilibriumNetwork <: AbstractExplicitLayer end
-abstract type AbstractSkipDeepEquilibriumNetwork <: AbstractDeepEquilibriumNetwork end
+abstract type AbstractDeepEquilibriumNetwork <: AbstractExplicitContainerLayer{(:model,)} end
 
-initialparameters(rng::AbstractRNG, deq::AbstractDeepEquilibriumNetwork) = (model=initialparameters(rng, deq.model),)
 function initialstates(rng::AbstractRNG, deq::AbstractDeepEquilibriumNetwork)
     return (model=initialstates(rng, deq.model), fixed_depth=0)
 end
-createcache(rng::AbstractRNG, deq::AbstractDeepEquilibriumNetwork, x) = (model=createcache(rng, deq.model, x),)
 
-parameterlength(deq::AbstractDeepEquilibriumNetwork) = parameterlength(deq.model)
-statelength(deq::AbstractDeepEquilibriumNetwork) = statelength(deq.model) + 2
-cachesize(deq::AbstractDeepEquilibriumNetwork) = cachesize(deq.model)
+abstract type AbstractSkipDeepEquilibriumNetwork <: AbstractExplicitContainerLayer{(:model,:shortcut)} end
 
-function initialparameters(rng::AbstractRNG, deq::AbstractSkipDeepEquilibriumNetwork)
-    return (model=initialparameters(rng, deq.model), shortcut=initialparameters(rng, deq.shortcut))
-end
 function initialstates(rng::AbstractRNG, deq::AbstractSkipDeepEquilibriumNetwork)
     return (
         model=initialstates(rng, deq.model), shortcut=initialstates(rng, deq.shortcut), fixed_depth=0
     )
 end
-function createcache(rng::AbstractRNG, deq::AbstractSkipDeepEquilibriumNetwork, x)
-    return (model=createcache(rng, deq.model, x), shortcut=createcache(rng, deq.shortcut, x))
-end
-
-parameterlength(deq::AbstractSkipDeepEquilibriumNetwork) = parameterlength(deq.model) + parameterlength(deq.shortcut)
-statelength(deq::AbstractSkipDeepEquilibriumNetwork) = statelength(deq.model) + statelength(deq.shortcut) + 2
-cachesize(deq::AbstractSkipDeepEquilibriumNetwork) = cachesize(deq.model) + cachesize(deq.shortcut)
 
 """
     DeepEquilibriumSolution(z_star, u₀, residual, jacobian_loss, nfe)

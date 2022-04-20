@@ -16,10 +16,16 @@ using CUDA,
     ExplicitFluxLayers,
     Functors,
     ChainRulesCore,
+    ComponentArrays,
     Setfield
 
 import ExplicitFluxLayers:
-    AbstractExplicitLayer, initialparameters, initialstates, createcache, parameterlength, statelength, cachesize
+    AbstractExplicitLayer,
+    AbstractExplicitContainerLayer,
+    initialparameters,
+    initialstates,
+    parameterlength,
+    statelength
 import Random: AbstractRNG
 
 include("operator.jl")

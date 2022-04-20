@@ -1,6 +1,3 @@
-neg(x) = -x
-neg(::Nothing) = nothing
-
 @noinline function DiffEqSensitivity.SteadyStateAdjointProblem(
     sol::EquilibriumSolution, sensealg::DiffEqSensitivity.SteadyStateAdjoint, g::Nothing, dg; save_idxs=nothing
 )
@@ -31,5 +28,5 @@ neg(::Nothing) = nothing
     _, back = Zygote.pullback(p -> vec(f(y, p, nothing)), p)
     dp = back(vec(λ))[1]
 
-    return dp isa NamedTuple ? fmap(neg, dp) : -vec(dp)
+    return -dp
 end

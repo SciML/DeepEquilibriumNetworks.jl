@@ -52,7 +52,7 @@ struct ContinuousDEQSolver{M,A,T,TS} <: SteadyStateDiffEq.SteadyStateDiffEqAlgor
 end
 
 function ContinuousDEQSolver(
-    alg=VCABM4();
+    alg=VCABM3();
     mode::Symbol=:rel_deq_default,
     abstol::T=1.0f-8,
     reltol::T=1.0f-8,

@@ -1,27 +1,13 @@
-struct DEQChain{P1,D<:AbstractDeepEquilibriumNetwork,P2} <: AbstractExplicitLayer
+struct DEQChain{P1,D,P2} <: AbstractExplicitContainerLayer{(:pre_deq, :deq, :post_deq)}
     pre_deq::P1
     deq::D
     post_deq::P2
 end
 
-function initialparameters(rng::AbstractRNG, c::DEQChain)
-    return (
-        pre_deq=initialparameters(rng, c.pre_deq),
-        deq=initialparameters(rng, c.deq),
-        post_deq=initialparameters(rng, c.post_deq),
-    )
-end
-
-function initialstates(rng::AbstractRNG, c::DEQChain)
-    return (
-        pre_deq=initialstates(rng, c.pre_deq), deq=initialstates(rng, c.deq), post_deq=initialstates(rng, c.post_deq)
-    )
-end
-
 function DEQChain(layers...)
     pre_deq, post_deq, deq, encounter_deq = [], [], nothing, false
     for l in layers
-        if l isa AbstractDeepEquilibriumNetwork
+        if l isa AbstractDeepEquilibriumNetwork || l isa AbstractSkipDeepEquilibriumNetwork
             @assert !encounter_deq "Can have only 1 DEQ Layer in the Chain!!!"
             deq = l
             encounter_deq = true
@@ -35,7 +21,7 @@ function DEQChain(layers...)
     return DEQChain(pre_deq, deq, post_deq)
 end
 
-function (deq::DEQChain{P1,D,P2})(x, ps::NamedTuple, st::NamedTuple) where {P1,D,P2}
+function (deq::DEQChain{P1,D,P2})(x, ps::ComponentArray, st::NamedTuple) where {P1,D,P2}
     x1, st1 = if P1 == Nothing
         x, st.pre_deq
     else
