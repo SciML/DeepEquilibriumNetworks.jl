@@ -114,7 +114,7 @@ function ResidualBlockV2(
     dropout_rate::Real=0.0f0,
     gn_affine::Bool=true,
     weight_norm::Bool=true,
-    gn_track_stats::Bool=true,
+    gn_track_stats::Bool=false,
 )
     inplanes, outplanes = mapping
     inner_planes = outplanes * deq_expand
@@ -143,7 +143,7 @@ function ResidualBlockV2(
     )
 end
 
-function BottleneckBlockV1(mapping::Pair, expansion::Int=4; bn_track_stats::Bool=true, bn_affine::Bool=true)
+function BottleneckBlockV1(mapping::Pair, expansion::Int=4; bn_track_stats::Bool=false, bn_affine::Bool=true)
     rescale = if first(mapping) != last(mapping) * expansion
         EFL.Chain(
             conv1x1(first(mapping) => last(mapping) * expansion),
@@ -173,7 +173,7 @@ function BottleneckBlockV1(mapping::Pair, expansion::Int=4; bn_track_stats::Bool
     )
 end
 
-function BottleneckBlockV2(mapping::Pair, expansion::Int=4; bn_track_stats::Bool=true, bn_affine::Bool=true)
+function BottleneckBlockV2(mapping::Pair, expansion::Int=4; bn_track_stats::Bool=false, bn_affine::Bool=true)
     rescale = if first(mapping) != last(mapping) * expansion
         EFL.Chain(
             conv1x1(first(mapping) => last(mapping) * expansion),
@@ -288,7 +288,7 @@ function get_model(
         [
             EFL.Chain(
                 conv3x3(config.head_channels[i] * 4 => config.head_channels[i + 1] * 4; stride=2, bias=true),
-                EFL.BatchNorm(config.head_channels[i + 1] * 4, relu; track_stats=true, affine=true),
+                EFL.BatchNorm(config.head_channels[i + 1] * 4, relu; track_stats=false, affine=true),
             ) for i in 1:(config.num_branches - 1)
         ]...,
     )
@@ -297,7 +297,7 @@ function get_model(
         increment_modules,
         downsample_modules,
         conv1x1(config.head_channels[config.num_branches] * 4 => config.final_channelsize; bias=true),
-        EFL.BatchNorm(config.final_channelsize, relu; track_stats=true, affine=true),
+        EFL.BatchNorm(config.final_channelsize, relu; track_stats=false, affine=true),
         EFL.GlobalMeanPool(),
         EFL.FlattenLayer(),
         EFL.Dense(config.final_channelsize, config.num_classes),
