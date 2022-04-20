@@ -68,6 +68,7 @@ function ResidualBlockV1(
     gn_affine::Bool=true,
     weight_norm::Bool=true,
     gn_track_stats::Bool=false,
+    dropout_seed::UInt64=UInt64(0),
 )
     inplanes, outplanes = mapping
     inner_planes = outplanes * deq_expand
@@ -84,7 +85,7 @@ function ResidualBlockV1(
     gn2 = EFL.GroupNorm(outplanes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
     gn3 = EFL.GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
 
-    dropout = iszero(dropout_rate) ? EFL.NoOpLayer() : EFL.Dropout(dropout_rate)
+    dropout = iszero(dropout_rate) ? EFL.NoOpLayer() : EFL.Dropout(dropout_rate; initial_seed=dropout_seed)
 
     return EFL.Chain(
         EFL.Parallel(
@@ -115,6 +116,7 @@ function ResidualBlockV2(
     gn_affine::Bool=true,
     weight_norm::Bool=true,
     gn_track_stats::Bool=false,
+    dropout_seed::UInt64=UInt64(0),
 )
     inplanes, outplanes = mapping
     inner_planes = outplanes * deq_expand
@@ -131,7 +133,7 @@ function ResidualBlockV2(
     gn2 = EFL.GroupNorm(outplanes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
     gn3 = EFL.GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
 
-    dropout = iszero(dropout_rate) ? EFL.NoOpLayer() : EFL.Dropout(dropout_rate)
+    dropout = iszero(dropout_rate) ? EFL.NoOpLayer() : EFL.Dropout(dropout_rate; initial_seed=dropout_seed)
 
     return EFL.Chain(
         conv1,
@@ -213,16 +215,16 @@ function get_model(
 
     downsample_layers = [
         conv3x3(3 => init_channel_size; stride=config.downsample_times >= 1 ? 2 : 1),
-        EFL.BatchNorm(init_channel_size, relu; affine=true),
+        EFL.BatchNorm(init_channel_size, relu; affine=true, track_stats=false),
         conv3x3(init_channel_size => init_channel_size; stride=config.downsample_times >= 2 ? 2 : 1),
-        EFL.BatchNorm(init_channel_size, relu; affine=true),
+        EFL.BatchNorm(init_channel_size, relu; affine=true, track_stats=false),
     ]
     for _ in 3:(config.downsample_times)
         append!(
             downsample_layers,
             [
                 conv3x3(init_channel_size => init_channel_size; stride=2),
-                EFL.BatchNorm(init_channel_size, relu; affine=true),
+                EFL.BatchNorm(init_channel_size, relu; affine=true, track_stats=false),
             ],
         )
     end
@@ -233,11 +235,13 @@ function get_model(
     else
         EFL.Chain(
             conv1x1(init_channel_size => init_channel_size; bias=false),
-            EFL.BatchNorm(init_channel_size, relu; affine=true),
+            EFL.BatchNorm(init_channel_size, relu; affine=true, track_stats=false),
         )
     end
 
     initial_layers = EFL.Chain(downsample, stage0)
+
+    dropout_seed = UInt64(0)
 
     main_layers = Tuple(
         ResidualBlockV1(
@@ -246,8 +250,11 @@ function get_model(
             dropout_rate=config.dropout_rate,
             num_gn_groups=config.group_count,
             n_big_kernels=config.big_kernels[i],
+            dropout_seed=dropout_seed + (i - 1) * 100,
         ) for i in 1:(config.num_branches)
     )
+
+    dropout_seed = dropout_seed + config.num_branches * 100
 
     mapping_layers = Matrix{EFL.AbstractExplicitLayer}(undef, config.num_branches, config.num_branches)
     for i in 1:(config.num_branches)
@@ -307,8 +314,8 @@ function get_model(
         ContinuousDEQSolver(
             config.ode_solver;
             mode=config.stop_mode,
-            abstol=1f-5, #config.abstol,
-            reltol=1f-5, #config.reltol,
+            abstol=1.0f-5, #config.abstol,
+            reltol=1.0f-5, #config.reltol,
             abstol_termination=config.abstol,
             reltol_termination=config.reltol,
         )
@@ -320,7 +327,9 @@ function get_model(
 
     deq = if config.model_type ∈ (:SKIP, :SKIPV2)
         shortcut = if config.model_type == :SKIP
-            slayers = EFL.AbstractExplicitLayer[ResidualBlockV2(config.num_channels[1] => config.num_channels[1])]
+            slayers = EFL.AbstractExplicitLayer[ResidualBlockV2(
+                config.num_channels[1] => config.num_channels[1]; dropout_seed=dropout_seed
+            )]
             for i in 1:(config.num_branches - 1)
                 push!(
                     slayers,

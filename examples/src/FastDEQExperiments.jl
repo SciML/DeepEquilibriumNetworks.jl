@@ -20,6 +20,9 @@ import MLDataUtils: nobs, getobs
 
 const EFL = ExplicitFluxLayers
 
+# FIXME: Remove once FastDEQ has been updated to use latest EFL
+Base.keys(::Nothing) = ()
+
 # Memory Management
 relieve_gc_pressure(::Union{Nothing,<:AbstractArray}) = nothing
 relieve_gc_pressure(x::CuArray) = CUDA.unsafe_free!(x)
