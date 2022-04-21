@@ -43,14 +43,16 @@ end
 
 Zygote.@nograd get_initial_condition_mdeq
 
-function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T}, ps::ComponentArray, st::NamedTuple) where {N,T}
+function (deq::MultiScaleDeepEquilibriumNetwork{N})(
+    x::AbstractArray{T}, ps::Union{ComponentArray,NamedTuple}, st::NamedTuple
+) where {N,T}
     z, st = get_initial_condition_mdeq(deq.scales, x, st)
 
     if !iszero(st.fixed_depth)
         z_star = split_and_reshape(z, st.split_idxs, deq.scales)
         st_ = st.model
 
-        for _ ∈ 1:st.fixed_depth
+        for _ in 1:(st.fixed_depth)
             z_star, st_ = deq.model(((z_star[1], x), z_star[2:N]...), ps, st_)
         end
 
@@ -94,7 +96,7 @@ function initialstates(rng::AbstractRNG, deq::MultiScaleSkipDeepEquilibriumNetwo
         model=initialstates(rng, deq.model),
         shortcut=initialstates(rng, deq.shortcut),
         split_idxs=Tuple(vcat(0, cumsum(prod.(deq.scales))...)),
-        fixed_depth=0
+        fixed_depth=0,
     )
 end
 
@@ -127,7 +129,7 @@ function MultiScaleSkipDeepEquilibriumNetwork(
 end
 
 function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh})(
-    x::AbstractArray{T}, ps::ComponentArray, st::NamedTuple
+    x::AbstractArray{T}, ps::Union{ComponentArray,NamedTuple}, st::NamedTuple
 ) where {N,L,M,Sh,T}
     z, st = if Sh == Nothing
         u0, st_ = get_initial_condition_mdeq(deq.scales, x, st)
@@ -145,7 +147,7 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh})(
         z_star = split_and_reshape(z, st.split_idxs, deq.scales)
         st_ = st.model
 
-        for _ ∈ 1:st.fixed_depth
+        for _ in 1:(st.fixed_depth)
             z_star, st_ = deq.model(((z_star[1], x), z_star[2:N]...), ps.model, st_)
         end
 

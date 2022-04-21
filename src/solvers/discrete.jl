@@ -18,9 +18,16 @@ Solver for Discrete DEQ Problem ([baideep2019](@cite)). A wrapper around `SSroot
 
 See also: [`ContinuousDEQSolver`](@ref)
 """
-function DiscreteDEQSolver(solver=LimitedMemoryBroydenSolver; abstol=1e-8, reltol=1e-8, kwargs...)
-    solver = solver(; kwargs..., reltol=reltol, abstol=abstol)
-    return SSRootfind(; nlsolve=(f, u0, abstol) -> solver(f, u0))
+struct DiscreteDEQSolver{M,A,T} <: SteadyStateDiffEq.SteadyStateDiffEqAlgorithm
+    alg::A
+    abstol_termination::T
+    reltol_termination::T
+end
+
+function DiscreteDEQSolver(
+    alg; mode::Symbol=:rel_deq_default, abstol_termination::T=1.0f-8, reltol_termination::T=1.0f-8
+) where {T<:Number}
+    return DiscreteDEQSolver{Val(mode),typeof(alg),T}(alg, abstol_termination, reltol_termination)
 end
 
 include("discrete/broyden.jl")

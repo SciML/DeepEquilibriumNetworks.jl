@@ -50,3 +50,30 @@ function DiffEqBase.__solve(
         u, du, prob, alg, retcode, sol.destats
     )
 end
+
+function DiffEqBase.__solve(
+    prob::DiffEqBase.AbstractSteadyStateProblem{uType}, alg::DiscreteDEQSolver, args...; maxiters=10, kwargs...
+) where {uType}
+    terminate_stats = Dict{Symbol,Any}(
+        :best_objective_value => real(eltype(prob.u0))(Inf), :best_objective_value_iteration => nothing
+    )
+
+    u, stats = nlsolve(
+        alg.alg,
+        u -> prob.f(u, prob.p, nothing),
+        prob.u0;
+        maxiters=maxiters,
+        terminate_condition=get_terminate_condition(alg, terminate_stats)
+    )
+
+    # Dont count towards NFE since this is mostly a check for convergence
+    du = prob.f(u, prob.p, nothing)
+
+    retcode = has_converged(du, u, alg) ? :Success : :Failure
+
+    destats = (nf=stats.nf,)
+
+    return EquilibriumSolution{eltype(uType),ndims(uType),uType,typeof(prob),typeof(alg),typeof(destats)}(
+        u, du, prob, alg, retcode, destats
+    )
+end

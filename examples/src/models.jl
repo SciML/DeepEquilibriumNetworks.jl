@@ -373,6 +373,9 @@ function get_model(
 
     model = DEQChain(initial_layers, deq, final_layers)
     ps, st = device.(EFL.setup(MersenneTwister(seed), model))
+    # NOTE: ComponentArrays seem to have some overhead
+    ps = NamedTuple(ps)
+    st = NamedTuple(st)
 
     if warmup
         clean_println("Starting Model Warmup")

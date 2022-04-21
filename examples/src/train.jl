@@ -67,15 +67,12 @@ function _get_loggable_stats(stats::NamedTuple)
     end
 end
 
-evaluate(model, ps, st, ::Nothing, device) = nothing
+evaluate(model, ps, st, ::Nothing) = nothing
 
-function evaluate(model, ps, st, dataloader, device)
+function evaluate(model, ps, st, dataloader)
     st_eval = EFL.testmode(st)
     matches, total_loss, total_datasize, total_nfe, total_time = 0, 0, 0, 0, 0
-    for (x, y) in dataloader
-        x = device(x)
-        y = device(y)
-
+    for (x, y) in CuIterator(dataloader)
         start_time = time()
         (ŷ, soln), _ = model(x, ps, st_eval)
         total_time += time() - start_time
@@ -86,58 +83,6 @@ function evaluate(model, ps, st, dataloader, device)
         total_datasize += size(x, ndims(x))
     end
     return (loss=total_loss, accuracy=matches, mean_nfe=total_nfe, total_time=total_time, total_datasize=total_datasize)
-end
-
-function train_one_epoch(
-    model,
-    ps,
-    st,
-    loss_function,
-    opt_state,
-    scheduler,
-    dataloader,
-    device,
-    lg::PrettyTableLogger,
-    econfig::ExperimentConfiguration,
-    iteration_count::Int,
-)
-    total_time = 0
-
-    for (x, y) in dataloader
-        x = device(x)
-        y = device(y)
-
-        # Compute Loss + Backprop + Update
-        start_time = time()
-
-        (loss, ŷ, st, nfe), back = Flux.pullback(p -> loss_function(x, y, model, p, st), ps)
-        gs, = back((one(loss), nothing, nothing, nothing))
-        opt_state, ps = Optimisers.update!(opt_state, ps, gs)
-
-        total_time += time() - start_time
-
-        acc = sum(argmax.(eachcol(cpu(ŷ))) .== Flux.onecold(cpu(y))) / size(x, 4)
-
-        iteration_count += 1
-        st = econfig.pretrain_steps == iteration_count ? EFL.update_state(st, :fixed_depth, 0) : st
-        if iteration_count % 25 == 0
-            # Without this we might frequently run out of memory
-            # Disabling CUDA Mempool with MPI seems to help but it
-            # also slows down the overall code
-            # Relieve GC Pressure
-            relieve_gc_pressure((gs, ŷ, x, y))
-            invoke_gc()
-        end
-
-        # Run ParameterScheduler
-        eta_new = ParameterSchedulers.next!(scheduler)
-        opt_state = update_lr(opt_state, eta_new)
-
-        # Logging
-        lg(; records=Dict("Train/Running/NFE" => nfe, "Train/Running/Loss" => loss, "Train/Running/Accuracy" => acc))
-    end
-
-    return ps, st, opt_state, scheduler, iteration_count, (total_time=total_time,)
 end
 
 loss_function(e::ExperimentConfiguration, args...; kwargs...) = loss_function(e.model_config, args...; kwargs...)
@@ -155,6 +100,46 @@ function loss_function(c::ImageClassificationModelConfiguration; λ_skip=1.0f-3)
     return loss_function_closure
 end
 
+function train_one_epoch(
+    model,
+    ps,
+    st,
+    loss_function,
+    opt_state,
+    scheduler,
+    dataloader,
+    lg::PrettyTableLogger,
+    econfig::ExperimentConfiguration,
+    iteration_count::Int,
+)
+    total_time = 0
+
+    for (x, y) in CuIterator(dataloader)
+        # Compute Loss + Backprop + Update
+        start_time = time()
+
+        (loss, ŷ, st, nfe), back = Flux.pullback(p -> loss_function(x, y, model, p, st), ps)
+        gs, = back((one(loss), nothing, nothing, nothing))
+        opt_state, ps = Optimisers.update!(opt_state, ps, gs)
+
+        total_time += time() - start_time
+
+        acc = sum(argmax.(eachcol(cpu(ŷ))) .== Flux.onecold(cpu(y))) / size(x, 4)
+
+        iteration_count += 1
+        st = econfig.pretrain_steps == iteration_count ? EFL.update_state(st, :fixed_depth, 0) : st
+
+        # Run ParameterScheduler
+        eta_new = ParameterSchedulers.next!(scheduler)
+        opt_state = update_lr(opt_state, eta_new)
+
+        # Logging
+        lg(; records=Dict("Train/Running/NFE" => nfe, "Train/Running/Loss" => loss, "Train/Running/Accuracy" => acc))
+    end
+
+    return ps, st, opt_state, scheduler, iteration_count, (total_time=total_time,)
+end
+
 function train(
     model,
     ps,
@@ -165,7 +150,6 @@ function train(
     train_dataloader,
     val_dataloader,
     test_dataloader,
-    device,
     nepochs,
     lg::PrettyTableLogger,
     econfig::ExperimentConfiguration;
@@ -181,14 +165,14 @@ function train(
     for epoch in 1:nepochs
         # Train 1 epoch
         ps, st, opt_state, scheduler, iteration_count, training_stats = train_one_epoch(
-            model, ps, st, loss_function, opt_state, scheduler, train_dataloader, device, lg, econfig, iteration_count
+            model, ps, st, loss_function, opt_state, scheduler, train_dataloader, lg, econfig, iteration_count
         )
         invoke_gc()
 
         # Evaluate
-        val_stats = _get_loggable_stats(evaluate(model, ps, st, val_dataloader, device))
+        val_stats = _get_loggable_stats(evaluate(model, ps, st, val_dataloader))
         invoke_gc()
-        test_stats = _get_loggable_stats(evaluate(model, ps, st, test_dataloader, device))
+        test_stats = _get_loggable_stats(evaluate(model, ps, st, test_dataloader))
         invoke_gc()
 
         lg(epoch, training_stats.total_time, val_stats..., test_stats...)

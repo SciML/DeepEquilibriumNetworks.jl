@@ -104,15 +104,15 @@ version = "0.1.3"
 
 [[deps.BlockArrays]]
 deps = ["ArrayLayouts", "FillArrays", "LinearAlgebra"]
-git-tree-sha1 = "7278f5ffec86a6c10233bf9c6be1a9c593012299"
+git-tree-sha1 = "28c497806c05326e7cadac0c916980d5a9c0e905"
 uuid = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
-version = "0.16.13"
+version = "0.16.14"
 
 [[deps.BlockBandedMatrices]]
 deps = ["ArrayLayouts", "BandedMatrices", "BlockArrays", "FillArrays", "LinearAlgebra", "MatrixFactorizations", "SparseArrays", "Statistics"]
-git-tree-sha1 = "8aaea69570a48b505383210451cbf36a7237a829"
+git-tree-sha1 = "646a8081a8f7a728b2c01a1d00a9fa07b678900a"
 uuid = "ffab5731-97b5-5995-9138-79e8c1846df0"
-version = "0.11.4"
+version = "0.11.5"
 
 [[deps.BufferedStreams]]
 deps = ["Compat", "Test"]
@@ -205,6 +205,12 @@ version = "3.43.0"
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 version = "0.5.2+0"
+
+[[deps.ComponentArrays]]
+deps = ["ArrayInterface", "ChainRulesCore", "LinearAlgebra", "Requires"]
+git-tree-sha1 = "243d8b8afc829a6707bbb1cd00da868703c2ef42"
+uuid = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
+version = "0.11.15"
 
 [[deps.CompositeTypes]]
 git-tree-sha1 = "d5b014b216dc891e81fea299638e4c10c657b582"
@@ -398,8 +404,8 @@ uuid = "7cc45869-7501-5eee-bdea-0790c847d4ef"
 version = "0.0.29+0"
 
 [[deps.ExplicitFluxLayers]]
-deps = ["CUDA", "ChainRulesCore", "FillArrays", "Flux", "Functors", "LinearAlgebra", "NNlib", "NNlibCUDA", "Octavian", "Random", "Setfield", "SparseArrays", "Statistics"]
-git-tree-sha1 = "c1e2783e6ff0a8327b58e869f9c243769f4e89d0"
+deps = ["CUDA", "ChainRulesCore", "ComponentArrays", "FillArrays", "Flux", "Functors", "LinearAlgebra", "NNlib", "NNlibCUDA", "Optimisers", "Random", "Setfield", "SparseArrays", "Statistics", "Zygote"]
+git-tree-sha1 = "e923ed1f219c9c505faa2c05af29dbb74b4f5760"
 repo-rev = "ap/sparse"
 repo-url = "https://github.com/avik-pal/ExplicitFluxLayers.jl.git"
 uuid = "aafdbc67-5cd5-409a-82a0-ebc47ac8091e"
@@ -452,7 +458,7 @@ uuid = "9aa1b823-49e4-5ca5-8b0f-3971ec8bab6a"
 version = "0.3.2"
 
 [[deps.FastDEQ]]
-deps = ["CUDA", "ChainRulesCore", "DataLoaders", "DiffEqBase", "DiffEqCallbacks", "DiffEqSensitivity", "ExplicitFluxLayers", "Flux", "Functors", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "Random", "Reexport", "Requires", "SciMLBase", "Setfield", "Statistics", "SteadyStateDiffEq", "UnPack", "Zygote"]
+deps = ["CUDA", "ChainRulesCore", "ComponentArrays", "DataLoaders", "DiffEqBase", "DiffEqCallbacks", "DiffEqSensitivity", "ExplicitFluxLayers", "Flux", "Functors", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "Random", "Reexport", "Requires", "SciMLBase", "Setfield", "Statistics", "SteadyStateDiffEq", "UnPack", "Zygote"]
 path = ".."
 uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 version = "0.1.0"
@@ -497,12 +503,12 @@ uuid = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 version = "0.13.0"
 
 [[deps.FluxMPI]]
-deps = ["CUDA", "Dates", "Flux", "Functors", "LearnBase", "MLDataUtils", "MPI", "Optimisers", "Setfield", "Zygote"]
-git-tree-sha1 = "0956751f425663d4f468cf4ed97b95249257e202"
-repo-rev = "ap/opt"
+deps = ["CUDA", "ComponentArrays", "Dates", "Flux", "Functors", "LearnBase", "MLDataUtils", "MPI", "Optimisers", "Setfield", "Zygote"]
+git-tree-sha1 = "65e52d4bf8600f15c8e640dce2ba80bb9bbc1f16"
+repo-rev = "main"
 repo-url = "https://github.com/avik-pal/FluxMPI.jl.git"
 uuid = "acf642fa-ee0e-513a-b9d5-bcd150f7ec3b"
-version = "0.3.0"
+version = "0.3.1"
 
 [[deps.FoldsThreads]]
 deps = ["Accessors", "FunctionWrappers", "InitialValues", "SplittablesBase", "Transducers"]
@@ -1064,12 +1070,6 @@ git-tree-sha1 = "55ce61d43409b1fb0279d1781bf3b0f22c83ab3b"
 uuid = "d8793406-e978-5875-9003-1fc021f44a92"
 version = "0.3.7"
 
-[[deps.Octavian]]
-deps = ["ArrayInterface", "CPUSummary", "IfElse", "LoopVectorization", "ManualMemory", "PolyesterWeave", "Requires", "Static", "ThreadingUtilities", "VectorizationBase"]
-git-tree-sha1 = "26c004c96dc634cefe9174cb9180c496f6c7e100"
-uuid = "6fd5a793-0b7e-452c-907f-f8bfe9c57db4"
-version = "0.3.13"
-
 [[deps.OffsetArrays]]
 deps = ["Adapt"]
 git-tree-sha1 = "043017e0bdeff61cfbb7afeb558ab29536bbb5ed"
@@ -1112,9 +1112,9 @@ version = "1.6.2"
 
 [[deps.Optimisers]]
 deps = ["ChainRulesCore", "Functors", "LinearAlgebra", "Random", "Statistics"]
-git-tree-sha1 = "e440ecef249dea69e79248857e800e71820d386c"
+git-tree-sha1 = "cfedc2d6990d792e705ade4c458fea5fbe574520"
 uuid = "3bd65402-5787-11e9-1adc-39752487f4e2"
-version = "0.2.1"
+version = "0.2.2"
 
 [[deps.OrderedCollections]]
 git-tree-sha1 = "85f8e6578bf1f9ee0d11e7bb1b1456435479d47c"
@@ -1123,9 +1123,9 @@ version = "1.4.1"
 
 [[deps.OrdinaryDiffEq]]
 deps = ["Adapt", "ArrayInterface", "DataStructures", "DiffEqBase", "DocStringExtensions", "ExponentialUtilities", "FastClosures", "FiniteDiff", "ForwardDiff", "LinearAlgebra", "LinearSolve", "Logging", "LoopVectorization", "MacroTools", "MuladdMacro", "NLsolve", "NonlinearSolve", "Polyester", "PreallocationTools", "RecursiveArrayTools", "Reexport", "SciMLBase", "SparseArrays", "SparseDiffTools", "StaticArrays", "UnPack"]
-git-tree-sha1 = "c5568ed45ee56cb4a5e3cebff3b91541ae016a83"
+git-tree-sha1 = "8031a288c9b418664a3dfbac36e464a3f61ace73"
 uuid = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
-version = "6.9.0"
+version = "6.10.0"
 
 [[deps.PDMats]]
 deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
@@ -1200,9 +1200,9 @@ version = "0.2.4"
 
 [[deps.Preferences]]
 deps = ["TOML"]
-git-tree-sha1 = "d3538e7f8a790dc8903519090857ef8e1283eecd"
+git-tree-sha1 = "47e5f437cc0e7ef2ce8406ce1e7e24d44915f88d"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
-version = "1.2.5"
+version = "1.3.0"
 
 [[deps.PrettyPrint]]
 git-tree-sha1 = "632eb4abab3449ab30c5e1afaa874f0b98b586e4"
@@ -1350,9 +1350,9 @@ version = "0.6.32"
 
 [[deps.SciMLBase]]
 deps = ["ArrayInterface", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Statistics", "Tables", "TreeViews"]
-git-tree-sha1 = "61159e034c4cb36b76ad2926bb5bf8c28cc2fb12"
+git-tree-sha1 = "f03796a588eba66f6bcc63cfdeda89b4a339ce4e"
 uuid = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-version = "1.29.0"
+version = "1.30.0"
 
 [[deps.SentinelArrays]]
 deps = ["Dates", "Random"]
@@ -1481,9 +1481,9 @@ version = "0.3.2"
 
 [[deps.Strided]]
 deps = ["LinearAlgebra", "TupleTools"]
-git-tree-sha1 = "972de61ae8cb965c516b871b69bb8594463d39a9"
+git-tree-sha1 = "7c4bcef07d559776a9e2a009c441547fb9eb5c92"
 uuid = "5e0ebb24-38b0-5f93-81fe-25c709ecae67"
-version = "1.2.0"
+version = "1.2.1"
 
 [[deps.StringEncodings]]
 deps = ["Libiconv_jll"]

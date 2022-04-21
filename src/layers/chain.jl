@@ -21,7 +21,7 @@ function DEQChain(layers...)
     return DEQChain(pre_deq, deq, post_deq)
 end
 
-function (deq::DEQChain{P1,D,P2})(x, ps::ComponentArray, st::NamedTuple) where {P1,D,P2}
+function (deq::DEQChain{P1,D,P2})(x, ps::Union{ComponentArray,NamedTuple}, st::NamedTuple) where {P1,D,P2}
     x1, st1 = if P1 == Nothing
         x, st.pre_deq
     else

@@ -11,7 +11,7 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
             ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0, reltol_termination=0.1f0),
         ),
     )
-    ps, st = gpu.(EFL.setup(MersenneTwister(seed), model))
+    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
     x = gpu(rand(MersenneTwister(seed + 1), Float32, 2, 1))
     y = gpu(rand(MersenneTwister(seed + 2), Float32, 2, 1))
 
@@ -32,7 +32,7 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
             sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
         ),
     )
-    ps, st = gpu.(EFL.setup(MersenneTwister(seed), model))
+    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
     x = gpu(rand(MersenneTwister(seed + 1), Float32, 2, 1))
     y = gpu(rand(MersenneTwister(seed + 2), Float32, 2, 1))
 
@@ -59,7 +59,7 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
             sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
         ),
     )
-    ps, st = gpu.(EFL.setup(MersenneTwister(seed), model))
+    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
     x = gpu(rand(MersenneTwister(seed + 1), Float32, 2, 1))
     y = gpu(rand(MersenneTwister(seed + 2), Float32, 2, 1))
 
@@ -76,43 +76,43 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end
 
-    # @info "Testing Broyden Solver"
-    # Random.seed!(0)
+    @info "Testing SkipDEQ with Broyden Solver"
+    model = DEQChain(
+        EFL.Dense(2, 2),
+        SkipDeepEquilibriumNetwork(
+            EFL.Parallel(+, EFL.Dense(2, 2), EFL.Dense(2, 2)),
+            EFL.Dense(2, 2),
+            DiscreteDEQSolver(BroydenSolver(); abstol_termination=0.1f0, reltol_termination=0.1f0);
+            sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+        ),
+    )
+    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
+    x = gpu(rand(MersenneTwister(seed + 1), Float32, 2, 1))
+    y = gpu(rand(MersenneTwister(seed + 2), Float32, 2, 1))
 
-    # model = gpu(DEQChain(Conv((3, 3), 1 => 1, relu; pad=1, stride=1),
-    #                      SkipDeepEquilibriumNetwork(Parallel(+, Conv((3, 3), 1 => 1, relu; pad=1, stride=1),
-    #                                                             Conv((3, 3), 1 => 1, relu; pad=1, stride=1)),
-    #                                                 Conv((3, 3), 1 => 1, relu; pad=1, stride=1),
-    #                                                 DiscreteDEQSolver(BroydenSolver; abstol=0.001f0,
-    #                                                                   reltol=0.001f0, device=gpu, original_dims=(8 * 8, 1),
-    #                                                                   batch_size=4);
-    #                                                 sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10))))
-    # x = gpu(rand(Float32, 8, 8, 1, 4))
-    # y = gpu(rand(Float32, 8, 8, 1, 4))
-    # ps = Flux.params(model)
-    # gs = Flux.gradient(() -> mse_loss_function(model, x, y), ps)
-    # for _p in ps
-    #     @test all(isfinite.(gs[_p]))
-    # end
+    gs = gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
 
-    # @info "Testing L-Broyden Solver"
-    # Random.seed!(0)
+    @info "Testing SkipDEQ with L-Broyden Solver"
+    model = DEQChain(
+        EFL.Dense(2, 2),
+        SkipDeepEquilibriumNetwork(
+            EFL.Parallel(+, EFL.Dense(2, 2), EFL.Dense(2, 2)),
+            EFL.Dense(2, 2),
+            DiscreteDEQSolver(LimitedMemoryBroydenSolver(); abstol_termination=0.1f0, reltol_termination=0.1f0);
+            sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+        ),
+    )
+    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
+    x = gpu(rand(MersenneTwister(seed + 1), Float32, 2, 1))
+    y = gpu(rand(MersenneTwister(seed + 2), Float32, 2, 1))
 
-    # model = gpu(DEQChain(Conv((3, 3), 1 => 1, relu; pad=1, stride=1),
-    #                      SkipDeepEquilibriumNetwork(Parallel(+, Conv((3, 3), 1 => 1, relu; pad=1, stride=1),
-    #                                                          Conv((3, 3), 1 => 1, relu; pad=1, stride=1)),
-    #                                                 Conv((3, 3), 1 => 1, relu; pad=1, stride=1),
-    #                                                 DiscreteDEQSolver(LimitedMemoryBroydenSolver; abstol=0.001f0,
-    #                                                                   reltol=0.001f0, device=gpu, original_dims=(8 * 8, 1),
-    #                                                                   batch_size=4);
-    #                                                 sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10))))
-    # x = gpu(rand(Float32, 8, 8, 1, 4))
-    # y = gpu(rand(Float32, 8, 8, 1, 4))
-    # ps = Flux.params(model)
-    # gs = Flux.gradient(() -> mse_loss_function(model, x, y), ps)
-    # for _p in ps
-    #     @test all(isfinite.(gs[_p]))
-    # end
+    gs = gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
 
     @info "Testing MultiScaleDEQ"
     model = MultiScaleDeepEquilibriumNetwork(
@@ -134,7 +134,7 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
         sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
     )
 
-    ps, st = gpu.(EFL.setup(MersenneTwister(seed), model))
+    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
     x = gpu(rand(MersenneTwister(seed + 1), Float32, 4, 2))
     y = tuple([gpu(rand(MersenneTwister(seed + 1 + i), Float32, i, 2)) for i in 4:-1:1]...)
 
@@ -172,7 +172,7 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
         sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
     )
 
-    ps, st = gpu.(EFL.setup(MersenneTwister(seed), model))
+    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
     x = gpu(rand(MersenneTwister(seed + 1), Float32, 4, 2))
     y = tuple([gpu(rand(MersenneTwister(seed + 1 + i), Float32, i, 2)) for i in 4:-1:1]...)
 
@@ -210,7 +210,7 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
         sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
     )
 
-    ps, st = gpu.(EFL.setup(MersenneTwister(seed), model))
+    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
     x = gpu(rand(MersenneTwister(seed + 1), Float32, 4, 2))
     y = tuple([gpu(rand(MersenneTwister(seed + 1 + i), Float32, i, 2)) for i in 4:-1:1]...)
 

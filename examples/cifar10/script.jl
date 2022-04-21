@@ -20,19 +20,14 @@ function train_model(config, expt_name)
     expt_config = FastDEQExperiments.get_experiment_config(
         :CIFAR10,
         config["model_size"];
-        model_type = config["model_type"],
-        continuous = config["continuous"],
-        abstol = config["abstol"],
-        reltol = config["reltol"],
+        model_type=config["model_type"],
+        continuous=config["continuous"],
+        abstol=config["abstol"],
+        reltol=config["reltol"],
     )
 
     # Model Setup
-    model, ps, st = FastDEQExperiments.get_model(
-        expt_config;
-        seed=config["seed"],
-        device=gpu,
-        warmup=true,
-    )
+    model, ps, st = FastDEQExperiments.get_model(expt_config; seed=config["seed"], device=gpu, warmup=true)
 
     # Get Dataloaders
     train_dataloader, test_dataloader = FastDEQExperiments.get_dataloaders(
@@ -52,7 +47,7 @@ function train_model(config, expt_name)
         gpu,
         expt_config.nepochs,
         lg,
-        expt_config
+        expt_config,
     )
 
     # Close Logger and Flush Data to disk
@@ -73,13 +68,13 @@ for seed in [6171, 3859, 2961], model_type in [:VANILLA, :SKIP, :SKIPV2], model_
             "model_type" => model_type,
             "continuous" => true,
             "model_size" => model_size,
-        )
+        ),
     )
 end
 
 # Training
 for config in configs
-    expt_name = "cifar-10_seed-$(config["seed"])_model-$(config["model_type"])_continuous-$(config["continuous"])_now-$(now())"
+    expt_name = "cifar-10_seed-$(config["seed"])_model-$(config["model_type"])_size-$(config["model_size"])_continuous-$(config["continuous"])_now-$(now())"
     FastDEQExperiments._should_log() && println("Starting Experiment: " * expt_name)
     model, ps, st, st_opt = train_model(config, expt_name)
 end

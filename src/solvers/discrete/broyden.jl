@@ -1,24 +1,3 @@
-# Broyden
-## NOTE: For the time being it is better to use `LimitedMemoryBroydenSolver`
-struct BroydenCache{J,F,X}
-    Jinv::J
-    fx::F
-    Δfx::F
-    fx_old::F
-    x::X
-    Δx::X
-    x_old::X
-end
-
-function BroydenCache(x)
-    fx, Δfx, fx_old = copy(x), copy(x), copy(x)
-    x, Δx, x_old = copy(x), copy(x), copy(x)
-    Jinv = _init_identity_matrix(x)
-    return BroydenCache(Jinv, fx, Δfx, fx_old, x, Δx, x_old)
-end
-
-BroydenCache(vec_length::Int, device) = BroydenCache(device(zeros(vec_length)))
-
 """
     BroydenSolver(; T=Float32, device, original_dims::Tuple{Int,Int}, batch_size, maxiters::Int=50, ϵ::Real=1e-6,
                   abstol::Union{Real,Nothing}=nothing, reltol::Union{Real,Nothing}=nothing)
@@ -39,64 +18,54 @@ Broyden Solver ([broyden1965class](@cite)) for solving Discrete DEQs. It is reco
 
 See also: [`LimitedMemoryBroydenSolver`](@ref)
 """
-struct BroydenSolver{C<:BroydenCache,T<:Real}
-    cache::C
-    maxiters::Int
-    batch_size::Int
-    ϵ::T
+struct BroydenSolver end
+
+function nlsolve(
+    b::BroydenSolver, f::Function, y::AbstractArray{T}; terminate_condition, maxiters::Int=10
+) where {T}
+    res, stats = nlsolve(
+        b,
+        u -> vec(f(reshape(u, size(y)))),
+        vec(y);
+        terminate_condition,
+        maxiters
+    )
+    return reshape(res, size(y)), stats
 end
 
-function BroydenSolver(; T=Float32, device, original_dims::Tuple{Int,Int}, batch_size, maxiters::Int=50, ϵ::Real=1e-6,
-                       abstol::Union{Real,Nothing}=nothing, reltol::Union{Real,Nothing}=nothing)
-    ϵ = abstol !== nothing ? abstol : ϵ
+function nlsolve(
+    ::BroydenSolver, f::Function, y::AbstractVector{T}; terminate_condition, maxiters::Int=10
+) where {T}
+    x = copy(y)
+    x_old = copy(y)
+    Δx = copy(y)
+    fx_old = f(y)
+    Δfx = copy(fx_old)
+    Jinv = _init_identity_matrix(y)
+    p = similar(fx_old, (size(Jinv, 1),))
+    ρ, σ₂ = T(0.9), T(0.001)
 
-    if reltol !== nothing
-        @warn "reltol is set to $reltol, but `BroydenSolver` ignores this value" maxlog=1
-    end
+    maybe_stuck, max_resets, resets, nsteps, nf = false, 3, 0, 1, 1
 
-    x = device(zeros(T, prod(original_dims) * batch_size))
-    cache = BroydenCache(x)
+    while nsteps <= maxiters
+        mul!(p, Jinv, fx_old)
+        p .*= -1
 
-    return BroydenSolver(cache, maxiters, batch_size, T(ϵ))
-end
-
-function (broyden::BroydenSolver{C,T})(f!, x_::AbstractVector{T}) where {C,T}
-    @unpack Jinv, fx, Δfx, fx_old, x, Δx, x_old = broyden.cache
-    if size(x) != size(x_)
-        # This might happen when the last batch with insufficient batch_size
-        # is passed.
-        @unpack Jinv, fx, Δfx, fx_old, x, Δx, x_old = BroydenCache(x_)
-    end
-    x .= x_
-
-    f!(fx, x)
-    _init_identity_matrix!(Jinv)
-
-    maybe_stuck = false
-    max_resets = 3
-    resets = 0
-
-    for i in 1:(broyden.maxiters)
-        x_old .= x
-        fx_old .= fx
-
-        p = -Jinv * fx_old
-
-        ρ, σ₂ = T(0.9), T(0.001)
-
-        x .= x_old .+ p
-        f!(fx, x)
+        @. x = x_old + p
+        fx = f(x)
+        nf += 1
 
         if norm(fx, 2) ≤ ρ * norm(fx_old, 2) - σ₂ * norm(p, 2)^2
             α = T(1)
         else
-            α = _approximate_norm_descent(f!, fx, x, p)
-            x .= x_old .+ α * p
-            f!(fx, x)
+            α, _stats = _approximate_norm_descent(f, x, p)
+            @. x = x_old + α * p
+            fx = f(x)
+            nf += 1 + _stats.nf
         end
 
-        Δx .= x .- x_old
-        Δfx .= fx .- fx_old
+        @. Δx = x - x_old
+        @. Δfx = fx - fx_old
 
         maybe_stuck = all(abs.(Δx) .<= eps(T)) || all(abs.(Δfx) .<= eps(T))
         if maybe_stuck
@@ -109,48 +78,38 @@ function (broyden::BroydenSolver{C,T})(f!, x_::AbstractVector{T}) where {C,T}
         end
 
         maybe_stuck = false
+        nsteps += 1
+        copyto!(fx_old, fx)
+        copyto!(x_old, x)
 
         # Convergence Check
-        norm(Δfx, 2) ≤ broyden.ϵ && return x
+        terminate_condition(fx, x) && break
     end
 
-    return x
+    return x, (nf=nf,)
 end
 
-# https://doi.org/10.1080/10556780008805782
-# FIXME: We are dropping some robustness tests for now.
-function _approximate_norm_descent(f!, fx::AbstractArray{T,N}, x::AbstractArray{T,N}, p; λ₀=T(1), β=T(0.5), σ₁=T(0.001),
+function _approximate_norm_descent(f::Function, x::AbstractArray{T,N}, p; λ₀=T(1), β=T(0.5), σ₁=T(0.001),
                                    η=T(0.1), max_iter=50) where {T,N}
     λ₂, λ₁ = λ₀, λ₀
 
-    f!(fx, x)
+    fx = f(x)
     fx_norm = norm(fx, 2)
+    j = 1
+    fx = f(x .+ λ₂ .* p)
+    converged = false
 
-    # TODO: Test NaN/Finite
-    # f!(fx, x .- λ₂ .* p)
-    # fxλp_norm = norm(fx, 2)
-    # TODO: nan backtrack
-
-    j = 0
-
-    f!(fx, x .+ λ₂ .* p)
-    converged = _test_approximate_norm_descent_convergence(f!, fx, x, fx_norm, p, σ₁, λ₂, η)
-
-    while j < max_iter && !converged
+    while j <= max_iter && !converged
         j += 1
         λ₁, λ₂ = λ₂, β * λ₂
-        converged = _test_approximate_norm_descent_convergence(f!, fx, x, fx_norm, p, σ₁, λ₂, η)
+        converged = _test_approximate_norm_descent_convergence(f, x, fx_norm, p, σ₁, λ₂, η)
     end
 
-    return λ₂
+    return λ₂, (nf=2(j + 1),)
 end
 
-function _test_approximate_norm_descent_convergence(f!, fx, x, fx_norm, p, σ₁, λ₂, η)
-    f!(fx, x .+ λ₂ .* p)
-    n1 = norm(fx, 2)
-
-    f!(fx, x)
-    n2 = norm(fx, 2)
-
+function _test_approximate_norm_descent_convergence(f, x, fx_norm, p, σ₁, λ₂, η)
+    n1 = norm(f(x .+ λ₂ .* p), 2)
+    n2 = norm(f(x), 2)
     return n1 ≤ fx_norm - σ₁ * norm(λ₂ .* p, 2) .^ 2 + η * n2
 end

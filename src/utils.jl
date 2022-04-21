@@ -36,13 +36,6 @@ function split_and_reshape(x::AbstractMatrix, idxs::Tuple, shapes::Tuple)
     )
 end
 
-## Some dispatches for CuArrays are not defined for subarrays
-# function split_and_reshape(x::AbstractMatrix, idxs::Tuple, shapes::Tuple)
-#     return Tuple(
-#         x[reshape((idxs[i] + 1):idxs[i + 1], shapes[i]...), :] for i in 1:(length(idxs) - 1)
-#     )
-# end
-
 # Zygote Fix
 function Zygote.accum(x::NTuple{N,T}, y::AbstractVector{T}) where {N,T<:AbstractArray}
     return Zygote.accum.(x, y)

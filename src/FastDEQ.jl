@@ -32,6 +32,7 @@ include("operator.jl")
 
 include("solvers/continuous.jl")
 include("solvers/discrete.jl")
+include("solvers/termination.jl")
 
 include("solve.jl")
 include("utils.jl")

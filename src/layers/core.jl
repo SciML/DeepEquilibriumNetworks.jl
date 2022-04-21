@@ -34,7 +34,7 @@ end
 
 function Base.show(io::IO, l::DeepEquilibriumSolution)
     print(io, "DeepEquilibriumSolution(")
-    print(io, ", z_star: ", l.z_star)
+    print(io, "z_star: ", l.z_star)
     print(io, ", initial_condition: ", l.u₀)
     print(io, ", residual: ", l.residual)
     print(io, ", jacobian_loss: ", l.jacobian_loss)
