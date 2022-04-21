@@ -44,7 +44,6 @@ function train_model(config, expt_name)
         train_dataloader,
         nothing,
         test_dataloader,
-        gpu,
         expt_config.nepochs,
         lg,
         expt_config,
