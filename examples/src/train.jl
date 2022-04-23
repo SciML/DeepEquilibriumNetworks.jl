@@ -88,16 +88,21 @@ end
 loss_function(e::ExperimentConfiguration, args...; kwargs...) = loss_function(e.model_config, args...; kwargs...)
 
 function loss_function(c::ImageClassificationModelConfiguration; λ_skip=1.0f-3)
-    function loss_function_closure(x, y, model, ps, st)
-        (ŷ, soln), st_ = model(x, ps, st)
-        loss = if c.model_type == :VANILLA
-            Flux.Losses.logitcrossentropy(ŷ, y)
-        else
-            Flux.Losses.logitcrossentropy(ŷ, y) + λ_skip * Flux.Losses.mse(soln.u₀, soln.z_star)
+    if c.model_type == :VANILLA
+        function loss_function_closure_1(x, y, model, ps, st)
+            (ŷ, soln), st_ = model(x, ps, st)
+            loss =  Flux.Losses.logitcrossentropy(ŷ, y)
+            return loss, ŷ, st_, soln.nfe
         end
-        return loss, ŷ, st_, soln.nfe
+        return loss_function_closure_1
+    else
+        function loss_function_closure_2(x, y, model, ps, st)
+            (ŷ, soln), st_ = model(x, ps, st)
+            loss = Flux.Losses.logitcrossentropy(ŷ, y) + λ_skip * Flux.Losses.mse(soln.u₀, soln.z_star)
+            return loss, ŷ, st_, soln.nfe
+        end
+        return loss_function_closure_2
     end
-    return loss_function_closure
 end
 
 function train_one_epoch(

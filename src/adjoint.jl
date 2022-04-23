@@ -24,7 +24,6 @@ neg(nt::NamedTuple) = fmap(neg, nt)
     s_val = size(_val)
     op = ZygotePullbackMultiplyOperator{eltype(y),typeof(back),typeof(s_val)}(back, s_val)
     linear_problem = LinearProblem(op, vec(diffcache.dg_val))
-    ## Automatically choose the best algorithm
     λ = solve(linear_problem, sensealg.linsolve).u
 
     # Compute the VJP

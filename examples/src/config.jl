@@ -32,7 +32,7 @@ Base.@kwdef struct ImageClassificationModelConfiguration{N} <: AbstractTaskModel
     abstol::Float32 = 5f-2
     reltol::Float32 = 5f-2
     stop_mode::Symbol = :rel_norm
-    ode_solver = VCABM3()
+    ode_solver = VCAB3()
 end
 
 function get_model_config(dataset::Symbol, model_size::Symbol; kwargs...)
@@ -58,7 +58,7 @@ function get_model_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 fuse_method=:sum,
                 final_channelsize=200,
                 fwd_maxiters=18,
-                bwd_maxiters=20,
+                bwd_maxiters=10,
                 kwargs...
             )
         elseif model_size == :LARGE
@@ -82,7 +82,7 @@ function get_model_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 fuse_method=:sum,
                 final_channelsize=1680,
                 fwd_maxiters=18,
-                bwd_maxiters=20,
+                bwd_maxiters=10,
                 kwargs...
             )
         else
@@ -110,7 +110,7 @@ function get_model_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 fuse_method=:sum,
                 final_channelsize=2048,
                 fwd_maxiters=27,
-                bwd_maxiters=28,
+                bwd_maxiters=15,
                 kwargs...
             )
         elseif model_size == :LARGE
@@ -134,7 +134,7 @@ function get_model_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 fuse_method=:sum,
                 final_channelsize=2048,
                 fwd_maxiters=27,
-                bwd_maxiters=28,
+                bwd_maxiters=15,
                 kwargs...
             )
         elseif model_size == :XL
@@ -158,7 +158,7 @@ function get_model_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 fuse_method=:sum,
                 final_channelsize=2048,
                 fwd_maxiters=27,
-                bwd_maxiters=28,
+                bwd_maxiters=15,
                 kwargs...
             )
         else
@@ -213,7 +213,7 @@ function get_experiment_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 eval_batchsize=128,
                 train_batchsize=128,
                 nepochs=50,
-                pretrain_steps=3000 ÷ (is_distributed() ? total_workers() : 1),
+                pretrain_steps=0 ÷ (is_distributed() ? total_workers() : 1),
                 lr_scheduler=:COSINE,
                 optimiser=:ADAM,
                 eta=0.001f0 / 2 * (is_distributed() ? total_workers() : 1),

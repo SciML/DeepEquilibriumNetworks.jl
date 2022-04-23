@@ -57,7 +57,7 @@ end
 
 # Experiment Configurations
 configs = []
-for seed in [6171, 3859, 2961], model_type in [:VANILLA, :SKIP, :SKIPV2], model_size in [:TINY, :LARGE]
+for seed in [6171, 3859, 2961], model_type in [:VANILLA, :SKIP, :SKIPV2], model_size in [:TINY] #, :LARGE]
     push!(
         configs,
         Dict(
