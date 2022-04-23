@@ -2,6 +2,8 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
 
 @testset "FastDEQ.jl" begin
     seed = 0
+    rng = Random.default_rng()
+    Random.seed!(rng, seed)
 
     @info "Testing DEQ"
     model = DEQChain(
@@ -11,18 +13,23 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
             ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0, reltol_termination=0.1f0),
         ),
     )
-    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
-    x = gpu(rand(MersenneTwister(seed + 1), Float32, 2, 1))
-    y = gpu(rand(MersenneTwister(seed + 2), Float32, 2, 1))
+    ps, st = gpu.(EFL.setup(rng, model))
+    x = gpu(rand(rng, Float32, 2, 1))
+    y = gpu(rand(rng, Float32, 2, 1))
 
     gs = gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)
+
+    @time gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)
 
     @info "Testing DEQ without Fixed Point Iterations"
     st = EFL.update_state(st, :fixed_depth, 5)
 
     gs = gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)
 
+    @time gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)
+
     @info "Testing SkipDEQ"
+    Random.seed!(rng, seed)
     model = DEQChain(
         EFL.Dense(2, 2),
         SkipDeepEquilibriumNetwork(
@@ -32,11 +39,16 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
             sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
         ),
     )
-    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
-    x = gpu(rand(MersenneTwister(seed + 1), Float32, 2, 1))
-    y = gpu(rand(MersenneTwister(seed + 2), Float32, 2, 1))
+    ps, st = gpu.(EFL.setup(rng, model))
+    x = gpu(rand(rng, Float32, 2, 1))
+    y = gpu(rand(rng, Float32, 2, 1))
 
     gs = gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
+
+    @time gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end
@@ -49,7 +61,13 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end
 
+    @time gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
+
     @info "Testing SkipDEQV2"
+    Random.seed!(rng, seed)
     model = DEQChain(
         EFL.Dense(2, 2),
         SkipDeepEquilibriumNetwork(
@@ -59,11 +77,16 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
             sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
         ),
     )
-    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
-    x = gpu(rand(MersenneTwister(seed + 1), Float32, 2, 1))
-    y = gpu(rand(MersenneTwister(seed + 2), Float32, 2, 1))
+    ps, st = gpu.(EFL.setup(rng, model))
+    x = gpu(rand(rng, Float32, 2, 1))
+    y = gpu(rand(rng, Float32, 2, 1))
 
     gs = gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
+
+    @time gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end
@@ -76,7 +99,13 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end
 
+    @time gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
+
     @info "Testing SkipDEQ with Broyden Solver"
+    Random.seed!(rng, seed)
     model = DEQChain(
         EFL.Dense(2, 2),
         SkipDeepEquilibriumNetwork(
@@ -86,16 +115,22 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
             sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
         ),
     )
-    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
-    x = gpu(rand(MersenneTwister(seed + 1), Float32, 2, 1))
-    y = gpu(rand(MersenneTwister(seed + 2), Float32, 2, 1))
+    ps, st = gpu.(EFL.setup(rng, model))
+    x = gpu(rand(rng, Float32, 2, 1))
+    y = gpu(rand(rng, Float32, 2, 1))
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end
 
+    @time gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
+
     @info "Testing SkipDEQ with L-Broyden Solver"
+    Random.seed!(rng, seed)
     model = DEQChain(
         EFL.Dense(2, 2),
         SkipDeepEquilibriumNetwork(
@@ -105,16 +140,22 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
             sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
         ),
     )
-    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
-    x = gpu(rand(MersenneTwister(seed + 1), Float32, 2, 1))
-    y = gpu(rand(MersenneTwister(seed + 2), Float32, 2, 1))
+    ps, st = gpu.(EFL.setup(rng, model))
+    x = gpu(rand(rng, Float32, 2, 1))
+    y = gpu(rand(rng, Float32, 2, 1))
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end
 
+    @time gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
+
     @info "Testing MultiScaleDEQ"
+    Random.seed!(rng, seed)
     model = MultiScaleDeepEquilibriumNetwork(
         (
             EFL.Parallel(+, EFL.Dense(4, 4, tanh), EFL.Dense(4, 4, tanh)),
@@ -134,11 +175,16 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
         sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
     )
 
-    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
-    x = gpu(rand(MersenneTwister(seed + 1), Float32, 4, 2))
-    y = tuple([gpu(rand(MersenneTwister(seed + 1 + i), Float32, i, 2)) for i in 4:-1:1]...)
+    ps, st = gpu.(EFL.setup(rng, model))
+    x = gpu(rand(rng, Float32, 4, 2))
+    y = tuple([gpu(rand(rng, Float32, i, 2)) for i in 4:-1:1]...)
 
     gs = gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(Base.Fix1(sum, abs2), ŷ .- y)
+    end
+
+    @time gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(Base.Fix1(sum, abs2), ŷ .- y)
     end
@@ -151,7 +197,13 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
         sum(Base.Fix1(sum, abs2), ŷ .- y)
     end
 
+    @time gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(Base.Fix1(sum, abs2), ŷ .- y)
+    end
+
     @info "Testing MultiScaleSkipDEQ"
+    Random.seed!(rng, seed)
     model = MultiScaleSkipDeepEquilibriumNetwork(
         (
             EFL.Parallel(+, EFL.Dense(4, 4, tanh), EFL.Dense(4, 4, tanh)),
@@ -172,11 +224,16 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
         sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
     )
 
-    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
-    x = gpu(rand(MersenneTwister(seed + 1), Float32, 4, 2))
-    y = tuple([gpu(rand(MersenneTwister(seed + 1 + i), Float32, i, 2)) for i in 4:-1:1]...)
+    ps, st = gpu.(EFL.setup(rng, model))
+    x = gpu(rand(rng, Float32, 4, 2))
+    y = tuple([gpu(rand(rng, Float32, i, 2)) for i in 4:-1:1]...)
 
     gs = gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
+
+    @time gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end
@@ -189,7 +246,13 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
         sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end
 
+    @time gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
+
     @info "Testing MultiScaleSkipDEQV2"
+    Random.seed!(rng, seed)
     model = MultiScaleSkipDeepEquilibriumNetwork(
         (
             EFL.Parallel(+, EFL.Dense(4, 4, tanh), EFL.Dense(4, 4, tanh)),
@@ -210,11 +273,16 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
         sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
     )
 
-    ps, st = NamedTuple.(gpu.(EFL.setup(MersenneTwister(seed), model)))
-    x = gpu(rand(MersenneTwister(seed + 1), Float32, 4, 2))
-    y = tuple([gpu(rand(MersenneTwister(seed + 1 + i), Float32, i, 2)) for i in 4:-1:1]...)
+    ps, st = gpu.(EFL.setup(rng, model))
+    x = gpu(rand(rng, Float32, 4, 2))
+    y = tuple([gpu(rand(rng, Float32, i, 2)) for i in 4:-1:1]...)
 
     gs = gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
+
+    @time gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end
@@ -223,6 +291,11 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
     st = EFL.update_state(st, :fixed_depth, 5)
 
     gs = gradient(ps) do p
+        (ŷ, soln), _ = model(x, p, st)
+        sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
+    end
+
+    @time gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
     end

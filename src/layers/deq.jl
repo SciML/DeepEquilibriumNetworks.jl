@@ -30,8 +30,10 @@ function (deq::DeepEquilibriumNetwork{J})(
         return (z_star, DeepEquilibriumSolution(z_star, z, z, 0.0f0, st.fixed_depth)), st
     end
 
+    st_ = st.model
+
     function dudt(u, p, t)
-        u_, _ = deq.model((u, x), p, st.model)
+        u_, st_ = deq.model((u, x), p, st_)
         return u_ .- u
     end
 
@@ -41,6 +43,8 @@ function (deq::DeepEquilibriumNetwork{J})(
 
     jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps, st.model, z_star, x) : T(0))
     residual = z_star .- deq.model((z_star, x), ps, st.model)[1]
+
+    st_ = EFL.update_state(st_, :update_mask, true)
     @set! st.model = st_
 
     return (z_star, DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J)), st
@@ -91,8 +95,10 @@ function (deq::SkipDeepEquilibriumNetwork{J,M,S})(
         return (z_star, DeepEquilibriumSolution(z_star, z, z, 0.0f0, st.fixed_depth)), st
     end
 
+    st_ = st.model
+
     function dudt(u, p, t)
-        u_, = deq.model((u, x), p, st.model)
+        u_, st_ = deq.model((u, x), p, st_)
         return u_ .- u
     end
 
@@ -102,7 +108,9 @@ function (deq::SkipDeepEquilibriumNetwork{J,M,S})(
 
     jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps.model, st.model, z_star, x) : T(0))
     residual = z_star .- deq.model((z_star, x), ps.model, st.model)[1]
-    @set! st.model = st_::typeof(st.model)
+
+    st_ = EFL.update_state(st_, :update_mask, true)
+    @set! st.model = st_
 
     return (z_star, DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J)), st
 end

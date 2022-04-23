@@ -25,7 +25,10 @@ struct DiscreteDEQSolver{M,A,T} <: SteadyStateDiffEq.SteadyStateDiffEqAlgorithm
 end
 
 function DiscreteDEQSolver(
-    alg; mode::Symbol=:rel_deq_default, abstol_termination::T=1.0f-8, reltol_termination::T=1.0f-8
+    alg=LimitedMemoryBroydenSolver();
+    mode::Symbol=:rel_deq_default,
+    abstol_termination::T=1.0f-8,
+    reltol_termination::T=1.0f-8
 ) where {T<:Number}
     return DiscreteDEQSolver{Val(mode),typeof(alg),T}(alg, abstol_termination, reltol_termination)
 end

@@ -102,7 +102,7 @@ function get_terminate_condition(alg::DiscreteDEQSolver{M,A,T}, args...; kwargs.
 end
 
 # Convergence Criterions
-function has_converged(
+@inline function has_converged(
     du,
     u,
     alg::Union{ContinuousDEQSolver{M},DiscreteDEQSolver{M}},
@@ -112,18 +112,18 @@ function has_converged(
     return has_converged(du, u, M, abstol, reltol)
 end
 
-function has_converged(du, u, M, abstol, reltol)
+@inline @inbounds function has_converged(du, u, M, abstol, reltol)
     mode = get_mode(M)
     if mode == :norm
-        return norm(du) <= abstol && norm(du) <= reltol * norm(du .+ u)
+        return norm(du) <= abstol && norm(du) <= reltol * norm(du + u)
     elseif mode == :rel
         return all(abs.(du) .<= reltol .* abs.(u))
     elseif mode == :rel_norm
-        return norm(du) <= reltol * norm(du .+ u)
+        return norm(du) <= reltol * norm(du + u)
     elseif mode == :rel_deq_default
-        return norm(du) <= reltol * norm(du .+ u)
+        return norm(du) <= reltol * norm(du + u)
     elseif mode == :rel_deq_best
-        return norm(du) <= reltol * norm(du .+ u)
+        return norm(du) <= reltol * norm(du + u)
     elseif mode == :abs
         return all(abs.(du) .<= abstol)
     elseif mode == :abs_norm
