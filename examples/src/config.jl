@@ -58,7 +58,7 @@ function get_model_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 fuse_method=:sum,
                 final_channelsize=200,
                 fwd_maxiters=18,
-                bwd_maxiters=10,
+                bwd_maxiters=20,
                 kwargs...
             )
         elseif model_size == :LARGE
@@ -82,7 +82,7 @@ function get_model_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 fuse_method=:sum,
                 final_channelsize=1680,
                 fwd_maxiters=18,
-                bwd_maxiters=10,
+                bwd_maxiters=20,
                 kwargs...
             )
         else
@@ -110,7 +110,7 @@ function get_model_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 fuse_method=:sum,
                 final_channelsize=2048,
                 fwd_maxiters=27,
-                bwd_maxiters=15,
+                bwd_maxiters=28,
                 kwargs...
             )
         elseif model_size == :LARGE
@@ -134,7 +134,7 @@ function get_model_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 fuse_method=:sum,
                 final_channelsize=2048,
                 fwd_maxiters=27,
-                bwd_maxiters=15,
+                bwd_maxiters=28,
                 kwargs...
             )
         elseif model_size == :XL
@@ -158,7 +158,7 @@ function get_model_config(dataset::Symbol, model_size::Symbol; kwargs...)
                 fuse_method=:sum,
                 final_channelsize=2048,
                 fwd_maxiters=27,
-                bwd_maxiters=15,
+                bwd_maxiters=28,
                 kwargs...
             )
         else

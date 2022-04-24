@@ -25,7 +25,7 @@ function (deq::DeepEquilibriumNetwork{J})(
         for _ in 1:(st.fixed_depth)
             z_star, st_ = deq.model((z_star, x), ps, st_)
         end
-        @set! st.model = st_
+        @set! st.model = EFL.update_state(st_, :update_mask, true)
 
         return (z_star, DeepEquilibriumSolution(z_star, z, z, 0.0f0, st.fixed_depth)), st
     end
@@ -44,8 +44,7 @@ function (deq::DeepEquilibriumNetwork{J})(
     jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps, st.model, z_star, x) : T(0))
     residual = z_star .- deq.model((z_star, x), ps, st.model)[1]
 
-    st_ = EFL.update_state(st_, :update_mask, true)
-    @set! st.model = st_
+    @set! st.model = EFL.update_state(st_, :update_mask, true)
 
     return (z_star, DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J)), st
 end
@@ -90,7 +89,7 @@ function (deq::SkipDeepEquilibriumNetwork{J,M,S})(
         for _ in 1:(st.fixed_depth)
             z_star, st_ = deq.model((z_star, x), ps.model, st_)
         end
-        @set! st.model = st_
+        @set! st.model = EFL.update_state(st_, :update_mask, true)
 
         return (z_star, DeepEquilibriumSolution(z_star, z, z, 0.0f0, st.fixed_depth)), st
     end
@@ -109,8 +108,7 @@ function (deq::SkipDeepEquilibriumNetwork{J,M,S})(
     jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps.model, st.model, z_star, x) : T(0))
     residual = z_star .- deq.model((z_star, x), ps.model, st.model)[1]
 
-    st_ = EFL.update_state(st_, :update_mask, true)
-    @set! st.model = st_
+    @set! st.model = EFL.update_state(st_, :update_mask, true)
 
     return (z_star, DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J)), st
 end

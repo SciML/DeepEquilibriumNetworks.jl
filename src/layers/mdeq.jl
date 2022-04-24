@@ -56,7 +56,7 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(
             z_star, st_ = deq.model(((z_star[1], x), z_star[2:N]...), ps, st_)
         end
 
-        @set! st.model = st_
+        @set! st.model = EFL.update_state(st_, :update_mask, true)
 
         return (z_star, DeepEquilibriumSolution(vcat(Flux.flatten.(z_star)...), z, z, 0.0f0, st.fixed_depth)), st
     end
@@ -77,8 +77,7 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(
 
     residual = dudt(sol.u, ps, nothing)
 
-    st_ = EFL.update_state(st_, :update_mask, true)
-    @set! st.model = st_
+    @set! st.model = EFL.update_state(st_, :update_mask, true)
 
     return (
         (z_star, DeepEquilibriumSolution(vcat(Flux.flatten.(z_star)...), z, residual, 0.0f0, sol.destats.nf + 1)), st
@@ -154,7 +153,7 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh})(
             z_star, st_ = deq.model(((z_star[1], x), z_star[2:N]...), ps.model, st_)
         end
 
-        @set! st.model = st_
+        @set! st.model = EFL.update_state(st_, :update_mask, true)
 
         return (z_star, DeepEquilibriumSolution(vcat(Flux.flatten.(z_star)...), z, z, 0.0f0, st.fixed_depth)), st
     end
@@ -175,8 +174,7 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh})(
 
     residual = dudt(sol.u, ps.model, nothing)
 
-    st_ = EFL.update_state(st_, :update_mask, true)
-    @set! st.model = st_
+    @set! st.model = EFL.update_state(st_, :update_mask, true)
 
     return (
         (z_star, DeepEquilibriumSolution(vcat(Flux.flatten.(z_star)...), z, residual, 0.0f0, sol.destats.nf + 1)), st
