@@ -1,6 +1,6 @@
 # Doesn't work as of now
 function compute_deq_jacobian_loss(
-    model::AbstractExplicitLayer, ps::ComponentArray, st::NamedTuple, z::AbstractArray, x::AbstractArray
+    model, ps::ComponentArray, st::NamedTuple, z::AbstractArray, x::AbstractArray
 )
     l, back = Zygote.pullback(u -> model((u, x), ps, st)[1], z)
     vjp_z = back(gaussian_like(l))[1]

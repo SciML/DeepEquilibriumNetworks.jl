@@ -16,8 +16,8 @@ function DEQChain(layers...)
         push!(encounter_deq ? post_deq : pre_deq, l)
     end
     @assert encounter_deq "No DEQ Layer in the Chain!!! Maybe you wanted to use Chain"
-    pre_deq = length(pre_deq) == 0 ? nothing : ExplicitFluxLayers.Chain(pre_deq...)
-    post_deq = length(post_deq) == 0 ? nothing : ExplicitFluxLayers.Chain(post_deq...)
+    pre_deq = length(pre_deq) == 0 ? nothing : Chain(pre_deq...)
+    post_deq = length(post_deq) == 0 ? nothing : Chain(post_deq...)
     return DEQChain(pre_deq, deq, post_deq)
 end
 

@@ -1,4 +1,16 @@
-using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
+using CUDA, FastDEQ, Functors, LinearAlgebra, Lux, Random, Test, Zygote
+
+function test_gradient_isfinite(gs::NamedTuple)
+    gradient_is_finite = [true]
+    function is_gradient_finite(x)
+        if !isnothing(x) && !all(isfinite, x)
+            gradient_is_finite[1] = false
+        end
+        return x
+    end
+    fmap(is_gradient_finite, gs)
+    return gradient_is_finite[1]
+end
 
 @testset "FastDEQ.jl" begin
     seed = 0
@@ -7,167 +19,149 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
 
     @info "Testing DEQ"
     model = DEQChain(
-        EFL.Dense(2, 2),
+        Dense(2, 2),
         DeepEquilibriumNetwork(
-            EFL.Parallel(+, EFL.Dense(2, 2; bias=false), EFL.Dense(2, 2; bias=false)),
+            Parallel(+, Dense(2, 2; bias=false), Dense(2, 2; bias=false)),
             ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0, reltol_termination=0.1f0),
         ),
     )
-    ps, st = gpu.(EFL.setup(rng, model))
+    ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 2, 1))
     y = gpu(rand(rng, Float32, 2, 1))
 
-    gs = gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)
+    gs = gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)[1]
 
-    @time gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)
+    @test test_gradient_isfinite(gs)
 
     @info "Testing DEQ without Fixed Point Iterations"
-    st = EFL.update_state(st, :fixed_depth, 5)
+    st = Lux.update_state(st, :fixed_depth, 5)
 
-    gs = gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)
+    gs = gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)[1]
 
-    @time gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)
+    @test test_gradient_isfinite(gs)
 
     @info "Testing SkipDEQ"
     Random.seed!(rng, seed)
     model = DEQChain(
-        EFL.Dense(2, 2),
+        Dense(2, 2),
         SkipDeepEquilibriumNetwork(
-            EFL.Parallel(+, EFL.Dense(2, 2), EFL.Dense(2, 2)),
-            EFL.Dense(2, 2),
+            Parallel(+, Dense(2, 2), Dense(2, 2)),
+            Dense(2, 2),
             ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0, reltol_termination=0.1f0);
             sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
         ),
     )
-    ps, st = gpu.(EFL.setup(rng, model))
+    ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 2, 1))
     y = gpu(rand(rng, Float32, 2, 1))
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    end[1]
 
-    @time gradient(ps) do p
-        (ŷ, soln), _ = model(x, p, st)
-        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    @test test_gradient_isfinite(gs)
 
     @info "Testing SkipDEQ without Fixed Point Iterations"
-    st = EFL.update_state(st, :fixed_depth, 5)
+    st = Lux.update_state(st, :fixed_depth, 5)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    end[1]
 
-    @time gradient(ps) do p
-        (ŷ, soln), _ = model(x, p, st)
-        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    @test test_gradient_isfinite(gs)
 
     @info "Testing SkipDEQV2"
     Random.seed!(rng, seed)
     model = DEQChain(
-        EFL.Dense(2, 2),
+        Dense(2, 2),
         SkipDeepEquilibriumNetwork(
-            EFL.Parallel(+, EFL.Dense(2, 2), EFL.Dense(2, 2)),
+            Parallel(+, Dense(2, 2), Dense(2, 2)),
             nothing,
             ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0, reltol_termination=0.1f0);
             sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
         ),
     )
-    ps, st = gpu.(EFL.setup(rng, model))
+    ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 2, 1))
     y = gpu(rand(rng, Float32, 2, 1))
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    end[1]
 
-    @time gradient(ps) do p
-        (ŷ, soln), _ = model(x, p, st)
-        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    @test test_gradient_isfinite(gs)
 
     @info "Testing SkipDEQV2 without Fixed Point Iterations"
-    st = EFL.update_state(st, :fixed_depth, 5)
+    st = Lux.update_state(st, :fixed_depth, 5)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    end[1]
 
-    @time gradient(ps) do p
-        (ŷ, soln), _ = model(x, p, st)
-        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    @test test_gradient_isfinite(gs)
 
     @info "Testing SkipDEQ with Broyden Solver"
     Random.seed!(rng, seed)
     model = DEQChain(
-        EFL.Dense(2, 2),
+        Dense(2, 2),
         SkipDeepEquilibriumNetwork(
-            EFL.Parallel(+, EFL.Dense(2, 2), EFL.Dense(2, 2)),
-            EFL.Dense(2, 2),
+            Parallel(+, Dense(2, 2), Dense(2, 2)),
+            Dense(2, 2),
             DiscreteDEQSolver(BroydenSolver(); abstol_termination=0.1f0, reltol_termination=0.1f0);
             sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
         ),
     )
-    ps, st = gpu.(EFL.setup(rng, model))
+    ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 2, 1))
     y = gpu(rand(rng, Float32, 2, 1))
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    end[1]
 
-    @time gradient(ps) do p
-        (ŷ, soln), _ = model(x, p, st)
-        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    @test test_gradient_isfinite(gs)
 
     @info "Testing SkipDEQ with L-Broyden Solver"
     Random.seed!(rng, seed)
     model = DEQChain(
-        EFL.Dense(2, 2),
+        Dense(2, 2),
         SkipDeepEquilibriumNetwork(
-            EFL.Parallel(+, EFL.Dense(2, 2), EFL.Dense(2, 2)),
-            EFL.Dense(2, 2),
+            Parallel(+, Dense(2, 2), Dense(2, 2)),
+            Dense(2, 2),
             DiscreteDEQSolver(LimitedMemoryBroydenSolver(); abstol_termination=0.1f0, reltol_termination=0.1f0);
             sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
         ),
     )
-    ps, st = gpu.(EFL.setup(rng, model))
+    ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 2, 1))
     y = gpu(rand(rng, Float32, 2, 1))
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    end[1]
 
-    @time gradient(ps) do p
-        (ŷ, soln), _ = model(x, p, st)
-        sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    @test test_gradient_isfinite(gs)
 
     @info "Testing MultiScaleDEQ"
     Random.seed!(rng, seed)
     model = MultiScaleDeepEquilibriumNetwork(
         (
-            EFL.Parallel(+, EFL.Dense(4, 4, tanh), EFL.Dense(4, 4, tanh)),
-            EFL.Dense(3, 3, tanh),
-            EFL.Dense(2, 2, tanh),
-            EFL.Dense(1, 1, tanh),
+            Parallel(+, Dense(4, 4, tanh), Dense(4, 4, tanh)),
+            Dense(3, 3, tanh),
+            Dense(2, 2, tanh),
+            Dense(1, 1, tanh),
         ),
         [
-            EFL.NoOpLayer() EFL.Dense(4, 3, tanh) EFL.Dense(4, 2, tanh) EFL.Dense(4, 1, tanh)
-            EFL.Dense(3, 4, tanh) EFL.NoOpLayer() EFL.Dense(3, 2, tanh) EFL.Dense(3, 1, tanh)
-            EFL.Dense(2, 4, tanh) EFL.Dense(2, 3, tanh) EFL.NoOpLayer() EFL.Dense(2, 1, tanh)
-            EFL.Dense(1, 4, tanh) EFL.Dense(1, 3, tanh) EFL.Dense(1, 2, tanh) EFL.NoOpLayer()
+            NoOpLayer() Dense(4, 3, tanh) Dense(4, 2, tanh) Dense(4, 1, tanh)
+            Dense(3, 4, tanh) NoOpLayer() Dense(3, 2, tanh) Dense(3, 1, tanh)
+            Dense(2, 4, tanh) Dense(2, 3, tanh) NoOpLayer() Dense(2, 1, tanh)
+            Dense(1, 4, tanh) Dense(1, 3, tanh) Dense(1, 2, tanh) NoOpLayer()
         ],
         nothing,
         ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0, reltol_termination=0.1f0),
@@ -175,96 +169,84 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
         sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
     )
 
-    ps, st = gpu.(EFL.setup(rng, model))
+    ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 4, 2))
     y = tuple([gpu(rand(rng, Float32, i, 2)) for i in 4:-1:1]...)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(Base.Fix1(sum, abs2), ŷ .- y)
-    end
+    end[1]
 
-    @time gradient(ps) do p
-        (ŷ, soln), _ = model(x, p, st)
-        sum(Base.Fix1(sum, abs2), ŷ .- y)
-    end
+    @test test_gradient_isfinite(gs)
 
     @info "Testing MultiScaleDEQ without Fixed Point Iterations"
-    st = EFL.update_state(st, :fixed_depth, 5)
+    st = Lux.update_state(st, :fixed_depth, 5)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(Base.Fix1(sum, abs2), ŷ .- y)
-    end
+    end[1]
 
-    @time gradient(ps) do p
-        (ŷ, soln), _ = model(x, p, st)
-        sum(Base.Fix1(sum, abs2), ŷ .- y)
-    end
+    @test test_gradient_isfinite(gs)
 
     @info "Testing MultiScaleSkipDEQ"
     Random.seed!(rng, seed)
     model = MultiScaleSkipDeepEquilibriumNetwork(
         (
-            EFL.Parallel(+, EFL.Dense(4, 4, tanh), EFL.Dense(4, 4, tanh)),
-            EFL.Dense(3, 3, tanh),
-            EFL.Dense(2, 2, tanh),
-            EFL.Dense(1, 1, tanh),
+            Parallel(+, Dense(4, 4, tanh), Dense(4, 4, tanh)),
+            Dense(3, 3, tanh),
+            Dense(2, 2, tanh),
+            Dense(1, 1, tanh),
         ),
         [
-            EFL.NoOpLayer() EFL.Dense(4, 3, tanh) EFL.Dense(4, 2, tanh) EFL.Dense(4, 1, tanh)
-            EFL.Dense(3, 4, tanh) EFL.NoOpLayer() EFL.Dense(3, 2, tanh) EFL.Dense(3, 1, tanh)
-            EFL.Dense(2, 4, tanh) EFL.Dense(2, 3, tanh) EFL.NoOpLayer() EFL.Dense(2, 1, tanh)
-            EFL.Dense(1, 4, tanh) EFL.Dense(1, 3, tanh) EFL.Dense(1, 2, tanh) EFL.NoOpLayer()
+            NoOpLayer() Dense(4, 3, tanh) Dense(4, 2, tanh) Dense(4, 1, tanh)
+            Dense(3, 4, tanh) NoOpLayer() Dense(3, 2, tanh) Dense(3, 1, tanh)
+            Dense(2, 4, tanh) Dense(2, 3, tanh) NoOpLayer() Dense(2, 1, tanh)
+            Dense(1, 4, tanh) Dense(1, 3, tanh) Dense(1, 2, tanh) NoOpLayer()
         ],
         nothing,
-        (EFL.Dense(4, 4, tanh), EFL.Dense(4, 3, tanh), EFL.Dense(4, 2, tanh), EFL.Dense(4, 1, tanh)),
+        (Dense(4, 4, tanh), Dense(4, 3, tanh), Dense(4, 2, tanh), Dense(4, 1, tanh)),
         ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0, reltol_termination=0.1f0),
         ((4,), (3,), (2,), (1,));
         sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
     )
 
-    ps, st = gpu.(EFL.setup(rng, model))
+    ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 4, 2))
     y = tuple([gpu(rand(rng, Float32, i, 2)) for i in 4:-1:1]...)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    end[1]
 
-    @time gradient(ps) do p
-        (ŷ, soln), _ = model(x, p, st)
-        sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    @test test_gradient_isfinite(gs)
 
     @info "Testing MultiScaleSkipDEQ without Fixed Point Iterations"
-    st = EFL.update_state(st, :fixed_depth, 5)
+    st = Lux.update_state(st, :fixed_depth, 5)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    end[1]
 
-    @time gradient(ps) do p
-        (ŷ, soln), _ = model(x, p, st)
-        sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    @test test_gradient_isfinite(gs)
 
     @info "Testing MultiScaleSkipDEQV2"
     Random.seed!(rng, seed)
     model = MultiScaleSkipDeepEquilibriumNetwork(
         (
-            EFL.Parallel(+, EFL.Dense(4, 4, tanh), EFL.Dense(4, 4, tanh)),
-            EFL.Dense(3, 3, tanh),
-            EFL.Dense(2, 2, tanh),
-            EFL.Dense(1, 1, tanh),
+            Parallel(+, Dense(4, 4, tanh), Dense(4, 4, tanh)),
+            Dense(3, 3, tanh),
+            Dense(2, 2, tanh),
+            Dense(1, 1, tanh),
         ),
         [
-            EFL.NoOpLayer() EFL.Dense(4, 3, tanh) EFL.Dense(4, 2, tanh) EFL.Dense(4, 1, tanh)
-            EFL.Dense(3, 4, tanh) EFL.NoOpLayer() EFL.Dense(3, 2, tanh) EFL.Dense(3, 1, tanh)
-            EFL.Dense(2, 4, tanh) EFL.Dense(2, 3, tanh) EFL.NoOpLayer() EFL.Dense(2, 1, tanh)
-            EFL.Dense(1, 4, tanh) EFL.Dense(1, 3, tanh) EFL.Dense(1, 2, tanh) EFL.NoOpLayer()
+            NoOpLayer() Dense(4, 3, tanh) Dense(4, 2, tanh) Dense(4, 1, tanh)
+            Dense(3, 4, tanh) NoOpLayer() Dense(3, 2, tanh) Dense(3, 1, tanh)
+            Dense(2, 4, tanh) Dense(2, 3, tanh) NoOpLayer() Dense(2, 1, tanh)
+            Dense(1, 4, tanh) Dense(1, 3, tanh) Dense(1, 2, tanh) NoOpLayer()
         ],
         nothing,
         nothing,
@@ -273,30 +255,24 @@ using FastDEQ, CUDA, LinearAlgebra, Random, Test, ExplicitFluxLayers, Flux
         sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
     )
 
-    ps, st = gpu.(EFL.setup(rng, model))
+    ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 4, 2))
     y = tuple([gpu(rand(rng, Float32, i, 2)) for i in 4:-1:1]...)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    end[1]
 
-    @time gradient(ps) do p
-        (ŷ, soln), _ = model(x, p, st)
-        sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    @test test_gradient_isfinite(gs)
 
     @info "Testing MultiScaleSkipDEQV2 without Fixed Point Iterations"
-    st = EFL.update_state(st, :fixed_depth, 5)
+    st = Lux.update_state(st, :fixed_depth, 5)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    end[1]
 
-    @time gradient(ps) do p
-        (ŷ, soln), _ = model(x, p, st)
-        sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
-    end
+    @test test_gradient_isfinite(gs)
 end

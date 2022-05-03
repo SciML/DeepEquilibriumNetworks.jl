@@ -3,4 +3,9 @@ wandb/
 .vscode
 data/
 /Manifest.toml
+docs/Manifest.toml
 build
+statprof
+profs
+logs
+benchmarking

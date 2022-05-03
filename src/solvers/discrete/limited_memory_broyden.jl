@@ -85,7 +85,7 @@ end
     part_Us::AbstractArray{E,3}, part_VTs::AbstractArray{E,3}, x::AbstractArray{E,2}
 ) where {E}
     # part_Us -> (T x D x N) | part_VTs -> (D x T x N) | x -> (D x N)
-    xTU = sum(Flux.unsqueeze(x; dims=1) .* part_Us; dims=2) # T x 1 x N
+    xTU = sum(unsqueeze(x; dims=1) .* part_Us; dims=2) # T x 1 x N
     return -x .+ dropdims(sum(permutedims(xTU, (2, 1, 3)) .* part_VTs; dims=2); dims=2)
 end
 
@@ -93,6 +93,6 @@ end
     part_Us::AbstractArray{E,3}, part_VTs::AbstractArray{E,3}, x::AbstractArray{E,2}
 ) where {E}
     # part_Us -> (T x D x N) | part_VTs -> (D x T x N) | x -> (D x N)
-    VTx = sum(part_VTs .* Flux.unsqueeze(x; dims=2); dims=1) # 1 x T x N
+    VTx = sum(part_VTs .* unsqueeze(x; dims=2); dims=1) # 1 x T x N
     return -x .+ dropdims(sum(part_Us .* permutedims(VTx, (2, 1, 3)); dims=1); dims=1)
 end

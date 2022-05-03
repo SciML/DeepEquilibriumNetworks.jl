@@ -1,32 +1,30 @@
 module FastDEQ
 
-using CUDA,
+using ChainRulesCore,
+    ComponentArrays,
+    CUDA,
     DiffEqBase,
     DiffEqCallbacks,
     DiffEqSensitivity,
-    Flux,
+    Functors,
     LinearAlgebra,
     LinearSolve,
+    Lux,
+    MLUtils,
     OrdinaryDiffEq,
     SciMLBase,
+    Setfield,
     Statistics,
     SteadyStateDiffEq,
     UnPack,
-    Zygote,
-    ExplicitFluxLayers,
-    Functors,
-    ChainRulesCore,
-    ComponentArrays,
-    Setfield
+    Zygote
 
-import ExplicitFluxLayers:
-    AbstractExplicitLayer,
-    AbstractExplicitContainerLayer,
-    initialparameters,
-    initialstates,
-    parameterlength,
-    statelength
+import Lux: AbstractExplicitContainerLayer, initialparameters, initialstates, parameterlength, statelength
 import Random: AbstractRNG
+
+# This shouldn't be put in Lux since it is not true in the general case
+# However for our usecase gradients dont propagate through the state
+ChainRulesCore.@non_differentiable Lux.update_state(::Any...)
 
 include("operator.jl")
 

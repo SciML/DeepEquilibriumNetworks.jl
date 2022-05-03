@@ -19,15 +19,13 @@ function MultiScaleDeepEquilibriumNetwork(
     sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
     kwargs...,
 )
-    l1 = ExplicitFluxLayers.Parallel(nothing, main_layers...)
-    l2 = ExplicitFluxLayers.BranchLayer(
-        ExplicitFluxLayers.Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...
-    )
+    l1 = Parallel(nothing, main_layers...)
+    l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
     model = if post_fuse_layer === nothing
-        ExplicitFluxLayers.Chain(l1, l2)
+        Chain(l1, l2)
     else
-        l3 = ExplicitFluxLayers.Parallel(nothing, post_fuse_layer...)
-        ExplicitFluxLayers.Chain(l1, l2, l3)
+        l3 = Parallel(nothing, post_fuse_layer...)
+        Chain(l1, l2, l3)
     end
     return MultiScaleDeepEquilibriumNetwork(model, solver, sensealg, scales, kwargs)
 end
@@ -56,9 +54,9 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(
             z_star, st_ = deq.model(((z_star[1], x), z_star[2:N]...), ps, st_)
         end
 
-        @set! st.model = EFL.update_state(st_, :update_mask, true)
+        @set! st.model = Lux.update_state(st_, :update_mask, true)
 
-        return (z_star, DeepEquilibriumSolution(vcat(Flux.flatten.(z_star)...), z, z, 0.0f0, st.fixed_depth)), st
+        return (z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, z, 0.0f0, st.fixed_depth)), st
     end
 
     st_ = st.model
@@ -69,7 +67,7 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(
         return u_, st_
     end
 
-    dudt(u, p, t) = vcat(Flux.flatten.(dudt_(u, p, t)[1])...) .- u
+    dudt(u, p, t) = vcat(flatten.(dudt_(u, p, t)[1])...) .- u
 
     prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps)
     sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
@@ -77,10 +75,10 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(
 
     residual = dudt(sol.u, ps, nothing)
 
-    @set! st.model = EFL.update_state(st_, :update_mask, true)
+    @set! st.model = Lux.update_state(st_, :update_mask, true)
 
     return (
-        (z_star, DeepEquilibriumSolution(vcat(Flux.flatten.(z_star)...), z, residual, 0.0f0, sol.destats.nf + 1)), st
+        (z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0, sol.destats.nf + 1)), st
     )
 end
 
@@ -112,20 +110,18 @@ function MultiScaleSkipDeepEquilibriumNetwork(
     sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
     kwargs...,
 )
-    l1 = ExplicitFluxLayers.Parallel(nothing, main_layers...)
-    l2 = ExplicitFluxLayers.BranchLayer(
-        ExplicitFluxLayers.Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...
-    )
+    l1 = Parallel(nothing, main_layers...)
+    l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
     model = if post_fuse_layer === nothing
-        ExplicitFluxLayers.Chain(l1, l2)
+        Chain(l1, l2)
     else
-        l3 = ExplicitFluxLayers.Parallel(nothing, post_fuse_layer...)
-        ExplicitFluxLayers.Chain(l1, l2, l3)
+        l3 = Parallel(nothing, post_fuse_layer...)
+        Chain(l1, l2, l3)
     end
     shortcut = if shortcut_layers === nothing
         nothing
     else
-        ExplicitFluxLayers.Parallel(nothing, shortcut_layers...)
+        Parallel(nothing, shortcut_layers...)
     end
     return MultiScaleSkipDeepEquilibriumNetwork(model, shortcut, solver, sensealg, scales, kwargs)
 end
@@ -138,11 +134,11 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh})(
         u0_ = split_and_reshape(u0, st.split_idxs, deq.scales)
         z0, st__ = deq.model(((u0_[1], x), u0_[2:N]...), ps.model, st_.model)
         @set! st_.model = st__
-        (vcat(Flux.flatten.(z0)...), st_)
+        (vcat(flatten.(z0)...), st_)
     else
         z0, st_ = deq.shortcut(x, ps.shortcut, st.shortcut)
         @set! st.shortcut = st_
-        (vcat(Flux.flatten.(z0)...), st)
+        (vcat(flatten.(z0)...), st)
     end
 
     if !iszero(st.fixed_depth)
@@ -153,9 +149,9 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh})(
             z_star, st_ = deq.model(((z_star[1], x), z_star[2:N]...), ps.model, st_)
         end
 
-        @set! st.model = EFL.update_state(st_, :update_mask, true)
+        @set! st.model = Lux.update_state(st_, :update_mask, true)
 
-        return (z_star, DeepEquilibriumSolution(vcat(Flux.flatten.(z_star)...), z, z, 0.0f0, st.fixed_depth)), st
+        return (z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, z, 0.0f0, st.fixed_depth)), st
     end
 
     st_ = st.model
@@ -166,7 +162,7 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh})(
         return u_, st_
     end
 
-    dudt(u, p, t) = vcat(Flux.flatten.(dudt_(u, p, t)[1])...) .- u
+    dudt(u, p, t) = vcat(flatten.(dudt_(u, p, t)[1])...) .- u
 
     prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps.model)
     sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
@@ -174,9 +170,9 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh})(
 
     residual = dudt(sol.u, ps.model, nothing)
 
-    @set! st.model = EFL.update_state(st_, :update_mask, true)
+    @set! st.model = Lux.update_state(st_, :update_mask, true)
 
     return (
-        (z_star, DeepEquilibriumSolution(vcat(Flux.flatten.(z_star)...), z, residual, 0.0f0, sol.destats.nf + 1)), st
+        (z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0, sol.destats.nf + 1)), st
     )
 end
