@@ -1,24 +1,23 @@
 module FastDEQExperiments
 
 using FastDEQ,
-    ExplicitFluxLayers,
+    DataLoaders,
     Random,
-    Flux,
     OrdinaryDiffEq,
     FluxMPI,
     Format,
+    Lux,
     MLDatasets,
-    MLDataUtils,
-    DataLoaders,
     Optimisers,
     MPI,
     CUDA,
     Setfield,
-    ParameterSchedulers
-import LearnBase: ObsDim
-import MLDataUtils: nobs, getobs
+    ParameterSchedulers,
+    NNlib,
+    Zygote
 
-const EFL = ExplicitFluxLayers
+import Flux: OneHotArray, onecold, onehotbatch, onehot
+import Flux.Losses: logitcrossentropy, mse
 
 # Memory Management
 relieve_gc_pressure(::Union{Nothing,<:AbstractArray}) = nothing

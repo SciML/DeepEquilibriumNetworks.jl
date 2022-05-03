@@ -1,15 +1,15 @@
 # Building Blocks
 ## Helpful Functional Wrappers
 function conv1x1(mapping, activation=identity; stride::Int=1, bias=false, kwargs...)
-    return EFL.Conv((1, 1), mapping, activation; stride=stride, pad=0, bias=bias, initW=NormalInitializer(), kwargs...)
+    return Conv((1, 1), mapping, activation; stride=stride, pad=0, bias=bias, initW=NormalInitializer(), kwargs...)
 end
 
 function conv3x3(mapping, activation=identity; stride::Int=1, bias=false, kwargs...)
-    return EFL.Conv((3, 3), mapping, activation; stride=stride, pad=1, bias=bias, initW=NormalInitializer(), kwargs...)
+    return Conv((3, 3), mapping, activation; stride=stride, pad=1, bias=bias, initW=NormalInitializer(), kwargs...)
 end
 
 function conv5x5(mapping, activation=identity; stride::Int=1, bias=false, kwargs...)
-    return EFL.Conv((5, 5), mapping, activation; stride=stride, pad=2, bias=bias, initW=NormalInitializer(), kwargs...)
+    return Conv((5, 5), mapping, activation; stride=stride, pad=2, bias=bias, initW=NormalInitializer(), kwargs...)
 end
 
 reassociate(x::NTuple{2,<:AbstractArray}, y) = (x[1], (x[2], y))
@@ -26,14 +26,14 @@ function downsample_module(mapping, level_diff, activation; group_count=8)
         end
     end
 
-    layers = EFL.AbstractExplicitLayer[]
+    layers = Lux.AbstractExplicitLayer[]
     for i in 1:level_diff
         inchs, outchs = intermediate_mapping(i)
         push!(layers, conv3x3(inchs => outchs; stride=2))
-        # push!(layers, EFL.GroupNorm(outchs, group_count, activation; affine=true, track_stats=false))
-        push!(layers, EFL.BatchNorm(outchs, activation; affine=true, track_stats=false))
+        # push!(layers, GroupNorm(outchs, group_count, activation; affine=true, track_stats=false))
+        push!(layers, BatchNorm(outchs, activation; affine=true, track_stats=false))
     end
-    return EFL.Chain(layers...)
+    return Chain(layers...)
 end
 
 ## Upsample Module
@@ -48,15 +48,15 @@ function upsample_module(mapping, level_diff, activation; upsample_mode::Symbol=
         end
     end
 
-    layers = EFL.AbstractExplicitLayer[]
+    layers = Lux.AbstractExplicitLayer[]
     for i in 1:level_diff
         inchs, outchs = intermediate_mapping(i)
         push!(layers, conv1x1(inchs => outchs))
-        # push!(layers, EFL.GroupNorm(outchs, group_count, activation; affine=true, track_stats=false))
-        push!(layers, EFL.BatchNorm(outchs, activation; affine=true, track_stats=false))
-        push!(layers, EFL.Upsample(upsample_mode; scale=2))
+        # push!(layers, GroupNorm(outchs, group_count, activation; affine=true, track_stats=false))
+        push!(layers, BatchNorm(outchs, activation; affine=true, track_stats=false))
+        push!(layers, Upsample(upsample_mode; scale=2))
     end
-    return EFL.Chain(layers...)
+    return Chain(layers...)
 end
 
 ## Residual Block
@@ -64,7 +64,7 @@ function ResidualBlockV1(
     mapping;
     deq_expand::Int=5,
     num_gn_groups::Int=4,
-    downsample=EFL.NoOpLayer(),
+    downsample=NoOpLayer(),
     n_big_kernels::Int=0,
     dropout_rate::Real=0.0f0,
     gn_affine::Bool=true,
@@ -77,36 +77,35 @@ function ResidualBlockV1(
     conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; bias=false)
 
     conv1, conv2 = if weight_norm
-        EFL.WeightNorm(conv1, (:weight,), (4,)), EFL.WeightNorm(conv2, (:weight,), (4,))
+        WeightNorm(conv1, (:weight,), (4,)), WeightNorm(conv2, (:weight,), (4,))
     else
         conv1, conv2
     end
 
-    # gn1 = EFL.GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
-    # gn2 = EFL.GroupNorm(outplanes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
-    # gn3 = EFL.GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
-    gn1 = EFL.BatchNorm(inner_planes, relu; affine=gn_affine, track_stats=gn_track_stats)
-    gn2 = EFL.BatchNorm(outplanes, relu; affine=gn_affine, track_stats=gn_track_stats)
-    gn3 = EFL.BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
+    # gn1 = GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
+    # gn2 = GroupNorm(outplanes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
+    # gn3 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
+    gn1 = BatchNorm(inner_planes, relu; affine=gn_affine, track_stats=gn_track_stats)
+    gn2 = BatchNorm(outplanes, relu; affine=gn_affine, track_stats=gn_track_stats)
+    gn3 = BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
 
-    dropout = iszero(dropout_rate) ? EFL.NoOpLayer() : EFL.VariationalHiddenDropout(dropout_rate)
+    dropout = iszero(dropout_rate) ? NoOpLayer() : VariationalHiddenDropout(dropout_rate)
 
-    return EFL.Chain(
-        EFL.Parallel(
+    return Chain(
+        Parallel(
             reassociate, # Reassociate and Merge
-            EFL.Chain(conv1, gn1, conv2, EFL.BranchLayer(downsample, dropout)),  # For x
-            EFL.NoOpLayer(),  # For injection
+            Chain(conv1, gn1, conv2, BranchLayer(downsample, dropout)),  # For x
+            NoOpLayer(),  # For injection
         ),
-        EFL.Parallel(
+        Parallel(
             +,
-            EFL.NoOpLayer(),  # For y1
-            EFL.Chain(
-                EFL.WrappedFunction(y2i -> y2i[1] .+ y2i[2]),  # Since injection could be a scalar
+            NoOpLayer(),  # For y1
+            Chain(
+                WrappedFunction(y2i -> y2i[1] .+ y2i[2]),  # Since injection could be a scalar
                 gn2,
             ),  # For (y2, injection)
         ),
-        # EFL.WrappedFunction(Base.Fix1(broadcast, relu)),
-        EFL.ActivationFunction(relu),
+        ActivationFunction(relu),
         gn3,
     )
 end
@@ -115,7 +114,7 @@ function ResidualBlockV2(
     mapping;
     deq_expand::Int=5,
     num_gn_groups::Int=4,
-    downsample=EFL.NoOpLayer(),
+    downsample=NoOpLayer(),
     n_big_kernels::Int=0,
     dropout_rate::Real=0.0f0,
     gn_affine::Bool=true,
@@ -128,87 +127,85 @@ function ResidualBlockV2(
     conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; bias=false)
 
     conv1, conv2 = if weight_norm
-        EFL.WeightNorm(conv1, (:weight,), (4,)), EFL.WeightNorm(conv2, (:weight,), (4,))
+        WeightNorm(conv1, (:weight,), (4,)), WeightNorm(conv2, (:weight,), (4,))
     else
         conv1, conv2
     end
 
-    # gn1 = EFL.GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
-    # gn2 = EFL.GroupNorm(outplanes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
-    # gn3 = EFL.GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
-    gn1 = EFL.BatchNorm(inner_planes, relu; affine=gn_affine, track_stats=gn_track_stats)
-    gn2 = EFL.BatchNorm(outplanes, relu; affine=gn_affine, track_stats=gn_track_stats)
-    gn3 = EFL.BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
+    # gn1 = GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
+    # gn2 = GroupNorm(outplanes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
+    # gn3 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
+    gn1 = BatchNorm(inner_planes, relu; affine=gn_affine, track_stats=gn_track_stats)
+    gn2 = BatchNorm(outplanes, relu; affine=gn_affine, track_stats=gn_track_stats)
+    gn3 = BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
 
-    dropout = iszero(dropout_rate) ? EFL.NoOpLayer() : EFL.VariationalHiddenDropout(dropout_rate)
+    dropout = iszero(dropout_rate) ? NoOpLayer() : VariationalHiddenDropout(dropout_rate)
 
-    return EFL.Chain(
+    return Chain(
         conv1,
         gn1,
         conv2,
-        EFL.Parallel(+, downsample, EFL.Chain(dropout, gn2)),
-        # EFL.WrappedFunction(Base.Fix1(broadcast, relu)),
-        EFL.ActivationFunction(relu),
+        Parallel(+, downsample, Chain(dropout, gn2)),
+        # WrappedFunction(Base.Fix1(broadcast, relu)),
+        ActivationFunction(relu),
         gn3,
     )
 end
 
 function BottleneckBlockV1(mapping::Pair, expansion::Int=4; bn_track_stats::Bool=false, bn_affine::Bool=true)
     rescale = if first(mapping) != last(mapping) * expansion
-        EFL.Chain(
+        Chain(
             conv1x1(first(mapping) => last(mapping) * expansion),
-            EFL.BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
+            BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
         )
     else
-        EFL.NoOpLayer()
+        NoOpLayer()
     end
 
-    return EFL.Chain(
-        EFL.Parallel(reassociate, EFL.BranchLayer(rescale, conv1x1(mapping)), EFL.NoOpLayer()),
-        EFL.Parallel(
+    return Chain(
+        Parallel(reassociate, BranchLayer(rescale, conv1x1(mapping)), NoOpLayer()),
+        Parallel(
             +,
-            EFL.NoOpLayer(),
-            EFL.Chain(
-                EFL.WrappedFunction(y2i -> y2i[1] .+ y2i[2]),  # Since injection could be a scalar
-                EFL.Chain(
-                    EFL.BatchNorm(last(mapping), relu; affine=bn_affine, track_stats=bn_track_stats),
+            NoOpLayer(),
+            Chain(
+                WrappedFunction(y2i -> y2i[1] .+ y2i[2]),  # Since injection could be a scalar
+                Chain(
+                    BatchNorm(last(mapping), relu; affine=bn_affine, track_stats=bn_track_stats),
                     conv3x3(last(mapping) => last(mapping) * expansion),
-                    EFL.BatchNorm(last(mapping) * expansion, relu; track_stats=bn_track_stats, affine=bn_affine),
+                    BatchNorm(last(mapping) * expansion, relu; track_stats=bn_track_stats, affine=bn_affine),
                     conv1x1(last(mapping) * expansion => last(mapping) * expansion),
-                    EFL.BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
+                    BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
                 ),
             ),
         ),
-        # EFL.WrappedFunction(Base.Fix1(broadcast, relu)),
-        EFL.ActivationFunction(relu),
+        ActivationFunction(relu),
     )
 end
 
 function BottleneckBlockV2(mapping::Pair, expansion::Int=4; bn_track_stats::Bool=false, bn_affine::Bool=true)
     rescale = if first(mapping) != last(mapping) * expansion
-        EFL.Chain(
+        Chain(
             conv1x1(first(mapping) => last(mapping) * expansion),
-            EFL.BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
+            BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
         )
     else
-        EFL.NoOpLayer()
+        NoOpLayer()
     end
 
-    return EFL.Chain(
-        EFL.Parallel(
+    return Chain(
+        Parallel(
             +,
             rescale,
-            EFL.Chain(
+            Chain(
                 conv1x1(mapping),
-                EFL.BatchNorm(last(mapping), relu; affine=bn_affine, track_stats=bn_track_stats),
+                BatchNorm(last(mapping), relu; affine=bn_affine, track_stats=bn_track_stats),
                 conv3x3(last(mapping) => last(mapping) * expansion),
-                EFL.BatchNorm(last(mapping) * expansion, relu; track_stats=bn_track_stats, affine=bn_affine),
+                BatchNorm(last(mapping) * expansion, relu; track_stats=bn_track_stats, affine=bn_affine),
                 conv1x1(last(mapping) * expansion => last(mapping) * expansion),
-                EFL.BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
+                BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
             ),
         ),
-        # EFL.WrappedFunction(Base.Fix1(broadcast, relu)),
-        EFL.ActivationFunction(relu),
+        ActivationFunction(relu),
     )
 end
 
@@ -225,31 +222,31 @@ function get_model(
 
     downsample_layers = [
         conv3x3(3 => init_channel_size; stride=config.downsample_times >= 1 ? 2 : 1),
-        EFL.BatchNorm(init_channel_size, relu; affine=true, track_stats=false),
+        BatchNorm(init_channel_size, relu; affine=true, track_stats=false),
         conv3x3(init_channel_size => init_channel_size; stride=config.downsample_times >= 2 ? 2 : 1),
-        EFL.BatchNorm(init_channel_size, relu; affine=true, track_stats=false),
+        BatchNorm(init_channel_size, relu; affine=true, track_stats=false),
     ]
     for _ in 3:(config.downsample_times)
         append!(
             downsample_layers,
             [
                 conv3x3(init_channel_size => init_channel_size; stride=2),
-                EFL.BatchNorm(init_channel_size, relu; affine=true, track_stats=false),
+                BatchNorm(init_channel_size, relu; affine=true, track_stats=false),
             ],
         )
     end
-    downsample = EFL.Chain(downsample_layers...)
+    downsample = Chain(downsample_layers...)
 
     stage0 = if config.downsample_times == 0 && config.num_branches <= 2
-        EFL.NoOpLayer()
+        NoOpLayer()
     else
-        EFL.Chain(
+        Chain(
             conv1x1(init_channel_size => init_channel_size; bias=false),
-            EFL.BatchNorm(init_channel_size, relu; affine=true, track_stats=false),
+            BatchNorm(init_channel_size, relu; affine=true, track_stats=false),
         )
     end
 
-    initial_layers = EFL.Chain(downsample, stage0)
+    initial_layers = Chain(downsample, stage0)
 
     main_layers = Tuple(
         ResidualBlockV1(
@@ -261,11 +258,11 @@ function get_model(
         ) for i in 1:(config.num_branches)
     )
 
-    mapping_layers = Matrix{EFL.AbstractExplicitLayer}(undef, config.num_branches, config.num_branches)
+    mapping_layers = Matrix{Lux.AbstractExplicitLayer}(undef, config.num_branches, config.num_branches)
     for i in 1:(config.num_branches)
         for j in 1:(config.num_branches)
             if i == j
-                mapping_layers[i, j] = EFL.NoOpLayer()
+                mapping_layers[i, j] = NoOpLayer()
             elseif i < j
                 mapping_layers[i, j] = downsample_module(
                     config.num_channels[i] => config.num_channels[j], j - i, relu; group_count=config.group_count
@@ -283,38 +280,37 @@ function get_model(
     end
 
     post_fuse_layers = Tuple(
-        EFL.Chain(
-            # EFL.WrappedFunction(Base.Fix1(broadcast, relu)),
-            EFL.ActivationFunction(relu),
+        Chain(
+            ActivationFunction(relu),
             conv1x1(config.num_channels[i] => config.num_channels[i]),
-            # EFL.GroupNorm(config.num_channels[i], config.group_count ÷ 2; affine=true, track_stats=false),
-            EFL.BatchNorm(config.num_channels[i]; affine=true, track_stats=false),
+            # GroupNorm(config.num_channels[i], config.group_count ÷ 2; affine=true, track_stats=false),
+            BatchNorm(config.num_channels[i]; affine=true, track_stats=false),
         ) for i in 1:(config.num_branches)
     )
 
-    increment_modules = EFL.Parallel(
+    increment_modules = Parallel(
         nothing,
         [BottleneckBlockV2(config.num_channels[i] => config.head_channels[i]) for i in 1:(config.num_branches)]...,
     )
 
-    downsample_modules = EFL.PairwiseFusion(
+    downsample_modules = PairwiseFusion(
         config.fuse_method == :sum ? (+) : error("Only `fuse_method` = `:sum` is supported"),
         [
-            EFL.Chain(
+            Chain(
                 conv3x3(config.head_channels[i] * 4 => config.head_channels[i + 1] * 4; stride=2, bias=true),
-                EFL.BatchNorm(config.head_channels[i + 1] * 4, relu; track_stats=false, affine=true),
+                BatchNorm(config.head_channels[i + 1] * 4, relu; track_stats=false, affine=true),
             ) for i in 1:(config.num_branches - 1)
         ]...,
     )
 
-    final_layers = EFL.Chain(
+    final_layers = Chain(
         increment_modules,
         downsample_modules,
         conv1x1(config.head_channels[config.num_branches] * 4 => config.final_channelsize; bias=true),
-        EFL.BatchNorm(config.final_channelsize, relu; track_stats=false, affine=true),
-        EFL.GlobalMeanPool(),
-        EFL.FlattenLayer(),
-        EFL.Dense(config.final_channelsize, config.num_classes),
+        BatchNorm(config.final_channelsize, relu; track_stats=false, affine=true),
+        GlobalMeanPool(),
+        FlattenLayer(),
+        Dense(config.final_channelsize, config.num_classes),
     )
 
     solver = if config.continuous
@@ -334,7 +330,7 @@ function get_model(
 
     deq = if config.model_type ∈ (:SKIP, :SKIPV2)
         shortcut = if config.model_type == :SKIP
-            slayers = EFL.AbstractExplicitLayer[ResidualBlockV2(config.num_channels[1] => config.num_channels[1])]
+            slayers = Lux.AbstractExplicitLayer[ResidualBlockV2(config.num_channels[1] => config.num_channels[1])]
             for i in 1:(config.num_branches - 1)
                 push!(
                     slayers,
@@ -379,28 +375,25 @@ function get_model(
     model = DEQChain(initial_layers, deq, final_layers)
     rng = Random.default_rng()
     Random.seed!(rng, seed)
-    ps, st = device.(EFL.setup(rng, model))
-
-    # Temporary Fix: CUDA.RNG giving errors on Julia 1.7
-    st = EFL.update_state(st, :rng, rng)
+    ps, st = device.(Lux.setup(rng, model))
 
     if warmup
         clean_println("Starting Model Warmup")
-        x__ = device(randn(Float32, config.image_size..., 3, 1))
-        y__ = device(Float32.(Flux.onehotbatch([1], 0:(config.num_classes - 1))))
+        x__ = device(randn(Float32, config.image_size..., 3, 2))
+        y__ = device(Float32.(onehotbatch([1, 2], 0:(config.num_classes - 1))))
         model(x__, ps, st)
         clean_println("Forward Pass Warmup Completed")
 
-        st_ = EFL.update_state(st, :fixed_depth, 2)
+        st_ = Lux.update_state(st, :fixed_depth, 2)
         model(x__, ps, st_)
         clean_println("Forward Pass (Pretraining) Warmup Completed")
 
         lfn = loss_function(config)
-        (l, _, _, _), back = Flux.pullback(p -> lfn(x__, y__, model, p, st), ps)
+        (l, _, _, _), back = pullback(p -> lfn(x__, y__, model, p, st), ps)
         back((one(l), nothing, nothing, nothing))
         clean_println("Backward Pass Warmup Completed")
 
-        (l, _, _, _), back = Flux.pullback(p -> lfn(x__, y__, model, p, st_), ps)
+        (l, _, _, _), back = pullback(p -> lfn(x__, y__, model, p, st_), ps)
         back((one(l), nothing, nothing, nothing))
         clean_println("Backward Pass (Pretraining) Warmup Completed")
 

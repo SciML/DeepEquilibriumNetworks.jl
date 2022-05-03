@@ -6,10 +6,8 @@ end
 MLDatasetsImageData(images::AbstractArray{T,4}, labels::AbstractArray{T,2}) where {T} =
     MLDatasetsImageData(collect(eachslice(images, dims=4)), collect(eachslice(labels, dims=2)))
 
-nobs(d::MLDatasetsImageData) = length(d.images)
-
-getobs(d::MLDatasetsImageData, i::Int, ::ObsDim.Undefined) = (d.images[i], d.labels[i])
-getobs(d::MLDatasetsImageData, i::Int) = (d.images[i], d.labels[i])
+Base.length(d::MLDatasetsImageData) = length(d.images)
+Base.getindex(d::MLDatasetsImageData, i::Int) = (d.images[i], d.labels[i])
 
 function get_dataloaders(
     dataset::Symbol; μ=nothing, σ²=nothing, train_batchsize::Int64, eval_batchsize::Int64
@@ -23,9 +21,9 @@ function get_dataloaders(
     end
 
     x_train = (x_train .- μ) ./ σ²
-    y_train = Float32.(Flux.onehotbatch(y_train, 0:(nclasses - 1)))
+    y_train = Float32.(onehotbatch(y_train, 0:(nclasses - 1)))
     x_test = (x_test .- μ) ./ σ²
-    y_test = Float32.(Flux.onehotbatch(y_test, 0:(nclasses - 1)))
+    y_test = Float32.(onehotbatch(y_test, 0:(nclasses - 1)))
 
     train_dataset = shuffleobs(MLDatasetsImageData(x_train, y_train))
     train_dataset = is_distributed() ? DistributedDataContainer(train_dataset) : train_dataset

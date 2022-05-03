@@ -33,6 +33,10 @@ function construct_optimiser(config::ExperimentConfiguration)
         opt = Optimisers.OptimiserChain(opt, Optimisers.WeightDecay(config.weight_decay))
     end
 
+    if is_distributed()
+        opt = DistributedOptimiser(opt)
+    end
+
     sched = if config.lr_scheduler == :COSINE
         ParameterSchedulers.Stateful(
             ParameterSchedulers.Cos(
@@ -78,8 +82,8 @@ function evaluate(model, ps, st, dataloader)
         total_time += time() - start_time
 
         total_nfe += soln.nfe * size(x, ndims(x))
-        total_loss += Flux.Losses.logitcrossentropy(ŷ, y) * size(x, ndims(x))
-        matches += sum(argmax.(eachcol(cpu(ŷ))) .== Flux.onecold(cpu(y)))
+        total_loss += logitcrossentropy(ŷ, y) * size(x, ndims(x))
+        matches += sum(argmax.(eachcol(cpu(ŷ))) .== onecold(cpu(y)))
         total_datasize += size(x, ndims(x))
     end
     return (loss=total_loss, accuracy=matches, mean_nfe=total_nfe, total_time=total_time, total_datasize=total_datasize)
@@ -91,14 +95,14 @@ function loss_function(c::ImageClassificationModelConfiguration; λ_skip=1.0f-3)
     if c.model_type == :VANILLA
         function loss_function_closure_1(x, y, model, ps, st)
             (ŷ, soln), st_ = model(x, ps, st)
-            loss =  Flux.Losses.logitcrossentropy(ŷ, y)
+            loss =  logitcrossentropy(ŷ, y)
             return loss, ŷ, st_, soln.nfe
         end
         return loss_function_closure_1
     else
         function loss_function_closure_2(x, y, model, ps, st)
             (ŷ, soln), st_ = model(x, ps, st)
-            loss = Flux.Losses.logitcrossentropy(ŷ, y) + λ_skip * Flux.Losses.mse(soln.u₀, soln.z_star)
+            loss = logitcrossentropy(ŷ, y) + λ_skip * mse(soln.u₀, soln.z_star)
             return loss, ŷ, st_, soln.nfe
         end
         return loss_function_closure_2
@@ -123,13 +127,13 @@ function train_one_epoch(
         # Compute Loss + Backprop + Update
         start_time = time()
 
-        (loss, ŷ, st, nfe), back = Flux.pullback(p -> loss_function(x, y, model, p, st), ps)
+        (loss, ŷ, st, nfe), back = pullback(p -> loss_function(x, y, model, p, st), ps)
         gs, = back((one(loss), nothing, nothing, nothing))
         opt_state, ps = Optimisers.update!(opt_state, ps, gs)
 
         total_time += time() - start_time
 
-        acc = sum(argmax.(eachcol(cpu(ŷ))) .== Flux.onecold(cpu(y))) / size(x, 4)
+        acc = sum(argmax.(eachcol(cpu(ŷ))) .== onecold(cpu(y))) / size(x, 4)
 
         iteration_count += 1
         st = econfig.pretrain_steps == iteration_count ? EFL.update_state(st, :fixed_depth, 0) : st

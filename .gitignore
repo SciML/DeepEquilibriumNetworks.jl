@@ -2,8 +2,7 @@
 wandb/
 .vscode
 data/
-/Manifest.toml
-docs/Manifest.toml
+Manifest.toml
 build
 statprof
 profs
