@@ -74,7 +74,7 @@ end
 evaluate(model, ps, st, ::Nothing) = nothing
 
 function evaluate(model, ps, st, dataloader)
-    st_eval = EFL.testmode(st)
+    st_eval = Lux.testmode(st)
     matches, total_loss, total_datasize, total_nfe, total_time = 0, 0, 0, 0, 0
     for (x, y) in CuIterator(dataloader)
         start_time = time()
@@ -136,7 +136,7 @@ function train_one_epoch(
         acc = sum(argmax.(eachcol(cpu(ŷ))) .== onecold(cpu(y))) / size(x, 4)
 
         iteration_count += 1
-        st = econfig.pretrain_steps == iteration_count ? EFL.update_state(st, :fixed_depth, 0) : st
+        st = econfig.pretrain_steps == iteration_count ? Lux.update_state(st, :fixed_depth, 0) : st
 
         # Run ParameterScheduler
         eta_new = ParameterSchedulers.next!(scheduler)
@@ -169,7 +169,7 @@ function train(
     opt_state = is_distributed() ? FluxMPI.synchronize!(opt_state; root_rank=0) : opt_state
     iteration_count = 0
 
-    st = econfig.pretrain_steps != 0 ? EFL.update_state(st, :fixed_depth, econfig.model_config.num_layers) : st
+    st = econfig.pretrain_steps != 0 ? Lux.update_state(st, :fixed_depth, econfig.model_config.num_layers) : st
 
     for epoch in 1:nepochs
         # Train 1 epoch

@@ -1,4 +1,4 @@
-using FastDEQExperiments, Flux, CUDA, Optimisers, Dates, FluxMPI
+using FastDEQExperiments, Lux, CUDA, Optimisers, Dates, FluxMPI
 
 # Distributed Training
 FluxMPI.Init(; verbose=true)

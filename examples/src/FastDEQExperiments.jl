@@ -6,6 +6,7 @@ using FastDEQ,
     OrdinaryDiffEq,
     FluxMPI,
     Format,
+    Funtors,
     Lux,
     MLDatasets,
     Optimisers,
@@ -18,6 +19,8 @@ using FastDEQ,
 
 import Flux: OneHotArray, onecold, onehotbatch, onehot
 import Flux.Losses: logitcrossentropy, mse
+import MLUtils: shuffleobs
+import MLDataPattern, MLUtils
 
 # Memory Management
 relieve_gc_pressure(::Union{Nothing,<:AbstractArray}) = nothing
@@ -41,5 +44,12 @@ include("train.jl")
 include("models.jl")
 # get_dataloaders
 include("dataloaders.jl")
+
+
+# Fallback since DataLoaders.jl still relies on MLDataPattern
+MLDataPattern.nobs(x) = MLUtils.numobs(x)
+MLDataPattern.getobs(d::Union{MLUtils.ObsView,MLDatasetsImageData,DistributedDataContainer}, i::Int64) =
+    MLUtils.getobs(d, i)
+
 
 end
