@@ -1,14 +1,13 @@
 # FastDEQ: (Fast) Deep Equlibrium Networks
 
-FastDEQ.jl is a framework built on top of [DifferentialEquations.jl](https://diffeq.sciml.ai/stable/) and [Flux.jl](https://fluxml.ai) enabling the efficient training and inference for Deep Equilibrium Networks (Infinitely Deep Neural Networks).
+FastDEQ.jl is a framework built on top of [DifferentialEquations.jl](https://diffeq.sciml.ai/stable/) and [Lux.jl](https://lux.csail.mit.edu/dev/) enabling the efficient training and inference for Deep Equilibrium Networks (Infinitely Deep Neural Networks).
 
 ## Installation
 
 Currently the package is not registered and requires manually installing a few dependencies. We are working towards upstream fixes which will make installation easier
 
 ```julia
-] add https://github.com/SciML/DiffEqSensitivity.jl.git#ap/fastdeq
-] add https://github.com/avik-pal/FluxExperimental.jl.git#main
+] add https://github.com/avik-pal/Lux.jl.git#main
 ] add https://github.com/SciML/FastDEQ.jl
 ```
 
@@ -28,13 +27,3 @@ If you are using this project for research or other academic purposes consider c
 ```
 
 For specific algorithms, check the respective documentations and cite the corresponding papers.
-
-## FAQs
-
-#### How do I reproduce the experiments in the paper -- *Mixing Implicit and Explicit Deep Learning with Skip DEQs and Infinite Time Neural ODEs (Continuous DEQs)*?
-
-Check out the `ap/paper` branch for the code corresponding to that paper.
-
-#### Are there some tutorials?
-
-We are working on adding some in the near future. In the meantime, please checkout the `experiments` directory in the `ap/paper` branch. You can also check `test/runtests.jl` for some simple examples.

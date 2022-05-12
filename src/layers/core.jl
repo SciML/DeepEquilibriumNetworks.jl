@@ -12,11 +12,11 @@ function initialstates(rng::AbstractRNG, deq::AbstractSkipDeepEquilibriumNetwork
     )
 end
 
-check_unrolled_mode(::Val{0}) = false
-check_unrolled_mode(::Val{d}) where {d} = d >= 1
-check_unrolled_mode(st::NamedTuple) = check_unrolled_mode(st.fixed_depth)
-get_unrolled_depth(::Val{d}) where {d} = d
-get_unrolled_depth(st::NamedTuple) = get_unrolled_depth(st.fixed_depth)
+@inline check_unrolled_mode(::Val{0}) = false
+@inline check_unrolled_mode(::Val{d}) where {d} = d >= 1
+@inline check_unrolled_mode(st::NamedTuple) = check_unrolled_mode(st.fixed_depth)
+@inline get_unrolled_depth(::Val{d}) where {d} = d
+@inline get_unrolled_depth(st::NamedTuple) = get_unrolled_depth(st.fixed_depth)
 
 """
     DeepEquilibriumSolution(z_star, u₀, residual, jacobian_loss, nfe)
