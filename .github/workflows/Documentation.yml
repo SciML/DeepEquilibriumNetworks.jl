@@ -17,7 +17,7 @@ jobs:
           version: '1'
       - name: Install dependencies
         # FIXME: Remove once Lux.jl is registered
-        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/avik-pal/Lux.jl"); Pkg.instantiate()'
+        run: julia --project=docs -e 'using Pkg; Pkg.add(url="https://github.com/avik-pal/Lux.jl"); Pkg.instantiate()'
       - name: Build and deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For authentication with GitHub Actions token
