@@ -34,7 +34,7 @@ end
     @test test_gradient_isfinite(gs)
 
     @info "Testing DEQ without Fixed Point Iterations"
-    st = Lux.update_state(st, :fixed_depth, 5)
+    st = Lux.update_state(st, :fixed_depth, Val(5))
 
     gs = gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)[1]
 
@@ -48,7 +48,7 @@ end
             Parallel(+, Dense(2, 2), Dense(2, 2)),
             Dense(2, 2),
             ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0, reltol_termination=0.1f0);
-            sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+            sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
         ),
     )
     ps, st = gpu.(Lux.setup(rng, model))
@@ -63,7 +63,7 @@ end
     @test test_gradient_isfinite(gs)
 
     @info "Testing SkipDEQ without Fixed Point Iterations"
-    st = Lux.update_state(st, :fixed_depth, 5)
+    st = Lux.update_state(st, :fixed_depth, Val(5))
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -80,7 +80,7 @@ end
             Parallel(+, Dense(2, 2), Dense(2, 2)),
             nothing,
             ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0, reltol_termination=0.1f0);
-            sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+            sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
         ),
     )
     ps, st = gpu.(Lux.setup(rng, model))
@@ -95,7 +95,7 @@ end
     @test test_gradient_isfinite(gs)
 
     @info "Testing SkipDEQV2 without Fixed Point Iterations"
-    st = Lux.update_state(st, :fixed_depth, 5)
+    st = Lux.update_state(st, :fixed_depth, Val(5))
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -112,7 +112,7 @@ end
             Parallel(+, Dense(2, 2), Dense(2, 2)),
             Dense(2, 2),
             DiscreteDEQSolver(BroydenSolver(); abstol_termination=0.1f0, reltol_termination=0.1f0);
-            sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+            sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
         ),
     )
     ps, st = gpu.(Lux.setup(rng, model))
@@ -134,7 +134,7 @@ end
             Parallel(+, Dense(2, 2), Dense(2, 2)),
             Dense(2, 2),
             DiscreteDEQSolver(LimitedMemoryBroydenSolver(); abstol_termination=0.1f0, reltol_termination=0.1f0);
-            sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+            sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
         ),
     )
     ps, st = gpu.(Lux.setup(rng, model))
@@ -166,7 +166,7 @@ end
         nothing,
         ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0, reltol_termination=0.1f0),
         ((4,), (3,), (2,), (1,));
-        sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+        sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
     )
 
     ps, st = gpu.(Lux.setup(rng, model))
@@ -181,7 +181,7 @@ end
     @test test_gradient_isfinite(gs)
 
     @info "Testing MultiScaleDEQ without Fixed Point Iterations"
-    st = Lux.update_state(st, :fixed_depth, 5)
+    st = Lux.update_state(st, :fixed_depth, Val(5))
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -209,7 +209,7 @@ end
         (Dense(4, 4, tanh), Dense(4, 3, tanh), Dense(4, 2, tanh), Dense(4, 1, tanh)),
         ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0, reltol_termination=0.1f0),
         ((4,), (3,), (2,), (1,));
-        sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+        sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
     )
 
     ps, st = gpu.(Lux.setup(rng, model))
@@ -224,7 +224,7 @@ end
     @test test_gradient_isfinite(gs)
 
     @info "Testing MultiScaleSkipDEQ without Fixed Point Iterations"
-    st = Lux.update_state(st, :fixed_depth, 5)
+    st = Lux.update_state(st, :fixed_depth, Val(5))
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -252,7 +252,7 @@ end
         nothing,
         ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0, reltol_termination=0.1f0),
         ((4,), (3,), (2,), (1,));
-        sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+        sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
     )
 
     ps, st = gpu.(Lux.setup(rng, model))
@@ -267,7 +267,7 @@ end
     @test test_gradient_isfinite(gs)
 
     @info "Testing MultiScaleSkipDEQV2 without Fixed Point Iterations"
-    st = Lux.update_state(st, :fixed_depth, 5)
+    st = Lux.update_state(st, :fixed_depth, Val(5))
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)

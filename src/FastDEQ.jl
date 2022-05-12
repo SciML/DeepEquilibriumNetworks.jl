@@ -19,6 +19,7 @@ using ChainRulesCore,
     UnPack,
     Zygote
 
+import DiffEqSensitivity: AbstractAdjointSensitivityAlgorithm
 import Lux: AbstractExplicitContainerLayer, initialparameters, initialstates, parameterlength, statelength
 import Random: AbstractRNG
 
@@ -47,7 +48,7 @@ include("adjoint.jl")
 export ContinuousDEQSolver, DiscreteDEQSolver, BroydenSolver, LimitedMemoryBroydenSolver
 
 # Utils
-export NormalInitializer, SteadyStateAdjoint, compute_deq_jacobian_loss, DeepEquilibriumSolution
+export NormalInitializer, DeepEquilibriumAdjoint, compute_deq_jacobian_loss, DeepEquilibriumSolution
 
 export DeepEquilibriumNetwork,
     SkipDeepEquilibriumNetwork, MultiScaleDeepEquilibriumNetwork, MultiScaleSkipDeepEquilibriumNetwork, DEQChain

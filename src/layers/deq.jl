@@ -6,7 +6,7 @@ struct DeepEquilibriumNetwork{J,M,A,S,K} <: AbstractDeepEquilibriumNetwork
 end
 
 function DeepEquilibriumNetwork(
-    model, solver; jacobian_regularization::Bool=false, sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10), kwargs...
+    model, solver; jacobian_regularization::Bool=false, sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10), kwargs...
 )
     return DeepEquilibriumNetwork{jacobian_regularization,typeof(model),typeof(solver),typeof(sensealg),typeof(kwargs)}(
         model, solver, sensealg, kwargs
@@ -18,16 +18,16 @@ function (deq::DeepEquilibriumNetwork{J})(
 ) where {J,T}
     z = zero(x)
 
-    if !iszero(st.fixed_depth)
+    if check_unrolled_mode(st)
         # Pretraining without Fixed Point Solving
         st_ = st.model
         z_star = z
-        for _ in 1:(st.fixed_depth)
+        for _ in 1:get_unrolled_depth(st)
             z_star, st_ = deq.model((z_star, x), ps, st_)
         end
         @set! st.model = Lux.update_state(st_, :update_mask, true)
 
-        return (z_star, DeepEquilibriumSolution(z_star, z, z, 0.0f0, st.fixed_depth)), st
+        return (z_star, DeepEquilibriumSolution(z_star, z, z, 0.0f0, get_unrolled_depth(st))), st
     end
 
     st_ = st.model
@@ -62,7 +62,7 @@ function SkipDeepEquilibriumNetwork(
     shortcut,
     solver;
     jacobian_regularization::Bool=false,
-    sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+    sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
     kwargs...,
 )
     return SkipDeepEquilibriumNetwork{
@@ -82,16 +82,16 @@ function (deq::SkipDeepEquilibriumNetwork{J,M,S})(
     end
     @set! st.shortcut = st__
 
-    if !iszero(st.fixed_depth)
+    if check_unrolled_mode(st)
         # Pretraining without Fixed Point Solving
         st_ = st.model
         z_star = z
-        for _ in 1:(st.fixed_depth)
+        for _ in 1:get_unrolled_depth(st)
             z_star, st_ = deq.model((z_star, x), ps.model, st_)
         end
         @set! st.model = Lux.update_state(st_, :update_mask, true)
 
-        return (z_star, DeepEquilibriumSolution(z_star, z, z, 0.0f0, st.fixed_depth)), st
+        return (z_star, DeepEquilibriumSolution(z_star, z, z, 0.0f0, get_unrolled_depth(st))), st
     end
 
     st_ = st.model

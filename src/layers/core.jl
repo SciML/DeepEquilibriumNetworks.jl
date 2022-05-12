@@ -1,16 +1,22 @@
 abstract type AbstractDeepEquilibriumNetwork <: AbstractExplicitContainerLayer{(:model,)} end
 
 function initialstates(rng::AbstractRNG, deq::AbstractDeepEquilibriumNetwork)
-    return (model=initialstates(rng, deq.model), fixed_depth=0)
+    return (model=initialstates(rng, deq.model), fixed_depth=Val(0))
 end
 
 abstract type AbstractSkipDeepEquilibriumNetwork <: AbstractExplicitContainerLayer{(:model,:shortcut)} end
 
 function initialstates(rng::AbstractRNG, deq::AbstractSkipDeepEquilibriumNetwork)
     return (
-        model=initialstates(rng, deq.model), shortcut=initialstates(rng, deq.shortcut), fixed_depth=0
+        model=initialstates(rng, deq.model), shortcut=initialstates(rng, deq.shortcut), fixed_depth=Val(0)
     )
 end
+
+check_unrolled_mode(::Val{0}) = false
+check_unrolled_mode(::Val{d}) where {d} = d >= 1
+check_unrolled_mode(st::NamedTuple) = check_unrolled_mode(st.fixed_depth)
+get_unrolled_depth(::Val{d}) where {d} = d
+get_unrolled_depth(st::NamedTuple) = get_unrolled_depth(st.fixed_depth)
 
 """
     DeepEquilibriumSolution(z_star, u₀, residual, jacobian_loss, nfe)

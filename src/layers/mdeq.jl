@@ -7,7 +7,7 @@ struct MultiScaleDeepEquilibriumNetwork{N,L,M,A,S,K} <: AbstractDeepEquilibriumN
 end
 
 function initialstates(rng::AbstractRNG, deq::MultiScaleDeepEquilibriumNetwork)
-    return (model=initialstates(rng, deq.model), split_idxs=Tuple(vcat(0, cumsum(prod.(deq.scales))...)), fixed_depth=0)
+    return (model=initialstates(rng, deq.model), split_idxs=Tuple(vcat(0, cumsum(prod.(deq.scales))...)), fixed_depth=Val(0))
 end
 
 function MultiScaleDeepEquilibriumNetwork(
@@ -16,7 +16,7 @@ function MultiScaleDeepEquilibriumNetwork(
     post_fuse_layer::Union{Nothing,Tuple},
     solver,
     scales;
-    sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+    sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
     kwargs...,
 )
     l1 = Parallel(nothing, main_layers...)
@@ -46,17 +46,17 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(
 ) where {N,T}
     z, st = get_initial_condition_mdeq(deq.scales, x, st)
 
-    if !iszero(st.fixed_depth)
+    if check_unrolled_mode(st)
         z_star = split_and_reshape(z, st.split_idxs, deq.scales)
         st_ = st.model
 
-        for _ in 1:(st.fixed_depth)
+        for _ in 1:get_unrolled_depth(st)
             z_star, st_ = deq.model(((z_star[1], x), z_star[2:N]...), ps, st_)
         end
 
         @set! st.model = Lux.update_state(st_, :update_mask, true)
 
-        return (z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, z, 0.0f0, st.fixed_depth)), st
+        return (z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, z, 0.0f0, get_unrolled_depth(st))), st
     end
 
     st_ = st.model
@@ -96,7 +96,7 @@ function initialstates(rng::AbstractRNG, deq::MultiScaleSkipDeepEquilibriumNetwo
         model=initialstates(rng, deq.model),
         shortcut=initialstates(rng, deq.shortcut),
         split_idxs=Tuple(vcat(0, cumsum(prod.(deq.scales))...)),
-        fixed_depth=0,
+        fixed_depth=Val(0),
     )
 end
 
@@ -107,7 +107,7 @@ function MultiScaleSkipDeepEquilibriumNetwork(
     shortcut_layers::Union{Nothing,Tuple},
     solver,
     scales;
-    sensealg=SteadyStateAdjoint(0.1f0, 0.1f0, 10),
+    sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
     kwargs...,
 )
     l1 = Parallel(nothing, main_layers...)
@@ -141,17 +141,17 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,L,M,Sh})(
         (vcat(flatten.(z0)...), st)
     end
 
-    if !iszero(st.fixed_depth)
+    if check_unrolled_mode(st)
         z_star = split_and_reshape(z, st.split_idxs, deq.scales)
         st_ = st.model
 
-        for _ in 1:(st.fixed_depth)
+        for _ in 1:get_unrolled_depth(st)
             z_star, st_ = deq.model(((z_star[1], x), z_star[2:N]...), ps.model, st_)
         end
 
         @set! st.model = Lux.update_state(st_, :update_mask, true)
 
-        return (z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, z, 0.0f0, st.fixed_depth)), st
+        return (z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, z, 0.0f0, get_unrolled_depth(st))), st
     end
 
     st_ = st.model
