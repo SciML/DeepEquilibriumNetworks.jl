@@ -29,12 +29,16 @@ end
     x = gpu(rand(rng, Float32, 2, 1))
     y = gpu(rand(rng, Float32, 2, 1))
 
+    @inferred model(x, ps, st)
+
     gs = gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)[1]
 
     @test test_gradient_isfinite(gs)
 
     @info "Testing DEQ without Fixed Point Iterations"
     st = Lux.update_state(st, :fixed_depth, Val(5))
+
+    @inferred model(x, ps, st)
 
     gs = gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)[1]
 
@@ -54,6 +58,8 @@ end
     ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 2, 1))
     y = gpu(rand(rng, Float32, 2, 1))
+    
+    @inferred model(x, ps, st)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -64,6 +70,8 @@ end
 
     @info "Testing SkipDEQ without Fixed Point Iterations"
     st = Lux.update_state(st, :fixed_depth, Val(5))
+    
+    @inferred model(x, ps, st)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -86,6 +94,8 @@ end
     ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 2, 1))
     y = gpu(rand(rng, Float32, 2, 1))
+    
+    @inferred model(x, ps, st)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -96,6 +106,8 @@ end
 
     @info "Testing SkipDEQV2 without Fixed Point Iterations"
     st = Lux.update_state(st, :fixed_depth, Val(5))
+    
+    @inferred model(x, ps, st)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -118,6 +130,8 @@ end
     ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 2, 1))
     y = gpu(rand(rng, Float32, 2, 1))
+    
+    @inferred model(x, ps, st)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -140,6 +154,8 @@ end
     ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 2, 1))
     y = gpu(rand(rng, Float32, 2, 1))
+    
+    @inferred model(x, ps, st)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -172,6 +188,8 @@ end
     ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 4, 2))
     y = tuple([gpu(rand(rng, Float32, i, 2)) for i in 4:-1:1]...)
+    
+    @inferred model(x, ps, st)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -182,6 +200,8 @@ end
 
     @info "Testing MultiScaleDEQ without Fixed Point Iterations"
     st = Lux.update_state(st, :fixed_depth, Val(5))
+    
+    @inferred model(x, ps, st)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -215,6 +235,8 @@ end
     ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 4, 2))
     y = tuple([gpu(rand(rng, Float32, i, 2)) for i in 4:-1:1]...)
+    
+    @inferred model(x, ps, st)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -225,6 +247,8 @@ end
 
     @info "Testing MultiScaleSkipDEQ without Fixed Point Iterations"
     st = Lux.update_state(st, :fixed_depth, Val(5))
+    
+    @inferred model(x, ps, st)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -258,6 +282,8 @@ end
     ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 4, 2))
     y = tuple([gpu(rand(rng, Float32, i, 2)) for i in 4:-1:1]...)
+    
+    @inferred model(x, ps, st)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
@@ -268,6 +294,8 @@ end
 
     @info "Testing MultiScaleSkipDEQV2 without Fixed Point Iterations"
     st = Lux.update_state(st, :fixed_depth, Val(5))
+    
+    @inferred model(x, ps, st)
 
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)

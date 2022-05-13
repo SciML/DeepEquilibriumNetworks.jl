@@ -53,22 +53,30 @@ function NormalInitializer(μ=0.0f0, σ²=0.01f0)
 end
 
 # For MultiScale DEQs
-function split_and_reshape(x::AbstractMatrix, idxs::Tuple, shapes::Tuple)
-    return Tuple(@view(x[reshape((idxs[i] + 1):idxs[i + 1], shapes[i]...), :]) for i in 1:(length(idxs) - 1))
+@generated function split_and_reshape(x::AbstractMatrix, ::T, ::S) where {T,S}
+    idxs, shapes = known(T), known(S)
+    dims = [reshape((idxs[i] + 1):idxs[i + 1], shapes[i]...) for i in 1:(length(idxs) - 1)]
+    varnames = [gensym("x_view") for _ in dims]
+    calls = []
+    for (i, dim) in enumerate(dims)
+        push!(calls, :($(varnames[i]) = view(x, $dim, :)))
+    end
+    push!(calls, :(return tuple($(Tuple(varnames)...))))
+    return Expr(:block, calls...)
 end
 
 # Zygote Fix
-function Zygote.accum(x::NTuple{N,T}, y::AbstractVector{T}) where {N,T<:AbstractArray}
-    return Zygote.accum.(x, y)
-end
+# function Zygote.accum(x::NTuple{N,T}, y::AbstractVector{T}) where {N,T<:AbstractArray}
+#     return Zygote.accum.(x, y)
+# end
 
-function Zygote.accum(x::AbstractVector{T}, y::NTuple{N,T}) where {N,T<:AbstractArray}
-    return Zygote.accum.(x, y)
-end
+# function Zygote.accum(x::AbstractVector{T}, y::NTuple{N,T}) where {N,T<:AbstractArray}
+#     return Zygote.accum.(x, y)
+# end
 
-function Zygote.accum(x::AbstractVector{T}, y::NTuple{N,Nothing}) where {N,T<:AbstractArray}
-    return Zygote.accum.(x, y)
-end
+# function Zygote.accum(x::AbstractVector{T}, y::NTuple{N,Nothing}) where {N,T<:AbstractArray}
+#     return Zygote.accum.(x, y)
+# end
 
 # General Utils
 @inline function _init_identity_matrix(x::AbstractArray{T}, scale::T=T(1)) where {T}
@@ -78,17 +86,12 @@ end
 
 @inline function _init_identity_matrix!(x::AbstractMatrix{T}, scale::T=T(1)) where {T}
     x .= zero(T)
-    idxs = diagind(x)
-    @. @view(x[idxs]) = scale * true
+    view(x, diagind(x)) .= scale .* true
     return x
 end
 
-@inline function _norm(x; dims=Colon())
-    return sqrt.(sum(abs2, x; dims=dims))
-end
+@inline _norm(x; dims=Colon()) = sqrt.(sum(abs2, x; dims=dims))
 
 # Compute norm over all dimensions except `except_dim`
-@inline function _norm(x::AbstractArray{T,N}, except_dim) where {T,N}
-    dims = filter(i -> i != except_dim, 1:N)
-    return _norm(x; dims=dims)
-end
+@inline _norm(x::AbstractArray{T,N}, except_dim) where {T,N} =
+    _norm(x; dims=filter(i -> i != except_dim, 1:N))

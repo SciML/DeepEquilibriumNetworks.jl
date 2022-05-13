@@ -1,3 +1,14 @@
+"""
+    DEQChain(layers...)
+
+Sequence of layers divided into 3 chunks --
+
+* `pre_deq` -- layers that are executed before DEQ is applied
+* `deq` -- The Deep Equilibrium Layer
+* `post_deq` -- layers that are executed after DEQ is applied
+
+Constraint: Must have one DEQ layer in `layers`
+"""
 struct DEQChain{P1,D,P2} <: AbstractExplicitContainerLayer{(:pre_deq, :deq, :post_deq)}
     pre_deq::P1
     deq::D

@@ -47,11 +47,7 @@ function DiffEqBase._concrete_solve_adjoint(
     sol = solve(_prob, alg, args...; kwargs...)
     _save_idxs = save_idxs === nothing ? Colon() : save_idxs
 
-    if save_idxs === nothing
-        out = sol
-    else
-        out = DiffEqBase.sensitivity_solution(sol, sol[_save_idxs])
-    end
+    out = save_idxs === nothing ? sol : DiffEqBase.sensitivity_solution(sol, sol[_save_idxs])
 
     function steadystatebackpass(Δ)
         # Δ = dg/dx or diffcache.dg_val
@@ -67,6 +63,7 @@ function DiffEqBase._concrete_solve_adjoint(
             ntuple(_ -> NoTangent(), length(args))...,
         )
     end
+
     return out, steadystatebackpass
 end
 
