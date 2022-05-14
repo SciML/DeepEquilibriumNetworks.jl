@@ -1,4 +1,4 @@
-@generated function evaluate_unrolled_deq(model, z_star::NTuple{N}, x, ps, st, ::Val{depth}) where {N,depth}
+@generated function evaluate_unrolled_mdeq(model, z_star::NTuple{N}, x, ps, st, ::Val{depth}) where {N,depth}
     calls = []
     for _ in 1:depth
         push!(calls, :((z_star, st) = model(((z_star[1], x), z_star[2:($N)]...), ps, st)))
@@ -112,11 +112,11 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(
 
     if check_unrolled_mode(st)
         z_star = split_and_reshape(z, st.split_idxs, deq.scales)
-        z_star, st_ = evaluate_unrolled_deq(deq.model, z_star, x, ps, st.model, st.fixed_depth)
+        z_star, st_ = evaluate_unrolled_mdeq(deq.model, z_star, x, ps, st.model, st.fixed_depth)
 
         residual = ignore_derivatives(
             vcat(flatten.(z_star)...) .-
-            vcat(flatten.(evaluate_unrolled_deq(deq.model, z_star, x, ps, st_, Val(1))[1])...),
+            vcat(flatten.(evaluate_unrolled_mdeq(deq.model, z_star, x, ps, st_, Val(1))[1])...),
         )
         st__ = merge(st, (model=Lux.update_state(st_, :update_mask, Val(true)),))
 
@@ -271,19 +271,19 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,Sc,M,Sh})(
         u0, st_ = get_initial_condition_mdeq(deq.scales, x, st)
         u0_ = split_and_reshape(u0, st.split_idxs, deq.scales)
         z0, st__ = deq.model(((u0_[1], x), u0_[2:N]...), ps.model, st_.model)
-        (vcat(flatten.(z0)...), merge(st_, (model=st__,))::typeof(st))
+        (vcat(flatten.(z0)...), merge(st_, (model=st__,)))
     else
         z0, st_ = deq.shortcut(x, ps.shortcut, st.shortcut)
-        (vcat(flatten.(z0)...), merge(st, (shortcut=st_,))::typeof(st))
+        (vcat(flatten.(z0)...), merge(st, (shortcut=st_,)))
     end
 
     if check_unrolled_mode(st)
         z_star = split_and_reshape(z, st.split_idxs, deq.scales)
-        z_star, st_ = evaluate_unrolled_deq(deq.model, z_star, x, ps.model, st.model, st.fixed_depth)
+        z_star, st_ = evaluate_unrolled_mdeq(deq.model, z_star, x, ps.model, st.model, st.fixed_depth)
 
         residual = ignore_derivatives(
             vcat(flatten.(z_star)...) .-
-            vcat(flatten.(evaluate_unrolled_deq(deq.model, z_star, x, ps.model, st_, Val(1))[1])...),
+            vcat(flatten.(evaluate_unrolled_mdeq(deq.model, z_star, x, ps.model, st_, Val(1))[1])...),
         )
         st__ = merge(st, (model=Lux.update_state(st_, :update_mask, Val(true)),))
 
