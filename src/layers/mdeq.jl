@@ -118,7 +118,7 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(
             vcat(flatten.(z_star)...) .-
             vcat(flatten.(evaluate_unrolled_deq(deq.model, z_star, x, ps, st_, Val(1))[1])...),
         )
-        st__ = merge(st, (model=Lux.update_state(st_, :update_mask, Val(true)),))::typeof(st)
+        st__ = merge(st, (model=Lux.update_state(st_, :update_mask, Val(true)),))
 
         return (
             (z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0, get_unrolled_depth(st))),
@@ -141,7 +141,8 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(
     z_star, st_ = dudt_(sol.u, ps, nothing)
 
     residual = ignore_derivatives(dudt(sol.u, ps, nothing))
-    st__ = merge(st, (model=Lux.update_state(st_, :update_mask, Val(true)),))::typeof(st)
+
+    st__ = merge(st, (model=Lux.update_state(st_, :update_mask, Val(true)),))
 
     return ((z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0, sol.destats.nf + 1)), st__)
 end
@@ -284,7 +285,7 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,Sc,M,Sh})(
             vcat(flatten.(z_star)...) .-
             vcat(flatten.(evaluate_unrolled_deq(deq.model, z_star, x, ps.model, st_, Val(1))[1])...),
         )
-        st__ = merge(st, (model=Lux.update_state(st_, :update_mask, Val(true)),))::typeof(st)
+        st__ = merge(st, (model=Lux.update_state(st_, :update_mask, Val(true)),))
 
         return (
             (z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0, get_unrolled_depth(st))),
@@ -308,7 +309,7 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,Sc,M,Sh})(
 
     residual = ignore_derivatives(dudt(sol.u, ps.model, nothing))
 
-    st__ = merge(st, (model=Lux.update_state(st_, :update_mask, Val(true)),))::typeof(st)
+    st__ = merge(st, (model=Lux.update_state(st_, :update_mask, Val(true)),))
 
     return ((z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0, sol.destats.nf + 1)), st)
 end

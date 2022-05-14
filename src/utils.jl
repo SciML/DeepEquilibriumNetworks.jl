@@ -65,19 +65,6 @@ end
     return Expr(:block, calls...)
 end
 
-# Zygote Fix
-# function Zygote.accum(x::NTuple{N,T}, y::AbstractVector{T}) where {N,T<:AbstractArray}
-#     return Zygote.accum.(x, y)
-# end
-
-# function Zygote.accum(x::AbstractVector{T}, y::NTuple{N,T}) where {N,T<:AbstractArray}
-#     return Zygote.accum.(x, y)
-# end
-
-# function Zygote.accum(x::AbstractVector{T}, y::NTuple{N,Nothing}) where {N,T<:AbstractArray}
-#     return Zygote.accum.(x, y)
-# end
-
 # General Utils
 @inline function _init_identity_matrix(x::AbstractArray{T}, scale::T=T(1)) where {T}
     x_ = vec(x)
