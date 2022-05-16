@@ -52,19 +52,6 @@ function NormalInitializer(μ=0.0f0, σ²=0.01f0)
     return (rng::AbstractRNG, dims...) -> randn(rng, Float32, dims...) .* σ² .+ μ
 end
 
-# Zygote Fix
-function Zygote.accum(x::NTuple{N,T}, y::AbstractVector{T}) where {N,T<:AbstractArray}
-    return Zygote.accum.(x, y)
-end
-
-function Zygote.accum(x::AbstractVector{T}, y::NTuple{N,T}) where {N,T<:AbstractArray}
-    return Zygote.accum.(x, y)
-end
-
-function Zygote.accum(x::AbstractVector{T}, y::NTuple{N,Nothing}) where {N,T<:AbstractArray}
-    return Zygote.accum.(x, y)
-end
-
 # For MultiScale DEQs
 @generated function split_and_reshape(x::AbstractMatrix, ::T, ::S) where {T,S}
     idxs, shapes = known(T), known(S)

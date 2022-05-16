@@ -60,7 +60,7 @@ function (deq::DeepEquilibriumNetwork{J})(
         end
 
         residual = ignore_derivatives(z_star .- deq.model((z_star, x), ps, st.model)[1])
-        @set! st.model = Lux.update_state(st_, :update_mask, Val(true))
+        st = merge(st, (model=st_,))
 
         return (z_star, DeepEquilibriumSolution(z_star, z, residual, 0.0f0, get_unrolled_depth(st))), st
     end
@@ -79,7 +79,7 @@ function (deq::DeepEquilibriumNetwork{J})(
     jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps, st.model, z_star, x) : T(0))
     residual = ignore_derivatives(z_star .- deq.model((z_star, x), ps, st.model)[1])
 
-    @set! st.model = Lux.update_state(st_, :update_mask, Val(true))
+    st = merge(st, (model=st_,))
 
     return (z_star, DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J)), st
 end
@@ -163,12 +163,13 @@ end
 function (deq::SkipDeepEquilibriumNetwork{J,M,S})(
     x::AbstractArray{T}, ps::Union{ComponentArray,NamedTuple}, st::NamedTuple
 ) where {J,M,S,T}
-    z, st__ = if S == Nothing
-        deq.model((zero(x), x), ps.model, st.model)
+    z, st = if S == Nothing
+        z__, st__ = deq.model((zero(x), x), ps.model, st.model)
+        z__, merge(st, (model=st__,))
     else
-        deq.shortcut(x, ps.shortcut, st.shortcut)
+        z__, st__ = deq.shortcut(x, ps.shortcut, st.shortcut)
+        z__, merge(st, (shortcut=st__,))
     end
-    @set! st.shortcut = st__
 
     if check_unrolled_mode(st)
         # Pretraining without Fixed Point Solving
@@ -179,7 +180,7 @@ function (deq::SkipDeepEquilibriumNetwork{J,M,S})(
         end
 
         residual = ignore_derivatives(z_star .- deq.model((z_star, x), ps.model, st.model)[1])
-        @set! st.model = Lux.update_state(st_, :update_mask, Val(true))
+        st = merge(st, (model=st_,))
 
         return (z_star, DeepEquilibriumSolution(z_star, z, residual, 0.0f0, get_unrolled_depth(st))), st
     end
@@ -198,7 +199,7 @@ function (deq::SkipDeepEquilibriumNetwork{J,M,S})(
     jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps.model, st.model, z_star, x) : T(0))
     residual = ignore_derivatives(z_star .- deq.model((z_star, x), ps.model, st.model)[1])
 
-    @set! st.model = Lux.update_state(st_, :update_mask, Val(true))
+    st = merge(st, (model=st_,))
 
     return (z_star, DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J)), st
 end

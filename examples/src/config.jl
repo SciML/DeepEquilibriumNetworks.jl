@@ -1,175 +1,4 @@
-abstract type AbstractTaskModelConfiguration end
-
-# Predefined Image Classification Models
-Base.@kwdef struct ImageClassificationModelConfiguration{N} <: AbstractTaskModelConfiguration
-    num_layers::Int
-    num_classes::Int
-    dropout_rate::Float32
-    group_count::Int
-    weight_norm::Bool
-    downsample_times::Int
-    expansion_factor::Int
-    post_gn_affine::Bool
-    image_size::Tuple{Int,Int}
-
-    num_modules::Int
-    num_branches::Int
-    block_type::Symbol
-    big_kernels::NTuple{N,Int}
-    head_channels::NTuple{N,Int}
-    num_blocks::NTuple{N,Int}
-    num_channels::NTuple{N,Int}
-
-    fuse_method::Symbol
-    final_channelsize::Int
-
-    fwd_maxiters::Int
-    bwd_maxiters::Int
-    model_type::Symbol
-    continuous::Bool
-
-    # Specific for Continuous Models
-    abstol::Float32 = 5f-2
-    reltol::Float32 = 5f-2
-    stop_mode::Symbol = :rel_norm
-    ode_solver = VCAB3()
-end
-
-function get_model_config(dataset::Symbol, model_size::Symbol; kwargs...)
-    if dataset == :CIFAR10
-        if model_size == :TINY
-            return ImageClassificationModelConfiguration{2}(;
-                num_layers=10,
-                num_classes=10,
-                dropout_rate=0.25f0,
-                group_count=8,
-                weight_norm=true,
-                downsample_times=0,
-                expansion_factor=5,
-                post_gn_affine=false,
-                image_size=(32, 32),
-                num_modules=1,
-                num_branches=2,
-                block_type=:basic,
-                big_kernels=(0, 0),
-                head_channels=(8, 16),
-                num_blocks=(1, 1),
-                num_channels=(24, 24),
-                fuse_method=:sum,
-                final_channelsize=200,
-                fwd_maxiters=18,
-                bwd_maxiters=20,
-                kwargs...
-            )
-        elseif model_size == :LARGE
-            return ImageClassificationModelConfiguration{4}(;
-                num_layers=10,
-                num_classes=10,
-                dropout_rate=0.3f0,
-                group_count=8,
-                weight_norm=true,
-                downsample_times=0,
-                expansion_factor=5,
-                post_gn_affine=false,
-                image_size=(32, 32),
-                num_modules=1,
-                num_branches=4,
-                block_type=:basic,
-                big_kernels=(0, 0, 0, 0),
-                head_channels=(14, 28, 56, 112),
-                num_blocks=(1, 1, 1, 1),
-                num_channels=(32, 64, 128, 256),
-                fuse_method=:sum,
-                final_channelsize=1680,
-                fwd_maxiters=18,
-                bwd_maxiters=20,
-                kwargs...
-            )
-        else
-            throw(ArgumentError("`model_size` must be one of `[:TINY, :LARGE]`"))
-        end
-    elseif dataset == :IMAGENET
-        if model_size == :SMALL
-            return ImageClassificationModelConfiguration{4}(;
-                num_layers=4,
-                num_classes=1000,
-                dropout_rate=0.0f0,
-                group_count=8,
-                weight_norm=true,
-                downsample_times=2,
-                expansion_factor=5,
-                post_gn_affine=true,
-                image_size=(224, 224),
-                num_modules=1,
-                num_branches=4,
-                block_type=:basic,
-                big_kernels=(0, 0, 0, 0),
-                head_channels=(24, 48, 96, 192),
-                num_blocks=(1, 1, 1, 1),
-                num_channels=(32, 64, 128, 256),
-                fuse_method=:sum,
-                final_channelsize=2048,
-                fwd_maxiters=27,
-                bwd_maxiters=28,
-                kwargs...
-            )
-        elseif model_size == :LARGE
-            return ImageClassificationModelConfiguration{4}(;
-                num_layers=4,
-                num_classes=1000,
-                dropout_rate=0.0f0,
-                group_count=8,
-                weight_norm=true,
-                downsample_times=2,
-                expansion_factor=5,
-                post_gn_affine=true,
-                image_size=(224, 224),
-                num_modules=1,
-                num_branches=4,
-                block_type=:basic,
-                big_kernels=(0, 0, 0, 0),
-                head_channels=(32, 64, 128, 256),
-                num_blocks=(1, 1, 1, 1),
-                num_channels=(80, 160, 320, 640),
-                fuse_method=:sum,
-                final_channelsize=2048,
-                fwd_maxiters=27,
-                bwd_maxiters=28,
-                kwargs...
-            )
-        elseif model_size == :XL
-            return ImageClassificationModelConfiguration{4}(;
-                num_layers=4,
-                num_classes=1000,
-                dropout_rate=0.0f0,
-                group_count=8,
-                weight_norm=true,
-                downsample_times=2,
-                expansion_factor=5,
-                post_gn_affine=true,
-                image_size=(224, 224),
-                num_modules=1,
-                num_branches=4,
-                block_type=:basic,
-                big_kernels=(0, 0, 0, 0),
-                head_channels=(32, 64, 128, 256),
-                num_blocks=(1, 1, 1, 1),
-                num_channels=(88, 176, 352, 704),
-                fuse_method=:sum,
-                final_channelsize=2048,
-                fwd_maxiters=27,
-                bwd_maxiters=28,
-                kwargs...
-            )
-        else
-            throw(ArgumentError("`model_size` must be one of `[:SMALL, :LARGE, :XL]`"))
-        end
-    else
-        throw(ArgumentError("`dataset` must be one of `[:CIFAR10]`"))
-    end
-end
-
-function compute_feature_scales(config::ImageClassificationModelConfiguration)
+function compute_feature_scales(config)
     image_size = config.image_size
     image_size_downsampled = image_size
     for _ in 1:(config.downsample_times)
@@ -182,120 +11,204 @@ function compute_feature_scales(config::ImageClassificationModelConfiguration)
     return Tuple(scales)
 end
 
-# Experiment Configuration
-Base.@kwdef struct ExperimentConfiguration{M<:AbstractTaskModelConfiguration}
-    model_config::M
-
-    # Eval
-    eval_batchsize::Int
-    eval_datasize_per_process::Int
-
-    # Train
-    train_batchsize::Int
-    train_datasize_per_process::Int
-    nepochs::Int
-    pretrain_steps::Int
-
-    # Optimiser
-    lr_scheduler::Symbol
-    optimiser::Symbol
-    eta::Float32
-    momentum::Float32
-    nesterov::Bool
-    weight_decay::Float32
+function get_default_experiment_configuration(::Val{:CIFAR10}, ::Val{:TINY})
+    return (
+        num_layers=10,
+        num_classes=10,
+        dropout_rate=0.25f0,
+        group_count=8,
+        weight_norm=true,
+        downsample_times=0,
+        expansion_factor=5,
+        post_gn_affine=false,
+        image_size=(32, 32),
+        num_modules=1,
+        num_branches=2,
+        block_type=:basic,
+        big_kernels=(0, 0),
+        head_channels=(8, 16),
+        num_blocks=(1, 1),
+        num_channels=(24, 24),
+        fuse_method=:sum,
+        final_channelsize=200,
+        fwd_maxiters=18,
+        bwd_maxiters=20,
+        continuous=true,
+        stop_mode=:rel_norm,
+        nepochs=50,
+        jfb=false,
+        augment=false,
+        model_type=:VANILLA,
+        abstol=5.0f-2,
+        reltol=5.0f-2,
+        ode_solver=VCABM3(),
+        pretrain_steps=3000 ÷ scaling_factor(),
+        lr_scheduler=:COSINE,
+        optimiser=:ADAM,
+        eta=0.001f0 * scaling_factor(),
+        eval_datasize_per_process=10000 ÷ scaling_factor(),
+        train_datasize_per_process=50000 ÷ scaling_factor(),
+    )
 end
 
-function get_experiment_config(dataset::Symbol, model_size::Symbol; kwargs...)
-    if dataset == :CIFAR10
-        if model_size == :TINY
-            return ExperimentConfiguration(
-                model_config=get_model_config(dataset, model_size; kwargs...),
-                eval_batchsize=128,
-                train_batchsize=128,
-                nepochs=50,
-                pretrain_steps=3000 ÷ (is_distributed() ? total_workers() : 1),
-                lr_scheduler=:COSINE,
-                optimiser=:ADAM,
-                eta=0.001f0 / 2 * (is_distributed() ? total_workers() : 1),
-                weight_decay=0.0f0,
-                momentum=0.9f0,
-                nesterov=true,
-                eval_datasize_per_process=10000 ÷ (is_distributed() ? total_workers() : 1),
-                train_datasize_per_process=50000 ÷ (is_distributed() ? total_workers() : 1),
-            )
-        elseif model_size == :LARGE
-            return ExperimentConfiguration(
-                model_config=get_model_config(dataset, model_size; kwargs...),
-                eval_batchsize=32,
-                train_batchsize=32,
-                nepochs=220,
-                pretrain_steps=20000 ÷ (is_distributed() ? total_workers() : 1),
-                lr_scheduler=:COSINE,
-                optimiser=:ADAM,
-                eta=0.001f0 / 4 * (is_distributed() ? total_workers() : 1),
-                weight_decay=0.0f0,
-                momentum=0.9f0,
-                nesterov=true,
-                eval_datasize_per_process=10000 ÷ (is_distributed() ? total_workers() : 1),
-                train_datasize_per_process=50000 ÷ (is_distributed() ? total_workers() : 1),
-            )
-        else
-            throw(ArgumentError("`model_size` must be one of `[:TINY, :LARGE]`"))
-        end
-    elseif dataset == :IMAGENET
-        if model_size == :SMALL
-            return ExperimentConfiguration(
-                model_config=get_model_config(dataset, model_size; kwargs...),
-                eval_batchsize=32,
-                train_batchsize=32,
-                nepochs=100,
-                pretrain_steps=510000 ÷ (is_distributed() ? total_workers() : 1),
-                lr_scheduler=:COSINE,
-                optimiser=:SGD,
-                eta=0.05f0 / 4 * (is_distributed() ? total_workers() : 1),
-                weight_decay=0.00005f0,
-                momentum=0.9f0,
-                nesterov=true,
-                eval_datasize_per_process=50000 ÷ (is_distributed() ? total_workers() : 1),
-                train_datasize_per_process=1281166 ÷ (is_distributed() ? total_workers() : 1),
-            )
-        elseif model_size == :LARGE
-            return ExperimentConfiguration(
-                model_config=get_model_config(dataset, model_size; kwargs...),
-                eval_batchsize=32,
-                train_batchsize=32,
-                nepochs=100,
-                pretrain_steps=510000 ÷ (is_distributed() ? total_workers() : 1),
-                lr_scheduler=:COSINE,
-                optimiser=:SGD,
-                eta=0.05f0 / 4 * (is_distributed() ? total_workers() : 1),
-                weight_decay=0.00005f0,
-                momentum=0.9f0,
-                nesterov=true,
-                eval_datasize_per_process=50000 ÷ (is_distributed() ? total_workers() : 1),
-                train_datasize_per_process=1281166 ÷ (is_distributed() ? total_workers() : 1),
-            )
-        elseif model_size == :XL
-            return ExperimentConfiguration(
-                model_config=get_model_config(dataset, model_size; kwargs...),
-                eval_batchsize=32,
-                train_batchsize=32,
-                nepochs=100,
-                pretrain_steps=510000 ÷ (is_distributed() ? total_workers() : 1),
-                lr_scheduler=:COSINE,
-                optimiser=:SGD,
-                eta=0.05f0 / 8 * (is_distributed() ? total_workers() : 1),
-                weight_decay=0.00005f0,
-                momentum=0.9f0,
-                nesterov=true,
-                eval_datasize_per_process=50000 ÷ (is_distributed() ? total_workers() : 1),
-                train_datasize_per_process=1281166 ÷ (is_distributed() ? total_workers() : 1),
-            )
-        else
-            throw(ArgumentError("`model_size` must be one of `[:SMALL, :LARGE, :XL]`"))
-        end
-    else
-        throw(ArgumentError("`dataset` must be one of `[:CIFAR10]`"))
-    end
+function get_default_experiment_configuration(::Val{:CIFAR10}, ::Val{:LARGE})
+    return (
+        num_layers=10,
+        num_classes=10,
+        dropout_rate=0.3f0,
+        group_count=8,
+        weight_norm=true,
+        downsample_times=0,
+        expansion_factor=5,
+        post_gn_affine=false,
+        image_size=(32, 32),
+        num_modules=1,
+        num_branches=4,
+        block_type=:basic,
+        big_kernels=(0, 0, 0, 0),
+        head_channels=(14, 28, 56, 112),
+        num_blocks=(1, 1, 1, 1),
+        num_channels=(32, 64, 128, 256),
+        fuse_method=:sum,
+        final_channelsize=1680,
+        fwd_maxiters=18,
+        bwd_maxiters=20,
+        continuous=true,
+        stop_mode=:rel_norm,
+        nepochs=220,
+        jfb=false,
+        augment=true,
+        model_type=:VANILLA,
+        abstol=5.0f-2,
+        reltol=5.0f-2,
+        ode_solver=VCABM3(),
+        pretrain_steps=20000 ÷ scaling_factor(),
+        lr_scheduler=:COSINE,
+        optimiser=:ADAM,
+        eta=0.001f0 * scaling_factor(),
+    )
 end
 
+function get_default_experiment_configuration(::Val{:IMAGENET}, ::Val{:SMALL})
+    return (
+        num_layers=4,
+        num_classes=1000,
+        dropout_rate=0.0f0,
+        group_count=8,
+        weight_norm=true,
+        downsample_times=2,
+        expansion_factor=5,
+        post_gn_affine=true,
+        image_size=(224, 224),
+        num_modules=1,
+        num_branches=4,
+        block_type=:basic,
+        big_kernels=(0, 0, 0, 0),
+        head_channels=(24, 48, 96, 192),
+        num_blocks=(1, 1, 1, 1),
+        num_channels=(32, 64, 128, 256),
+        fuse_method=:sum,
+        final_channelsize=2048,
+        fwd_maxiters=27,
+        bwd_maxiters=28,
+        continuous=true,
+        stop_mode=:rel_norm,
+        nepochs=100,
+        jfb=false,
+        model_type=:VANILLA,
+        abstol=5.0f-2,
+        reltol=5.0f-2,
+        ode_solver=VCABM3(),
+        pretrain_steps=510000 ÷ scaling_factor(),
+        lr_scheduler=:COSINE,
+        optimiser=:SGD,
+        eta=0.05f0 * scaling_factor(),
+        weight_decay=0.00005f0,
+        momentum=0.9f0,
+        nesterov=true,
+    )
+end
+
+function get_default_experiment_configuration(::Val{:IMAGENET}, ::Val{:LARGE})
+    return (
+        num_layers=4,
+        num_classes=1000,
+        dropout_rate=0.0f0,
+        group_count=8,
+        weight_norm=true,
+        downsample_times=2,
+        expansion_factor=5,
+        post_gn_affine=true,
+        image_size=(224, 224),
+        num_modules=1,
+        num_branches=4,
+        block_type=:basic,
+        big_kernels=(0, 0, 0, 0),
+        head_channels=(32, 64, 128, 256),
+        num_blocks=(1, 1, 1, 1),
+        num_channels=(80, 160, 320, 640),
+        fuse_method=:sum,
+        final_channelsize=2048,
+        fwd_maxiters=27,
+        bwd_maxiters=28,
+        continuous=true,
+        stop_mode=:rel_norm,
+        nepochs=100,
+        jfb=false,
+        model_type=:VANILLA,
+        abstol=5.0f-2,
+        reltol=5.0f-2,
+        ode_solver=VCABM3(),
+        pretrain_steps=510000 ÷ scaling_factor(),
+        lr_scheduler=:COSINE,
+        optimiser=:SGD,
+        eta=0.05f0 * scaling_factor(),
+        weight_decay=0.00005f0,
+        momentum=0.9f0,
+        nesterov=true,
+    )
+end
+
+function get_default_experiment_configuration(::Val{:IMAGENET}, ::Val{:XL})
+    return (
+        num_layers=4,
+        num_classes=1000,
+        dropout_rate=0.0f0,
+        group_count=8,
+        weight_norm=true,
+        downsample_times=2,
+        expansion_factor=5,
+        post_gn_affine=true,
+        image_size=(224, 224),
+        num_modules=1,
+        num_branches=4,
+        block_type=:basic,
+        big_kernels=(0, 0, 0, 0),
+        head_channels=(32, 64, 128, 256),
+        num_blocks=(1, 1, 1, 1),
+        num_channels=(88, 176, 352, 704),
+        fuse_method=:sum,
+        final_channelsize=2048,
+        fwd_maxiters=27,
+        bwd_maxiters=28,
+        continuous=true,
+        stop_mode=:rel_norm,
+        nepochs=100,
+        jfb=false,
+        model_type=:VANILLA,
+        abstol=5.0f-2,
+        reltol=5.0f-2,
+        ode_solver=VCABM3(),
+        pretrain_steps=510000 ÷ scaling_factor(),
+        lr_scheduler=:COSINE,
+        optimiser=:SGD,
+        eta=0.05f0 * scaling_factor(),
+        weight_decay=0.00005f0,
+        momentum=0.9f0,
+        nesterov=true,
+    )
+end
+
+function get_experiment_configuration(dataset::Val, model_size::Val; kwargs...)
+    return merge(get_default_experiment_configuration(dataset, model_size), kwargs)
+end

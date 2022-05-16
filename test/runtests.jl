@@ -54,7 +54,7 @@ end
     ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 2, 1))
     y = gpu(rand(rng, Float32, 2, 1))
-    
+
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(abs2, ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
@@ -172,7 +172,7 @@ end
     ps, st = gpu.(Lux.setup(rng, model))
     x = gpu(rand(rng, Float32, 4, 2))
     y = tuple([gpu(rand(rng, Float32, i, 2)) for i in 4:-1:1]...)
-    
+
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(Base.Fix1(sum, abs2), ŷ .- y)
@@ -182,7 +182,7 @@ end
 
     @info "Testing MultiScaleDEQ without Fixed Point Iterations"
     st = Lux.update_state(st, :fixed_depth, Val(5))
-    
+
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(Base.Fix1(sum, abs2), ŷ .- y)
@@ -225,7 +225,7 @@ end
 
     @info "Testing MultiScaleSkipDEQ without Fixed Point Iterations"
     st = Lux.update_state(st, :fixed_depth, Val(5))
-    
+
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)
@@ -268,7 +268,7 @@ end
 
     @info "Testing MultiScaleSkipDEQV2 without Fixed Point Iterations"
     st = Lux.update_state(st, :fixed_depth, Val(5))
-    
+
     gs = gradient(ps) do p
         (ŷ, soln), _ = model(x, p, st)
         sum(Base.Fix1(sum, abs2), ŷ .- y) + sum(abs2, soln.u₀ .- soln.z_star)

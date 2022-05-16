@@ -24,10 +24,6 @@ import DiffEqSensitivity: AbstractAdjointSensitivityAlgorithm
 import Lux: AbstractExplicitContainerLayer, initialparameters, initialstates, parameterlength, statelength
 import Random: AbstractRNG
 
-# This shouldn't be put in Lux since it is not true in the general case
-# However for our usecase gradients dont propagate through the state
-ChainRulesCore.@non_differentiable Lux.update_state(::Any...)
-
 include("operator.jl")
 
 include("solvers/continuous.jl")
