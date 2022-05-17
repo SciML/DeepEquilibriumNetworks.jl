@@ -322,8 +322,8 @@ function get_model(
         ContinuousDEQSolver(
             config.ode_solver;
             mode=config.stop_mode,
-            abstol=1.0f-5,
-            reltol=1.0f-5,
+            abstol=1.0f-3,
+            reltol=1.0f-3,
             abstol_termination=config.abstol,
             reltol_termination=config.reltol,
         )

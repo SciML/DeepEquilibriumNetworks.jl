@@ -67,6 +67,10 @@ function parse_commandline_arguments()
             help = "directory to save logs"
             arg_type = String
             default = "logs/"
+        "--expt-subdir"
+            help = "subdirectory name"
+            arg_type = String
+            default = ""
     end
 
     return parse_args(parse_settings)

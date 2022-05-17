@@ -317,7 +317,7 @@ function main(args)
     invoke_gc()
 
     expt_name = get_base_experiment_name(args)
-    store_in = string(now())
+    store_in = args["expt-subdir"] == "" ? string(now()) : args["expt-subdir"]
 
     ckpt_dir = joinpath(args["checkpoint-dir"], expt_name, store_in)
     log_path = joinpath(args["log-dir"], expt_name, store_in, "results.csv")
@@ -329,6 +329,8 @@ function main(args)
     should_log() && println("$(now()) => logging results to `$(log_path)`")
 
     should_log() && serialize(joinpath(dirname(log_path), "setup.jls"), Dict("config" => expt_config, "args" => args))
+
+    st = hasproperty(expt_config, :pretrain_epochs) && getproperty(expt_config, :pretrain_epochs) > 0 ? Lux.update_state(st, :fixed_depth, Val(getproperty(expt_config, :num_layers))) : st
 
     for epoch in args["start-epoch"]:(expt_config.nepochs)
         # Train for 1 epoch
@@ -354,6 +356,10 @@ function main(args)
         # ParameterSchedulers
         eta_new = ParameterSchedulers.next!(scheduler)
         optimiser_state = update_lr(optimiser_state, eta_new)
+        if hasproperty(expt_config, :pretrain_epochs) && getproperty(expt_config, :pretrain_epochs) == epoch
+            should_log() && println("$(now()) => pretraining completed\n")
+            st = Lux.update_state(st, :fixed_depth, Val(0))
+        end
 
         # Some Housekeeping
         invoke_gc()
@@ -374,4 +380,4 @@ function main(args)
     end
 end
 
-# main(parse_commandline_arguments())
+main(parse_commandline_arguments())
