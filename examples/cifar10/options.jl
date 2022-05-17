@@ -43,7 +43,7 @@ function parse_commandline_arguments()
         "--start-epoch"
             help = "manual epoch number (useful on restarts)"
             arg_type = Int
-            default = 0
+            default = 1
         "--print-freq"
             help = "print frequency"
             arg_type = Int
