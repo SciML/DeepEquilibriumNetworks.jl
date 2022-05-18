@@ -39,6 +39,9 @@ struct LimitedMemoryBroydenSolver end
     Us = fill!(similar(y, (LBFGS_threshold, total_hsize, batch_size)), T(0))
     VTs = fill!(similar(y, (total_hsize, LBFGS_threshold, batch_size)), T(0))
 
+    # Store the trajectory
+    xs = [x₀]
+
     # Counters
     nstep = 1
 
@@ -51,6 +54,8 @@ struct LimitedMemoryBroydenSolver end
         fx₁ = f(x₁)
         @. Δx = x₁ - x₀
         @. Δfx = fx₁ - fx₀
+
+        push!(xs, x₁)
 
         # Convergence Check
         terminate_condition(fx₁, x₁) && break
@@ -78,7 +83,7 @@ struct LimitedMemoryBroydenSolver end
         nstep += 1
     end
 
-    return x₁, (nf=nstep + 1,)
+    return xs, (nf=nstep + 1,)
 end
 
 @inbounds @views function matvec(

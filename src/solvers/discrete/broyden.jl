@@ -45,6 +45,9 @@ function nlsolve(
     p = similar(fx_old, (size(Jinv, 1),))
     ρ, σ₂ = T(0.9), T(0.001)
 
+    # Store the trajectory
+    xs = [x]
+
     maybe_stuck, max_resets, resets, nsteps, nf = false, 3, 0, 1, 1
 
     while nsteps <= maxiters
@@ -82,11 +85,13 @@ function nlsolve(
         copyto!(fx_old, fx)
         copyto!(x_old, x)
 
+        push!(xs, x)
+
         # Convergence Check
         terminate_condition(fx, x) && break
     end
 
-    return x, (nf=nf,)
+    return xs, (nf=nf,)
 end
 
 function _approximate_norm_descent(f::Function, x::AbstractArray{T,N}, p; λ₀=T(1), β=T(0.5), σ₁=T(0.001),

@@ -104,7 +104,7 @@ function get_dataloaders(expt_config::NamedTuple)
     base_transform = ImageToTensor() |> Normalize((0.4914f0, 0.4822f0, 0.4465f0), (0.2023f0, 0.1994f0, 0.2010f0))
 
     if expt_config.augment
-        train_transform = ScaleKeepAspect((36, 36)) |> RandomResizeCrop((32, 32)) |> Maybe(FlipX()) |> base_transform
+        train_transform = Maybe(FlipX()) |> ScaleKeepAspect((36, 36)) |> RandomResizeCrop((32, 32)) |> base_transform
     else
         train_transform = base_transform
     end
@@ -165,6 +165,7 @@ function validate(val_loader, model, ps, st, loss_function, args)
         if i % args["print-freq"] == 0 || i == length(val_loader)
             should_log() && print_meter(progress, i)
         end
+        i % 10 == 0 && invoke_gc()
 
         t = time()
     end
@@ -235,6 +236,7 @@ function train_one_epoch(train_loader, model, ps, st, optimiser_state, epoch, lo
         if i % args["print-freq"] == 0 || i == length(train_loader)
             should_log() && print_meter(progress, i)
         end
+        i % 10 == 0 && invoke_gc()
 
         t = time()
     end
@@ -380,4 +382,4 @@ function main(args)
     end
 end
 
-main(parse_commandline_arguments())
+# main(parse_commandline_arguments())

@@ -58,13 +58,19 @@ function DiffEqBase.__solve(
         :best_objective_value => real(eltype(prob.u0))(Inf), :best_objective_value_iteration => nothing
     )
 
-    u, stats = nlsolve(
+    us, stats = nlsolve(
         alg.alg,
         u -> prob.f(u, prob.p, nothing),
         prob.u0;
         maxiters=maxiters,
         terminate_condition=get_terminate_condition(alg, terminate_stats)
     )
+
+    u = if terminate_stats[:best_objective_value_iteration] === nothing
+        us[end]
+    else
+        us[terminate_stats[:best_objective_value_iteration] + 1]
+    end
 
     # Dont count towards NFE since this is mostly a check for convergence
     du = prob.f(u, prob.p, nothing)
