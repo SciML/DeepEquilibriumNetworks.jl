@@ -26,6 +26,7 @@ using Serialization                                     # Serialize Models
 using Setfield                                          # Easy Parameter Manipulation
 using Statistics                                        # Statistics
 using ValueHistories                                    # Storing Value Histories
+using Wandb                                             # Logging to Weights and Biases
 using Zygote                                            # Our AD Engine
 
 # Distributed Training
@@ -165,7 +166,7 @@ function validate(val_loader, model, ps, st, loss_function, args)
         if i % args["print-freq"] == 0 || i == length(val_loader)
             should_log() && print_meter(progress, i)
         end
-        i % 10 == 0 && invoke_gc()
+        i == length(val_loader) - 1 && invoke_gc()  # Needed since the last batch size is different
 
         t = time()
     end
@@ -215,9 +216,12 @@ function train_one_epoch(train_loader, model, ps, st, optimiser_state, epoch, lo
         )
         forward_pass_time(time() - _t, B)
         _t = time()
-        gs = back((one(loss), nothing, nothing))[1]
+        gs = back((one(loss) / total_workers(), nothing, nothing))[1]
         backward_pass_time(time() - _t, B)
         st = Lux.update_state(st, :update_mask, Val(true))
+        if is_distributed()
+            gs = allreduce_gradients(gs)
+        end
         optimiser_state, ps = Optimisers.update(optimiser_state, ps, gs)
 
         # Measure Elapsed Time
@@ -236,7 +240,7 @@ function train_one_epoch(train_loader, model, ps, st, optimiser_state, epoch, lo
         if i % args["print-freq"] == 0 || i == length(train_loader)
             should_log() && print_meter(progress, i)
         end
-        i % 10 == 0 && invoke_gc()
+        i == length(train_loader) - 1 && invoke_gc()  # Needed since the last batch size is different
 
         t = time()
     end
@@ -272,6 +276,14 @@ function get_loggable_stats(stats)
     return v[1:end-1] ./ v[end]
 end
 
+function convert_config_to_loggable(expt_config::NamedTuple)
+    config = Dict()
+    for (k, v) in pairs(expt_config)
+        config[k] = isprimitivetype(typeof(v)) ? v : string(v)
+    end
+    return config
+end
+
 function main(args)
     best_acc1 = 0
 
@@ -281,6 +293,7 @@ function main(args)
 
     # Model Construction
     expt_config = get_experiment_config(args)
+    loggable_config = convert_config_to_loggable(expt_config)
     should_log() && println("$(now()) => creating model")
     model, ps, st = create_model(expt_config, args)
 
@@ -326,7 +339,13 @@ function main(args)
 
     should_log() && println("$(now()) => checkpoint directory `$(ckpt_dir)`")
 
-    csv_logger = CSVLogger(log_path, ["Epoch", "Train/Batch Time", "Train/Data Time", "Train/Forward Pass Time", "Train/Backward Pass Time", "Train/Cross Entropy Loss", "Train/Skip Loss", "Train/Net Loss", "Train/NFE", "Train/Accuracy", "Train/Residual", "Test/Batch Time", "Test/Data Time", "Test/Cross Entropy Loss", "Test/Skip Loss", "Test/Net Loss", "Test/NFE", "Test/Accuracy", "Test/Residual"])
+    logging_header = ["Epoch", "Train/Batch Time", "Train/Data Time", "Train/Forward Pass Time", "Train/Backward Pass Time", "Train/Cross Entropy Loss", "Train/Skip Loss", "Train/Net Loss", "Train/NFE", "Train/Accuracy", "Train/Residual", "Test/Batch Time", "Test/Data Time", "Test/Cross Entropy Loss", "Test/Skip Loss", "Test/Net Loss", "Test/NFE", "Test/Accuracy", "Test/Residual"]
+    csv_logger = CSVLogger(log_path, logging_header)
+    wandb_logger = WandbLoggerMPI(project="deep_equilibrium_models",
+                                  name=store_in,
+                                  config=loggable_config)
+
+    values_to_loggable_dict(args...) = Dict(zip(logging_header, args))
 
     should_log() && println("$(now()) => logging results to `$(log_path)`")
 
@@ -353,6 +372,7 @@ function main(args)
         should_log() && println()
 
         csv_logger(epoch, train_stats..., val_stats...)
+        Wandb.log(wandb_logger, values_to_loggable_dict(epoch, train_stats..., val_stats...))
         should_log() && println("$(now()) => logged intermediated results to csv file\n")
 
         # ParameterSchedulers
@@ -372,7 +392,7 @@ function main(args)
 
         save_state = Dict(
             "epoch" => epoch,
-            "config" => expt_config,
+            "config" => loggable_config,
             "accuracy" => accuracy,
             "model_states" => cpu(st),
             "model_parameters" => cpu(ps),
@@ -382,4 +402,4 @@ function main(args)
     end
 end
 
-# main(parse_commandline_arguments())
+main(parse_commandline_arguments())

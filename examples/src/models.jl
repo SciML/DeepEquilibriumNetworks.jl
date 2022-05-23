@@ -389,6 +389,16 @@ function get_model(
     Random.seed!(rng, config.seed)
     ps, st = device.(Lux.setup(rng, model))
 
+    ps, st = if is_distributed()
+        ps_ = FluxMPI.synchronize!(ps; root_rank=0)
+        should_log() && println("$(now()) ===> synchronized model parameters across all processes")
+        st_ = FluxMPI.synchronize!(st; root_rank=0)
+        should_log() && println("$(now()) ===> synchronized model state across all processes")
+        ps_, st_
+    else
+        ps, st
+    end
+
     if warmup
         should_log() && println("$(now()) ==> starting model warmup")
         x__ = device(randn(Float32, config.image_size..., 3, 2))
@@ -409,16 +419,6 @@ function get_model(
         should_log() && println("$(now()) ==> backward pass (pretraining) warmup completed")
 
         invoke_gc()
-    end
-
-    ps, st = if is_distributed()
-        ps_ = FluxMPI.synchronize!(ps; root_rank=0)
-        should_log() && println("$(now()) ===> synchronized model parameters across all processes")
-        st_ = FluxMPI.synchronize!(st; root_rank=0)
-        should_log() && println("$(now()) ===> synchronized model state across all processes")
-        ps_, st_
-    else
-        ps, st
     end
 
     return model, ps, st
@@ -443,10 +443,6 @@ function construct_optimiser(config::NamedTuple)
     end
     if hasproperty(config, :weight_decay) && !iszero(config.weight_decay)
         opt = Optimisers.OptimiserChain(opt, Optimisers.WeightDecay(config.weight_decay))
-    end
-
-    if is_distributed()
-        opt = DistributedOptimiser(opt)
     end
 
     sched = if config.lr_scheduler == :COSINE
