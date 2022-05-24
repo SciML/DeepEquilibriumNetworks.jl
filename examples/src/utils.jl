@@ -51,8 +51,5 @@ end
 @inline mse(ŷ, y) = mean(abs2, ŷ .- y)
 
 # DataLoaders doesn't yet work with MLUtils
-LearnBase.nobs(data::DistributedDataContainer) = MLUtils.numobs(data)
-LearnBase.getobs(data::DistributedDataContainer, i::Int) = MLUtils.getobs(data, i)
 MLDataPattern.nobs(x) = MLUtils.numobs(x)
-MLDataPattern.getobs(d::Union{MLUtils.ObsView,DistributedDataContainer}, i::Int64) =
-    MLUtils.getobs(d, i)
+MLDataPattern.getobs(d::MLUtils.ObsView, i::Int64) = MLUtils.getobs(d, i)

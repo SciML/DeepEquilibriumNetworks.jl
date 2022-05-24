@@ -40,7 +40,8 @@ function downsample_module(mapping, level_diff, activation; group_count=8)
     for i in 1:level_diff
         inchs, outchs = intermediate_mapping(i)
         push!(layers, conv3x3(inchs => outchs; stride=2))
-        push!(layers, GroupNorm(outchs, group_count, activation; affine=true, track_stats=false))
+        # push!(layers, GroupNorm(outchs, group_count, activation; affine=true, track_stats=false))
+        push!(layers, BatchNorm(outchs, activation; affine=true, track_stats=false))
     end
     return Chain(layers...)
 end
@@ -61,7 +62,8 @@ function upsample_module(mapping, level_diff, activation; upsample_mode::Symbol=
     for i in 1:level_diff
         inchs, outchs = intermediate_mapping(i)
         push!(layers, conv1x1(inchs => outchs))
-        push!(layers, GroupNorm(outchs, group_count, activation; affine=true, track_stats=false))
+        # push!(layers, GroupNorm(outchs, group_count, activation; affine=true, track_stats=false))
+        push!(layers, BatchNorm(outchs, activation; affine=true, track_stats=false))
         push!(layers, Upsample(upsample_mode; scale=2))
     end
     return Chain(layers...)
@@ -90,9 +92,12 @@ function ResidualBlockV1(
         conv1, conv2
     end
 
-    gn1 = GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
-    gn2 = GroupNorm(outplanes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
-    gn3 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
+    # gn1 = GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
+    # gn2 = GroupNorm(outplanes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
+    # gn3 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
+    gn1 = BatchNorm(inner_planes, relu; affine=gn_affine, track_stats=gn_track_stats)
+    gn2 = BatchNorm(outplanes, relu; affine=gn_affine, track_stats=gn_track_stats)
+    gn3 = BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
 
     dropout = iszero(dropout_rate) ? NoOpLayer() : VariationalHiddenDropout(dropout_rate)
 
@@ -136,9 +141,12 @@ function ResidualBlockV2(
         conv1, conv2
     end
 
-    gn1 = GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
-    gn2 = GroupNorm(outplanes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
-    gn3 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
+    # gn1 = GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
+    # gn2 = GroupNorm(outplanes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
+    # gn3 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
+    gn1 = BatchNorm(inner_planes, relu; affine=gn_affine, track_stats=gn_track_stats)
+    gn2 = BatchNorm(outplanes, relu; affine=gn_affine, track_stats=gn_track_stats)
+    gn3 = BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
 
     dropout = iszero(dropout_rate) ? NoOpLayer() : VariationalHiddenDropout(dropout_rate)
 
@@ -280,7 +288,8 @@ function get_model(
         Chain(
             ActivationFunction(relu),
             conv1x1(config.num_channels[i] => config.num_channels[i]),
-            GroupNorm(config.num_channels[i], config.group_count ÷ 2; affine=true, track_stats=false),
+            # GroupNorm(config.num_channels[i], config.group_count ÷ 2; affine=true, track_stats=false),
+            BatchNorm(config.num_channels[i]; affine=true, track_stats=false),
         ) for i in 1:(config.num_branches)
     )
 
