@@ -35,7 +35,7 @@ function get_default_experiment_configuration(::Val{:CIFAR10}, ::Val{:TINY})
         bwd_maxiters=20,
         continuous=true,
         stop_mode=:rel_deq_best,
-        nepochs=20,
+        nepochs=50,
         jfb=false,
         augment=false,
         model_type=:VANILLA,
