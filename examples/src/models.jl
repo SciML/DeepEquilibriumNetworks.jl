@@ -78,7 +78,7 @@ function ResidualBlockV1(
     n_big_kernels::Int=0,
     dropout_rate::Real=0.0f0,
     gn_affine::Bool=true,
-    weight_norm::Bool=true,
+    weight_norm::Bool=false,
     gn_track_stats::Bool=false,
 )
     inplanes, outplanes = mapping
@@ -93,10 +93,10 @@ function ResidualBlockV1(
     end
 
     # gn1 = GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
-    # gn2 = GroupNorm(outplanes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
+    # gn2 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
     # gn3 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
     gn1 = BatchNorm(inner_planes, relu; affine=gn_affine, track_stats=gn_track_stats)
-    gn2 = BatchNorm(outplanes, relu; affine=gn_affine, track_stats=gn_track_stats)
+    gn2 = BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
     gn3 = BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
 
     dropout = iszero(dropout_rate) ? NoOpLayer() : VariationalHiddenDropout(dropout_rate)
@@ -127,7 +127,7 @@ function ResidualBlockV2(
     n_big_kernels::Int=0,
     dropout_rate::Real=0.0f0,
     gn_affine::Bool=true,
-    weight_norm::Bool=true,
+    weight_norm::Bool=false,
     gn_track_stats::Bool=false,
 )
     inplanes, outplanes = mapping
@@ -142,10 +142,10 @@ function ResidualBlockV2(
     end
 
     # gn1 = GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
-    # gn2 = GroupNorm(outplanes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
+    # gn2 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
     # gn3 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
     gn1 = BatchNorm(inner_planes, relu; affine=gn_affine, track_stats=gn_track_stats)
-    gn2 = BatchNorm(outplanes, relu; affine=gn_affine, track_stats=gn_track_stats)
+    gn2 = BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
     gn3 = BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
 
     dropout = iszero(dropout_rate) ? NoOpLayer() : VariationalHiddenDropout(dropout_rate)
@@ -178,9 +178,9 @@ function BottleneckBlockV1(mapping::Pair, expansion::Int=4; bn_track_stats::Bool
                 WrappedFunction(addtuple),  # Since injection could be a scalar
                 Chain(
                     BatchNorm(last(mapping), relu; affine=bn_affine, track_stats=bn_track_stats),
-                    conv3x3(last(mapping) => last(mapping) * expansion),
-                    BatchNorm(last(mapping) * expansion, relu; track_stats=bn_track_stats, affine=bn_affine),
-                    conv1x1(last(mapping) * expansion => last(mapping) * expansion),
+                    conv3x3(last(mapping) => last(mapping)),
+                    BatchNorm(last(mapping), relu; track_stats=bn_track_stats, affine=bn_affine),
+                    conv1x1(last(mapping) => last(mapping) * expansion),
                     BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
                 ),
             ),
@@ -188,7 +188,7 @@ function BottleneckBlockV1(mapping::Pair, expansion::Int=4; bn_track_stats::Bool
     )
 end
 
-function BottleneckBlockV2(mapping::Pair, expansion::Int=4; bn_track_stats::Bool=false, bn_affine::Bool=true)
+function BottleneckBlockV2(mapping::Pair, expansion::Int=4; bn_track_stats::Bool=true, bn_affine::Bool=true)
     rescale = if first(mapping) != last(mapping) * expansion
         Chain(
             conv1x1(first(mapping) => last(mapping) * expansion),
@@ -205,9 +205,9 @@ function BottleneckBlockV2(mapping::Pair, expansion::Int=4; bn_track_stats::Bool
             Chain(
                 conv1x1(mapping),
                 BatchNorm(last(mapping), relu; affine=bn_affine, track_stats=bn_track_stats),
-                conv3x3(last(mapping) => last(mapping) * expansion),
-                BatchNorm(last(mapping) * expansion, relu; track_stats=bn_track_stats, affine=bn_affine),
-                conv1x1(last(mapping) * expansion => last(mapping) * expansion),
+                conv3x3(last(mapping) => last(mapping)),
+                BatchNorm(last(mapping), relu; track_stats=bn_track_stats, affine=bn_affine),
+                conv1x1(last(mapping) => last(mapping) * expansion),
                 BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
             ),
         ),
@@ -288,8 +288,8 @@ function get_model(
         Chain(
             ActivationFunction(relu),
             conv1x1(config.num_channels[i] => config.num_channels[i]),
-            # GroupNorm(config.num_channels[i], config.group_count ÷ 2; affine=true, track_stats=false),
-            BatchNorm(config.num_channels[i]; affine=true, track_stats=false),
+            # GroupNorm(config.num_channels[i], config.group_count ÷ 2; affine=false, track_stats=false),
+            BatchNorm(config.num_channels[i]; affine=false, track_stats=false),
         ) for i in 1:(config.num_branches)
     )
 
@@ -303,7 +303,7 @@ function get_model(
         [
             Chain(
                 conv3x3(config.head_channels[i] * 4 => config.head_channels[i + 1] * 4; stride=2, bias=true),
-                BatchNorm(config.head_channels[i + 1] * 4, relu; track_stats=false, affine=true),
+                BatchNorm(config.head_channels[i + 1] * 4, relu; track_stats=true, affine=true),
             ) for i in 1:(config.num_branches - 1)
         ]...,
     )
