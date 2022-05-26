@@ -115,7 +115,7 @@ function ResidualBlock(
     return ResidualBlock(conv1, conv2, dropout, downsample, norm1, norm2, norm3)
 end
 
-function (rb::ResidualBlock)((x, y)::NTuple{2,<:AbstractArray}, ps, st)
+function (rb::ResidualBlock)((x, y)::Tuple{<:AbstractArray,<:AbstractArray}, ps, st)
     x, st_conv1 = rb.conv1(x, ps.conv1, st.conv1)
     x, st_norm1 = rb.norm1(x, ps.norm1, st.norm1)
     x, st_conv2 = rb.conv2(x, ps.conv2, st.conv2)
@@ -200,7 +200,7 @@ function BottleneckBlock(mapping::Pair, expansion::Int=4; bn_track_stats::Bool=t
     )
 end
 
-function (bn::BottleneckBlock)((x, y)::NTuple{2,<:AbstractArray}, ps, st)
+function (bn::BottleneckBlock)((x, y)::Tuple{<:AbstractArray,<:AbstractArray}, ps, st)
     x_r, st_rescale = bn.rescale(x, ps.rescale, st.rescale)
     x_m, st_conv1 = bn.conv(x_r, ps.conv, st.conv)
 
