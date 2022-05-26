@@ -30,7 +30,7 @@ using Wandb                                             # Logging to Weights and
 using Zygote                                            # Our AD Engine
 
 # Distributed Training
-FluxMPI.Init(; verbose=true)
+# FluxMPI.Init(; verbose=true)
 CUDA.allowscalar(false)
 
 # Training Options
@@ -216,7 +216,7 @@ function train_one_epoch(train_loader, model, ps, st, optimiser_state, epoch, lo
         )
         forward_pass_time(time() - _t, B)
         _t = time()
-        gs = back((one(loss) / total_workers(), nothing, nothing))[1]
+        gs = back((one(loss), nothing, nothing))[1]
         backward_pass_time(time() - _t, B)
         st = Lux.update_state(st, :update_mask, Val(true))
         if is_distributed()
@@ -341,9 +341,9 @@ function main(args)
 
     logging_header = ["Epoch", "Train/Batch Time", "Train/Data Time", "Train/Forward Pass Time", "Train/Backward Pass Time", "Train/Cross Entropy Loss", "Train/Skip Loss", "Train/Net Loss", "Train/NFE", "Train/Accuracy", "Train/Residual", "Test/Batch Time", "Test/Data Time", "Test/Cross Entropy Loss", "Test/Skip Loss", "Test/Net Loss", "Test/NFE", "Test/Accuracy", "Test/Residual"]
     csv_logger = CSVLogger(log_path, logging_header)
-    wandb_logger = WandbLoggerMPI(project="deep_equilibrium_models",
-                                  name=store_in,
-                                  config=loggable_config)
+    wandb_logger = WandbLogger(project="deep_equilibrium_models",
+                               name=store_in,
+                               config=loggable_config)
 
     values_to_loggable_dict(args...) = Dict(zip(logging_header, args))
 
