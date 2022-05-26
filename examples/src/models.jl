@@ -78,7 +78,7 @@ function ResidualBlockV1(
     n_big_kernels::Int=0,
     dropout_rate::Real=0.0f0,
     gn_affine::Bool=true,
-    weight_norm::Bool=false,
+    weight_norm::Bool=true,
     gn_track_stats::Bool=false,
 )
     inplanes, outplanes = mapping
@@ -127,7 +127,7 @@ function ResidualBlockV2(
     n_big_kernels::Int=0,
     dropout_rate::Real=0.0f0,
     gn_affine::Bool=true,
-    weight_norm::Bool=false,
+    weight_norm::Bool=true,
     gn_track_stats::Bool=false,
 )
     inplanes, outplanes = mapping
@@ -342,7 +342,7 @@ function get_model(
 
     deq = if config.model_type ∈ (:SKIP, :SKIPV2)
         shortcut = if config.model_type == :SKIP
-            slayers = Lux.AbstractExplicitLayer[ResidualBlockV2(config.num_channels[1] => config.num_channels[1], weight_norm=false)]
+            slayers = Lux.AbstractExplicitLayer[ResidualBlockV2(config.num_channels[1] => config.num_channels[1], weight_norm=true)]
             for i in 1:(config.num_branches - 1)
                 push!(
                     slayers,
