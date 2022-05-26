@@ -70,7 +70,18 @@ function upsample_module(mapping, level_diff, activation; upsample_mode::Symbol=
 end
 
 ## Residual Block
-function ResidualBlockV1(
+struct ResidualBlock{C1,C2,Dr,Do,N1,N2,N3} <:
+       Lux.AbstractExplicitContainerLayer{(:conv1, :conv2, :dropout, :downsample, :norm1, :norm2, :norm3)}
+    conv1::C1
+    conv2::C2
+    dropout::Dr
+    downsample::Do
+    norm1::N1
+    norm2::N2
+    norm3::N3
+end
+
+function ResidualBlock(
     mapping;
     deq_expand::Int=5,
     num_gn_groups::Int=4,
@@ -92,74 +103,81 @@ function ResidualBlockV1(
         conv1, conv2
     end
 
-    # gn1 = GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
-    # gn2 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
-    # gn3 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
-    gn1 = BatchNorm(inner_planes, relu; affine=gn_affine, track_stats=gn_track_stats)
-    gn2 = BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
-    gn3 = BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
+    # norm1 = GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
+    # norm2 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
+    # norm3 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
+    norm1 = BatchNorm(inner_planes, relu; affine=gn_affine, track_stats=gn_track_stats)
+    norm2 = BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
+    norm3 = BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
 
-    dropout = iszero(dropout_rate) ? NoOpLayer() : VariationalHiddenDropout(dropout_rate)
+    dropout = VariationalHiddenDropout(dropout_rate)
 
-    return Chain(
-        Parallel(
-            reassociate, # Reassociate and Merge
-            Chain(conv1, gn1, conv2, BranchLayer(downsample, dropout)),  # For x
-            NoOpLayer(),  # For injection
+    return ResidualBlock(conv1, conv2, dropout, downsample, norm1, norm2, norm3)
+end
+
+function (rb::ResidualBlock)((x, y)::NTuple{2,<:AbstractArray}, ps, st)
+    x, st_conv1 = rb.conv1(x, ps.conv1, st.conv1)
+    x, st_norm1 = rb.norm1(x, ps.norm1, st.norm1)
+    x, st_conv2 = rb.conv2(x, ps.conv2, st.conv2)
+
+    x_do, st_downsample = rb.downsample(x, ps.downsample, st.downsample)
+    x_dr, st_dropout = rb.dropout(x, ps.dropout, st.dropout)
+
+    y_ = x_dr .+ y
+    y_, st_norm2 = rb.norm2(y_, ps.norm2, st.norm2)
+
+    y__ = relu.(y_ .+ x_do)
+    y__, st_norm3 = rb.norm3(y__, ps.norm3, st.norm3)
+
+    return (
+        y__,
+        (
+            conv1=st_conv1,
+            conv2=st_conv2,
+            dropout=st_dropout,
+            downsample=st_downsample,
+            norm1=st_norm1,
+            norm2=st_norm2,
+            norm3=st_norm3,
         ),
-        Parallel(
-            addrelu,
-            NoOpLayer(),  # For y1
-            Chain(
-                WrappedFunction(addtuple),  # Since injection could be a scalar
-                gn2,
-            ),  # For (y2, injection)
-        ),
-        gn3,
     )
 end
 
-function ResidualBlockV2(
-    mapping;
-    deq_expand::Int=1,
-    num_gn_groups::Int=4,
-    downsample=NoOpLayer(),
-    n_big_kernels::Int=0,
-    dropout_rate::Real=0.0f0,
-    gn_affine::Bool=true,
-    weight_norm::Bool=true,
-    gn_track_stats::Bool=false,
-)
-    inplanes, outplanes = mapping
-    inner_planes = outplanes * deq_expand
-    conv1 = (n_big_kernels >= 1 ? conv5x5 : conv3x3)(inplanes => inner_planes; bias=false)
-    conv2 = (n_big_kernels >= 2 ? conv5x5 : conv3x3)(inner_planes => outplanes; bias=false)
+function (rb::ResidualBlock)(x::AbstractArray, ps, st)
+    x, st_conv1 = rb.conv1(x, ps.conv1, st.conv1)
+    x, st_norm1 = rb.norm1(x, ps.norm1, st.norm1)
+    x, st_conv2 = rb.conv2(x, ps.conv2, st.conv2)
 
-    conv1, conv2 = if weight_norm
-        WeightNorm(conv1, (:weight,), (4,)), WeightNorm(conv2, (:weight,), (4,))
-    else
-        conv1, conv2
-    end
+    x_do, st_downsample = rb.downsample(x, ps.downsample, st.downsample)
+    
+    x_dr, st_dropout = rb.dropout(x, ps.dropout, st.dropout)
+    x_dr, st_norm2 = rb.norm2(x_dr, ps.norm2, st.norm2)
 
-    # gn1 = GroupNorm(inner_planes, num_gn_groups, relu; affine=gn_affine, track_stats=gn_track_stats)
-    # gn2 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
-    # gn3 = GroupNorm(outplanes, num_gn_groups; affine=gn_affine, track_stats=gn_track_stats)
-    gn1 = BatchNorm(inner_planes, relu; affine=gn_affine, track_stats=gn_track_stats)
-    gn2 = BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
-    gn3 = BatchNorm(outplanes; affine=gn_affine, track_stats=gn_track_stats)
+    y__ = relu.(x_dr .+ x_do)
+    y__, st_norm3 = rb.norm3(y__, ps.norm3, st.norm3)
 
-    dropout = iszero(dropout_rate) ? NoOpLayer() : VariationalHiddenDropout(dropout_rate)
-
-    return Chain(
-        conv1,
-        gn1,
-        conv2,
-        Parallel(addrelu, downsample, Chain(dropout, gn2)),
-        gn3,
+    return (
+        y__,
+        (
+            conv1=st_conv1,
+            conv2=st_conv2,
+            dropout=st_dropout,
+            downsample=st_downsample,
+            norm1=st_norm1,
+            norm2=st_norm2,
+            norm3=st_norm3,
+        ),
     )
 end
 
-function BottleneckBlockV1(mapping::Pair, expansion::Int=4; bn_track_stats::Bool=false, bn_affine::Bool=true)
+# Bottleneck Block
+struct BottleneckBlock{R,C,M} <: Lux.AbstractExplicitContainerLayer{(:rescale, :conv, :mapping)}
+    rescale::R
+    conv::C
+    mapping::M
+end
+
+function BottleneckBlock(mapping::Pair, expansion::Int=4; bn_track_stats::Bool=true, bn_affine::Bool=true)
     rescale = if first(mapping) != last(mapping) * expansion
         Chain(
             conv1x1(first(mapping) => last(mapping) * expansion),
@@ -169,48 +187,48 @@ function BottleneckBlockV1(mapping::Pair, expansion::Int=4; bn_track_stats::Bool
         NoOpLayer()
     end
 
-    return Chain(
-        Parallel(reassociate, BranchLayer(rescale, conv1x1(mapping)), NoOpLayer()),
-        Parallel(
-            addrelu,
-            NoOpLayer(),
-            Chain(
-                WrappedFunction(addtuple),  # Since injection could be a scalar
-                Chain(
-                    BatchNorm(last(mapping), relu; affine=bn_affine, track_stats=bn_track_stats),
-                    conv3x3(last(mapping) => last(mapping)),
-                    BatchNorm(last(mapping), relu; track_stats=bn_track_stats, affine=bn_affine),
-                    conv1x1(last(mapping) => last(mapping) * expansion),
-                    BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
-                ),
-            ),
-        ),
+    return BottleneckBlock(
+        rescale,
+        conv1x1(mapping),
+        Chain(
+            BatchNorm(last(mapping), relu; affine=bn_affine, track_stats=bn_track_stats),
+            conv3x3(last(mapping) => last(mapping)),
+            BatchNorm(last(mapping), relu; track_stats=bn_track_stats, affine=bn_affine),
+            conv1x1(last(mapping) => last(mapping) * expansion),
+            BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine)
+        )
     )
 end
 
-function BottleneckBlockV2(mapping::Pair, expansion::Int=4; bn_track_stats::Bool=true, bn_affine::Bool=true)
-    rescale = if first(mapping) != last(mapping) * expansion
-        Chain(
-            conv1x1(first(mapping) => last(mapping) * expansion),
-            BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
-        )
-    else
-        NoOpLayer()
-    end
+function (bn::BottleneckBlock)((x, y)::NTuple{2,<:AbstractArray}, ps, st)
+    x_r, st_rescale = bn.rescale(x, ps.rescale, st.rescale)
+    x_m, st_conv1 = bn.conv(x_r, ps.conv, st.conv)
 
-    return Chain(
-        Parallel(
-            addrelu,
-            rescale,
-            Chain(
-                conv1x1(mapping),
-                BatchNorm(last(mapping), relu; affine=bn_affine, track_stats=bn_track_stats),
-                conv3x3(last(mapping) => last(mapping)),
-                BatchNorm(last(mapping), relu; track_stats=bn_track_stats, affine=bn_affine),
-                conv1x1(last(mapping) => last(mapping) * expansion),
-                BatchNorm(last(mapping) * expansion; track_stats=bn_track_stats, affine=bn_affine),
-            ),
-        ),
+    x_m = y .+ x_m
+    x_m, st_mapping = bn.mapping(x_m, ps.mapping, st.mapping)
+
+    return (
+        relu.(x_m .+ x_r),
+        (
+            rescale=st_rescale,
+            conv=st_conv1,
+            mapping=st_mapping,
+        )
+    )
+end
+
+function (bn::BottleneckBlock)(x::AbstractArray, ps, st)
+    x_r, st_rescale = bn.rescale(x, ps.rescale, st.rescale)
+    x_m, st_conv1 = bn.conv(x_r, ps.conv, st.conv)
+    x_m, st_mapping = bn.mapping(x_m, ps.mapping, st.mapping)
+
+    return (
+        relu.(x_m .+ x_r),
+        (
+            rescale=st_rescale,
+            conv=st_conv1,
+            mapping=st_mapping,
+        )
     )
 end
 
@@ -219,7 +237,7 @@ function get_model(
     config::NamedTuple;
     device=gpu,
     warmup::Bool=true,  # Helps reduce Zygote compile times
-    loss_function=nothing
+    loss_function=nothing,
 )
     @assert !warmup || loss_function !== nothing
 
@@ -254,7 +272,7 @@ function get_model(
     initial_layers = Chain(downsample, stage0)
 
     main_layers = Tuple(
-        ResidualBlockV1(
+        ResidualBlock(
             config.num_channels[i] => config.num_channels[i];
             deq_expand=config.expansion_factor,
             dropout_rate=config.dropout_rate,
@@ -295,7 +313,7 @@ function get_model(
 
     increment_modules = Parallel(
         nothing,
-        [BottleneckBlockV2(config.num_channels[i] => config.head_channels[i]) for i in 1:(config.num_branches)]...,
+        [BottleneckBlock(config.num_channels[i] => config.head_channels[i]) for i in 1:(config.num_branches)]...,
     )
 
     downsample_modules = PairwiseFusion(
@@ -322,8 +340,8 @@ function get_model(
         ContinuousDEQSolver(
             config.ode_solver;
             mode=config.stop_mode,
-            abstol=1.0f-3,
-            reltol=1.0f-3,
+            abstol=config.abstol,
+            reltol=config.reltol,
             abstol_termination=config.abstol,
             reltol_termination=config.reltol,
         )
@@ -342,7 +360,9 @@ function get_model(
 
     deq = if config.model_type ∈ (:SKIP, :SKIPV2)
         shortcut = if config.model_type == :SKIP
-            slayers = Lux.AbstractExplicitLayer[ResidualBlockV2(config.num_channels[1] => config.num_channels[1], weight_norm=true)]
+            slayers = Lux.AbstractExplicitLayer[ResidualBlock(
+                config.num_channels[1] => config.num_channels[1]; weight_norm=true
+            )]
             for i in 1:(config.num_branches - 1)
                 push!(
                     slayers,
