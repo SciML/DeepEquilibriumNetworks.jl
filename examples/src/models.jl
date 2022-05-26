@@ -202,7 +202,7 @@ end
 
 function (bn::BottleneckBlock)((x, y)::Tuple{<:AbstractArray,<:AbstractArray}, ps, st)
     x_r, st_rescale = bn.rescale(x, ps.rescale, st.rescale)
-    x_m, st_conv1 = bn.conv(x_r, ps.conv, st.conv)
+    x_m, st_conv1 = bn.conv(x, ps.conv, st.conv)
 
     x_m = y .+ x_m
     x_m, st_mapping = bn.mapping(x_m, ps.mapping, st.mapping)
@@ -219,7 +219,7 @@ end
 
 function (bn::BottleneckBlock)(x::AbstractArray, ps, st)
     x_r, st_rescale = bn.rescale(x, ps.rescale, st.rescale)
-    x_m, st_conv1 = bn.conv(x_r, ps.conv, st.conv)
+    x_m, st_conv1 = bn.conv(x, ps.conv, st.conv)
     x_m, st_mapping = bn.mapping(x_m, ps.mapping, st.mapping)
 
     return (
