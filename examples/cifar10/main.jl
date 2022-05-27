@@ -56,7 +56,7 @@ create_model(expt_config, args) = get_model(expt_config; device=gpu, warmup=true
 
 function get_loss_function(args)
     if args["model-type"] == "VANILLA"
-        function loss_function_closure_vanilla(x, y, model, ps, st)
+        function loss_function_closure_vanilla(x, y, model, ps, st, w_skip=args["w-skip"])
             (ŷ, soln), st_ = model(x, ps, st)
             celoss = logitcrossentropy(ŷ, y)
             skiploss = FastDEQExperiments.mae(soln.u₀, soln.z_star)
@@ -65,11 +65,11 @@ function get_loss_function(args)
         end
         return loss_function_closure_vanilla
     else
-        function loss_function_closure_skip(x, y, model, ps, st)
+        function loss_function_closure_skip(x, y, model, ps, st, w_skip=args["w-skip"])
             (ŷ, soln), st_ = model(x, ps, st)
             celoss = logitcrossentropy(ŷ, y)
             skiploss = FastDEQExperiments.mae(soln.u₀, soln.z_star)
-            loss = celoss + args["w-skip"] * skiploss
+            loss = celoss + w_skip * skiploss
             return loss, st_, (ŷ, soln.nfe, celoss, skiploss, soln.residual)
         end
         return loss_function_closure_skip
@@ -185,7 +185,7 @@ function validate(val_loader, model, ps, st, loss_function, args)
 end
 
 # Training
-function train_one_epoch(train_loader, model, ps, st, optimiser_state, epoch, loss_function, args)
+function train_one_epoch(train_loader, model, ps, st, optimiser_state, epoch, loss_function, w_skip, args)
     batch_time = AverageMeter("Batch Time", "6.3f")
     data_time = AverageMeter("Data Time", "6.3f")
     forward_pass_time = AverageMeter("Forward Pass Time", "6.3f")
@@ -212,7 +212,7 @@ function train_one_epoch(train_loader, model, ps, st, optimiser_state, epoch, lo
         # Gradients and Update
         _t = time()
         (loss, st, (ŷ, nfe_, celoss, skiploss, resi)), back = Zygote.pullback(
-            p -> loss_function(x, y, model, p, st), ps
+            p -> loss_function(x, y, model, p, st, w_skip), ps
         )
         forward_pass_time(time() - _t, B)
         _t = time()
@@ -353,10 +353,12 @@ function main(args)
 
     st = hasproperty(expt_config, :pretrain_epochs) && getproperty(expt_config, :pretrain_epochs) > 0 ? Lux.update_state(st, :fixed_depth, Val(getproperty(expt_config, :num_layers))) : st
 
+    wskip_sched = ParameterSchedulers.Exp(args["w-skip"], 0.92f0)
+
     for epoch in args["start-epoch"]:(expt_config.nepochs)
         # Train for 1 epoch
         ps, st, optimiser_state, train_stats = train_one_epoch(
-            train_loader, model, ps, st, optimiser_state, epoch, loss_function, args
+            train_loader, model, ps, st, optimiser_state, epoch, loss_function, wskip_sched(epoch), args
         )
         train_stats = get_loggable_stats(train_stats)
 
