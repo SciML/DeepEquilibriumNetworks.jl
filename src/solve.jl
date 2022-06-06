@@ -1,347 +1,80 @@
-"""
-    ContinuousDEQSolver(alg=VCABM4(); mode::Symbol=:rel_deq_default, abstol=1e-8, reltol=1e-8, tspan=Inf)
-
-Solver for Continuous DEQ Problem ([pal2022mixing](@cite)). Similar to `DynamicSS` but provides more flexibility needed
-for solving DEQ problems.
-
-## Arguments
-
-* `alg`: Algorithm to solve the ODEProblem. (Default: `VCABM4()`)
-* `mode`: Termination Mode of the solver. See below for a description of the various termination conditions (Default: `:rel_deq_default`)
-* `abstol`: Absolute tolerance for termination. (Default: `1e-8`)
-* `reltol`: Relative tolerance for termination. (Default: `1e-8`)
-* `tspan`: Time span. Users should not change this value, instead control termination through `maxiters` in `solve` (Default: `Inf`)
-
-## Termination Modes
-
-#### Termination on Absolute Tolerance
-
-* `:abs`: Terminates if ``all \\left( | \\frac{\\partial u}{\\partial t} | \\leq abstol \\right)``
-* `:abs_norm`: Terminates if ``\\| \\frac{\\partial u}{\\partial t} \\| \\leq abstol``
-* `:abs_deq_default`: Essentially `abs_norm` + terminate if there has been no improvement for the last 30 steps + terminate if the solution blows up (diverges)
-* `:abs_deq_best`: Same as `:abs_deq_default` but uses the best solution found so far, i.e. deviates only if the solution has not converged
-
-#### Termination on Relative Tolerance
-
-* `:rel`: Terminates if ``all \\left(| \\frac{\\partial u}{\\partial t} | \\leq reltol \\times | u | \\right)``
-* `:rel_norm`: Terminates if ``\\| \\frac{\\partial u}{\\partial t} \\| \\leq reltol \\times \\| \\frac{\\partial u}{\\partial t} + u \\|``
-* `:rel_deq_default`: Essentially `rel_norm` + terminate if there has been no improvement for the last 30 steps + terminate if the solution blows up (diverges)
-* `:rel_deq_best`: Same as `:rel_deq_default` but uses the best solution found so far, i.e. deviates only if the solution has not converged
-
-#### Termination using both Absolute and Relative Tolerances
-
-* `:norm`: Terminates if ``\\| \\frac{\\partial u}{\\partial t} \\| \\leq reltol \\times \\| \\frac{\\partial u}{\\partial t} + u \\|`` &
-           ``\\| \\frac{\\partial u}{\\partial t} \\| \\leq abstol``
-* `fallback`: Check if all values of the derivative is close to zero wrt both relative and absolute tolerance. This is usable for small problems
-              but doesn't scale well for neural networks, and should be avoided unless absolutely necessary
-
-See also: [`DiscreteDEQSolver`](@ref)
-
-!!! note 
-    This  will be upstreamed to DiffEqSensitivity in the later releases of the package
-"""
-struct ContinuousDEQSolver{M,A,AT,RT,TS} <: SteadyStateDiffEq.SteadyStateDiffEqAlgorithm
-    alg::A
-    abstol::AT
-    reltol::RT
-    tspan::TS
-end
-
-function ContinuousDEQSolver(alg=VCABM4(); mode::Symbol=:rel_deq_default, abstol=1e-8, reltol=1e-8, tspan=Inf)
-    return ContinuousDEQSolver{Val(mode),typeof(alg),typeof(abstol),typeof(reltol),typeof(tspan)}(alg, abstol, reltol, tspan)
-end
-
-function terminate_condition_reltol(integrator, abstol, reltol, min_t)
-    return all(abs.(DiffEqBase.get_du(integrator)) .<= reltol .* abs.(integrator.u))
-end
-
-function terminate_condition_reltol_norm(integrator, abstol, reltol, min_t)
-    du = DiffEqBase.get_du(integrator)
-    return norm(du) <= reltol * norm(du .+ integrator.u)
-end
-
-function terminate_condition_abstol(integrator, abstol, reltol, min_t)
-    return all(abs.(DiffEqBase.get_du(integrator)) .<= abstol)
-end
-
-function terminate_condition_abstol_norm(integrator, abstol, reltol, min_t)
-    return norm(DiffEqBase.get_du(integrator)) <= abstol
-end
-
-function terminate_condition(integrator, abstol, reltol, min_t)
-    return all((abs.(DiffEqBase.get_du(integrator)) .<= reltol .* abs.(integrator.u)) .&
-               (abs.(DiffEqBase.get_du(integrator)) .<= abstol))
-end
-
-function terminate_condition_norm(integrator, abstol, reltol, min_t)
-    du = DiffEqBase.get_du(integrator)
-    du_norm = norm(du)
-    return (du_norm <= reltol * norm(du .+ integrator.u)) && (du_norm <= abstol)
-end
-
-get_terminate_condition(::ContinuousDEQSolver{Val(:abs)}, args...; kwargs...) = terminate_condition_abstol
-get_terminate_condition(::ContinuousDEQSolver{Val(:abs_norm)}, args...; kwargs...) = terminate_condition_abstol_norm
-get_terminate_condition(::ContinuousDEQSolver{Val(:rel)}, args...; kwargs...) = terminate_condition_reltol
-get_terminate_condition(::ContinuousDEQSolver{Val(:rel_norm)}, args...; kwargs...) = terminate_condition_reltol_norm
-get_terminate_condition(::ContinuousDEQSolver{Val(:norm)}, args...; kwargs...) = terminate_condition_norm
-get_terminate_condition(::ContinuousDEQSolver, args...; kwargs...) = terminate_condition
-
-# Termination conditions used in the original DEQ Paper
-function get_terminate_condition(::ContinuousDEQSolver{Val(:abs_deq_default),A,T}, args...; kwargs...) where {A,T}
-    nstep = 0
-    protective_threshold = T(1e6)
-    objective_values = T[]
-    function terminate_condition_closure(integrator, abstol, reltol, min_t)
-        du = DiffEqBase.get_du(integrator)
-        objective = norm(du)
-        # Main termination condition
-        objective <= abstol && return true
-
-        # Terminate if there has been no improvement for the last 30 steps
-        nstep += 1
-        push!(objective_values, objective)
-
-        objective <= 3 * abstol &&
-            nstep >= 30 &&
-            maximum(objective_values[(end - nstep):end]) < 1.3 * minimum(objective_values[(end - nstep):end]) &&
-            return true
-
-        # Protective break
-        objective >= objective_values[1] * protective_threshold * length(du) && return true
-
-        return false
-    end
-    return terminate_condition_closure
-end
-
-function get_terminate_condition(::ContinuousDEQSolver{Val(:rel_deq_default),A,T}, args...; kwargs...) where {A,T}
-    nstep = 0
-    protective_threshold = T(1e3)
-    objective_values = T[]
-    function terminate_condition_closure(integrator, abstol, reltol, min_t)
-        du = DiffEqBase.get_du(integrator)
-        u = integrator.u
-        objective = norm(du) / (norm(du .+ u) + eps(T))
-        # Main termination condition
-        objective <= reltol && return true
-
-        # Terminate if there has been no improvement for the last 30 steps
-        nstep += 1
-        push!(objective_values, objective)
-
-        objective <= 3 * reltol &&
-            nstep >= 30 &&
-            maximum(objective_values[(end - nstep + 1):end]) < 1.3 * minimum(objective_values[(end - nstep + 1):end]) &&
-            return true
-
-        # Protective break
-        objective >= objective_values[1] * protective_threshold * length(du) && return true
-
-        return false
-    end
-    return terminate_condition_closure
-end
-
-function get_terminate_condition(::ContinuousDEQSolver{Val(:rel_deq_best),A,T}, terminate_stats::Dict, args...;
-                                 kwargs...) where {A,T}
-    nstep = 0
-    protective_threshold = T(1e3)
-    objective_values = T[]
-
-    terminate_stats[:best_objective_value] = T(Inf)
-    terminate_stats[:best_objective_value_iteration] = 0
-
-    function terminate_condition_closure(integrator, abstol, reltol, min_t)
-        du = DiffEqBase.get_du(integrator)
-        u = integrator.u
-        objective = norm(du) / (norm(du .+ u) + eps(T))
-
-        if objective < terminate_stats[:best_objective_value]
-            terminate_stats[:best_objective_value] = objective
-            terminate_stats[:best_objective_value_iteration] = nstep + 1
-        end
-
-        # Main termination condition
-        objective <= reltol && return true
-
-        # Terminate if there has been no improvement for the last 30 steps
-        nstep += 1
-        push!(objective_values, objective)
-
-        objective <= 3 * reltol &&
-            nstep >= 30 &&
-            maximum(objective_values[(end - nstep + 1):end]) < 1.3 * minimum(objective_values[(end - nstep + 1):end]) &&
-            return true
-
-        # Protective break
-        objective >= objective_values[1] * protective_threshold * length(du) && return true
-
-        return false
-    end
-
-    return terminate_condition_closure
-end
-
-function get_terminate_condition(::ContinuousDEQSolver{Val(:abs_deq_best),A,T}, terminate_stats::Dict, args...;
-                                 kwargs...) where {A,T}
-    nstep = 0
-    protective_threshold = T(1e3)
-    objective_values = T[]
-
-    terminate_stats[:best_objective_value] = T(Inf)
-    terminate_stats[:best_objective_value_iteration] = 0
-
-    function terminate_condition_closure(integrator, abstol, reltol, min_t)
-        du = DiffEqBase.get_du(integrator)
-        objective = norm(du)
-
-        if objective < terminate_stats[:best_objective_value]
-            terminate_stats[:best_objective_value] = objective
-            terminate_stats[:best_objective_value_iteration] = nstep + 1
-        end
-
-        # Main termination condition
-        objective <= reltol && return true
-
-        # Terminate if there has been no improvement for the last 30 steps
-        nstep += 1
-        push!(objective_values, objective)
-
-        objective <= 3 * reltol &&
-            nstep >= 30 &&
-            maximum(objective_values[(end - nstep + 1):end]) < 1.3 * minimum(objective_values[(end - nstep + 1):end]) &&
-            return true
-
-        # Protective break
-        objective >= objective_values[1] * protective_threshold * length(du) && return true
-
-        return false
-    end
-
-    return terminate_condition_closure
-end
-
-has_converged(du, u, alg::ContinuousDEQSolver) = all(abs.(du) .<= alg.abstol .& abs.(du) .<= alg.reltol .* abs.(u))
-has_converged(du, u, alg::ContinuousDEQSolver{Val(:norm)}) = norm(du) <= alg.abstol && norm(du) <= alg.reltol * norm(du .+ u)
-has_converged(du, u, alg::ContinuousDEQSolver{Val(:rel)}) = all(abs.(du) .<= alg.reltol .* abs.(u))
-has_converged(du, u, alg::ContinuousDEQSolver{Val(:rel_norm)}) = norm(du) <= alg.reltol * norm(du .+ u)
-has_converged(du, u, alg::ContinuousDEQSolver{Val(:rel_deq_default)}) = norm(du) <= alg.reltol * norm(du .+ u)
-has_converged(du, u, alg::ContinuousDEQSolver{Val(:rel_deq_best)}) = norm(du) <= alg.reltol * norm(du .+ u)
-has_converged(du, u, alg::ContinuousDEQSolver{Val(:abs)}) = all(abs.(du) .<= alg.abstol)
-has_converged(du, u, alg::ContinuousDEQSolver{Val(:abs_norm)}) = norm(du) <= alg.abstol
-has_converged(du, u, alg::ContinuousDEQSolver{Val(:abs_deq_default)}) = norm(du) <= alg.abstol
-has_converged(du, u, alg::ContinuousDEQSolver{Val(:abs_deq_best)}) = norm(du) <= alg.abstol
-
-struct EquilibriumSolution{T,N,uType,R,P,A,TEnd} <: SciMLBase.AbstractNonlinearSolution{T,N}
+struct EquilibriumSolution{T, N, uType, P, A, D} <:
+       SciMLBase.AbstractNonlinearSolution{T, N}
     u::uType
-    resid::R
+    resid::uType
     prob::P
     alg::A
     retcode::Symbol
-    t::TEnd
-    λₜ::T
+    destats::D
 end
 
 function transform_solution(soln::EquilibriumSolution)
     # Creates a NonlinearSolution/SteadyStateSolution
-    return DiffEqBase.build_solution(soln.prob, soln.alg, soln.u, soln.resid; retcode=soln.retcode)
+    return DiffEqBase.build_solution(soln.prob, soln.alg, soln.u, soln.resid;
+                                     retcode=soln.retcode)
 end
 
-function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem, alg::ContinuousDEQSolver, args...;
-                            regularize_endpoint=false, kwargs...)
-    tspan = alg.tspan isa Tuple ? alg.tspan : convert.(real(eltype(prob.u0)), (zero(alg.tspan), alg.tspan))
+function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},
+                            alg::ContinuousDEQSolver, args...; kwargs...) where {uType}
+    tspan = alg.tspan isa Tuple ? alg.tspan :
+            convert.(real(eltype(prob.u0)), (zero(alg.tspan), alg.tspan))
     _prob = ODEProblem(prob.f, prob.u0, tspan, prob.p)
 
-    terminate_stats = Dict{Symbol,Any}(:best_objective_value => real(eltype(prob.u0))(Inf),
-                                       :best_objective_value_iteration => nothing)
+    terminate_stats = Dict{Symbol, Any}(:best_objective_value => real(eltype(prob.u0))(Inf),
+                                        :best_objective_value_iteration => nothing)
 
-    sol = solve(_prob, alg.alg, args...; kwargs...,
-                callback=TerminateSteadyState(alg.abstol, alg.reltol, get_terminate_condition(alg, terminate_stats)))
+    sol = solve(_prob,
+                alg.alg,
+                args...;
+                kwargs...,
+                callback=TerminateSteadyState(alg.abstol_termination,
+                                              alg.reltol_termination,
+                                              get_terminate_condition(alg, terminate_stats)))
 
-    u, t = terminate_stats[:best_objective_value_iteration] === nothing ? (sol.u[end], sol.t[end]) :
-           (sol.u[terminate_stats[:best_objective_value_iteration] + 1],
-            sol.t[terminate_stats[:best_objective_value_iteration] + 1])
+    u, t = if terminate_stats[:best_objective_value_iteration] === nothing
+        (sol.u[end], sol.t[end])
+    else
+        (sol.u[terminate_stats[:best_objective_value_iteration] + 1],
+         sol.t[terminate_stats[:best_objective_value_iteration] + 1])
+    end
 
+    # Dont count towards NFE since this is mostly a check for convergence
     du = prob.f(u, prob.p, t)
 
-    T = eltype(eltype(u))
-    N = ndims(u)
-    retcode = (sol.retcode == :Terminated && has_converged(du, u, alg) ? :Success : :Failure)
-    _t = regularize_endpoint isa Bool ? (regularize_endpoint ? t : nothing) : t
-    regularize_endpoint = regularize_endpoint isa Bool ? (regularize_endpoint ? T(1e-5) : T(0)) : T(regularize_endpoint)
+    retcode = (sol.retcode == :Terminated && has_converged(du, u, alg) ? :Success :
+               :Failure)
 
-    return EquilibriumSolution{T,N,typeof(u),typeof(du),typeof(prob),typeof(alg),typeof(_t)}(u, du, prob, alg, retcode,
-                                                                                             _t, regularize_endpoint)
+    return EquilibriumSolution{eltype(uType), ndims(uType), uType, typeof(prob),
+                               typeof(alg), typeof(sol.destats)}(u, du, prob, alg, retcode,
+                                                                 sol.destats)
 end
 
-function clear_zero(x::T) where T
-    ϵ = eps(T)
-    if -ϵ <= x < 0
-        return -ϵ
-    elseif 0 <= x < ϵ
-        return ϵ
-    end
-    return x
-end
+function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},
+                            alg::DiscreteDEQSolver, args...; maxiters=10,
+                            kwargs...) where {uType}
+    terminate_stats = Dict{Symbol, Any}(:best_objective_value => real(eltype(prob.u0))(Inf),
+                                        :best_objective_value_iteration => nothing)
 
-@noinline function DiffEqSensitivity.SteadyStateAdjointProblem(sol::EquilibriumSolution,
-                                                               sensealg::DiffEqSensitivity.SteadyStateAdjoint, g, dg;
-                                                               save_idxs=nothing)
-    @unpack f, p, u0 = sol.prob
+    us, stats = nlsolve(alg.alg,
+                        u -> prob.f(u, prob.p, nothing),
+                        prob.u0;
+                        maxiters=maxiters,
+                        terminate_condition=get_terminate_condition(alg, terminate_stats))
 
-    discrete = false
-
-    p === DiffEqBase.NullParameters() &&
-        error("Your model does not have parameters, and thus it is impossible to calculate the derivative of the solution with respect to the parameters. Your model must have parameters to use parameter sensitivity calculations!")
-
-    sense = DiffEqSensitivity.SteadyStateAdjointSensitivityFunction(g, sensealg, discrete, sol, dg, f.colorvec, false)
-    @unpack diffcache, y, sol, λ, vjp, linsolve = sense
-
-    _save_idxs = save_idxs === nothing ? Colon() : save_idxs
-    if dg !== nothing
-        if g !== nothing
-            dg(vec(diffcache.dg_val), y, p, nothing, nothing)
-        else
-            if typeof(_save_idxs) <: Number
-                diffcache.dg_val[_save_idxs] = dg[_save_idxs]
-            elseif typeof(dg) <: Number
-                @. diffcache.dg_val[_save_idxs] = dg
-            else
-                @. diffcache.dg_val[_save_idxs] = dg[_save_idxs]
-            end
-        end
+    u = if terminate_stats[:best_objective_value_iteration] === nothing
+        us[end]
     else
-        if g !== nothing
-            DiffEqSensitivity.gradient!(vec(diffcache.dg_val), diffcache.g, y, sensealg, diffcache.g_grad_config)
-        end
+        us[terminate_stats[:best_objective_value_iteration] + 1]
     end
 
-    _val, back = Zygote.pullback(x -> f(x, p, nothing), y)
-    s_val = size(_val)
-    op = DiffEqSensitivity.ZygotePullbackMultiplyOperator{eltype(y),typeof(back),typeof(s_val)}(back, s_val)
+    # Dont count towards NFE since this is mostly a check for convergence
+    du = prob.f(u, prob.p, nothing)
 
-    b = vec(diffcache.dg_val)
-    # println("Original Mean: $(mean(b)) & Residual Mean: $(mean(sol.resid)) Norm: $(norm(sol.resid))")
-    if sol.t !== nothing
-        @. b = (b + clamp(sol.λₜ ./ norm(sol.resid), -Inf, mean(b))) / 2
-    end
-    # println("Updated mean: $(mean(b))")
-    linear_problem = LinearProblem(op, b)
+    retcode = has_converged(du, u, alg) ? :Success : :Failure
 
-    copyto!(vec(λ), solve(linear_problem, linsolve).u)
-    _, back = Zygote.pullback(p -> vec(f(y, p, nothing)), p)
-    vjp .= -vec(back(λ)[1])
+    destats = (nf=stats.nf,)
 
-    if g !== nothing
-        # compute del g/del p
-        dg_dp_val = zero(p)
-        dg_dp = DiffEqSensitivity.ParamGradientWrapper(g, nothing, y)
-        dg_dp_config = DiffEqSensitivity.build_grad_config(sensealg, dg_dp, p, p)
-        DiffEqSensitivity.gradient!(dg_dp_val, dg_dp, p, sensealg, dg_dp_config)
-
-        @. dg_dp_val = dg_dp_val + vjp
-        return dg_dp_val
-    else
-        return vjp
-    end
+    return EquilibriumSolution{eltype(uType), ndims(uType), uType, typeof(prob),
+                               typeof(alg), typeof(destats)}(u, du, prob, alg, retcode,
+                                                             destats)
 end
