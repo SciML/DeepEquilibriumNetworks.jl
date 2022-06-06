@@ -1,4 +1,4 @@
-using CUDA, FastDEQ, Functors, LinearAlgebra, Lux, Random, Test, Zygote
+using CUDA, DeepEquilibriumNetworks, Functors, LinearAlgebra, Lux, Random, Test, Zygote
 
 function test_gradient_isfinite(gs::NamedTuple)
     gradient_is_finite = [true]
@@ -12,7 +12,7 @@ function test_gradient_isfinite(gs::NamedTuple)
     return gradient_is_finite[1]
 end
 
-@testset "FastDEQ.jl" begin
+@testset "DeepEquilibriumNetworks.jl" begin
     seed = 0
     rng = Random.default_rng()
     Random.seed!(rng, seed)

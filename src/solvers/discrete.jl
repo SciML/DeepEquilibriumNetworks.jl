@@ -1,4 +1,3 @@
-# Wrapper for Discrete DEQs
 """
     DiscreteDEQSolver(alg=LimitedMemoryBroydenSolver(); mode::Symbol=:rel_deq_default, abstol_termination::T=1.0f-8, reltol_termination::T=1.0f-8)
 

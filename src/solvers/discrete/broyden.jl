@@ -30,7 +30,7 @@ function nlsolve(
         terminate_condition,
         maxiters
     )
-    return reshape(res, size(y)), stats
+    return reshape.(res, (size(y),)), stats
 end
 
 function nlsolve(

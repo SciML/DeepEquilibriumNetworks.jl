@@ -1,4 +1,4 @@
-module FastDEQ
+module DeepEquilibriumNetworks
 
 using ChainRulesCore,
     ComponentArrays,

@@ -1,4 +1,4 @@
-using Documenter, DocumenterCitations, FastDEQ
+using Documenter, DocumenterCitations, DeepEquilibriumNetworks
 
 bib = CitationBibliography(joinpath(@__DIR__, "ref.bib"), sorting = :nyt)
 
@@ -8,12 +8,12 @@ makedocs(
     authors = "Avik Pal et al.",
     clean = true,
     doctest = false,
-    modules = [FastDEQ],
+    modules = [DeepEquilibriumNetworks],
     format = Documenter.HTML(#  analytics = "",
                              #  assets = ["assets/favicon.ico"],
-                             canonical="https://fastdeq.sciml.ai/stable/"),
+                             canonical="https://deepequilibriumnetworks.sciml.ai/stable/"),
     pages = [
-        "FastDEQ: Fast Deep Equilibrium Networks" => "index.md",
+        "Home" => "index.md",
         "Manual" => [
             "Dynamical Systems" => "manual/solvers.md",
             "Non Linear Solvers" => "manual/nlsolve.md",
@@ -26,6 +26,6 @@ makedocs(
 )
 
 deploydocs(
-   repo = "github.com/SciML/FastDEQ.jl.git";
+   repo = "github.com/SciML/DeepEquilibriumNetworks.jl.git";
    push_preview = true
 )

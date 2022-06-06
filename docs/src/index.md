@@ -1,14 +1,11 @@
-# FastDEQ: (Fast) Deep Equlibrium Networks
+# DeepEquilibriumNetworks: (Fast) Deep Equlibrium Networks
 
-FastDEQ.jl is a framework built on top of [DifferentialEquations.jl](https://diffeq.sciml.ai/stable/) and [Lux.jl](https://lux.csail.mit.edu/dev/) enabling the efficient training and inference for Deep Equilibrium Networks (Infinitely Deep Neural Networks).
+DeepEquilibriumNetworks.jl is a framework built on top of [DifferentialEquations.jl](https://diffeq.sciml.ai/stable/) and [Lux.jl](https://lux.csail.mit.edu/dev/) enabling the efficient training and inference for Deep Equilibrium Networks (Infinitely Deep Neural Networks).
 
 ## Installation
 
-Currently the package is not registered and requires manually installing a few dependencies. We are working towards upstream fixes which will make installation easier
-
 ```julia
-] add https://github.com/avik-pal/Lux.jl.git#main
-] add https://github.com/SciML/FastDEQ.jl
+] add DeepEquilibriumNetworks
 ```
 
 ## Citation
