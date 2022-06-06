@@ -16,7 +16,7 @@ for solving DEQ problems.
 
 See also: [`DiscreteDEQSolver`](@ref)
 """
-struct ContinuousDEQSolver{M,A,T,TS} <: SteadyStateDiffEq.SteadyStateDiffEqAlgorithm
+struct ContinuousDEQSolver{M, A, T, TS} <: SteadyStateDiffEq.SteadyStateDiffEqAlgorithm
     alg::A
     abstol::T
     reltol::T
@@ -25,16 +25,16 @@ struct ContinuousDEQSolver{M,A,T,TS} <: SteadyStateDiffEq.SteadyStateDiffEqAlgor
     tspan::TS
 end
 
-function ContinuousDEQSolver(
-    alg=VCABM3();
-    mode::Symbol=:rel_deq_default,
-    abstol::T=1.0f-8,
-    reltol::T=1.0f-8,
-    abstol_termination::T=1.0f-8,
-    reltol_termination::T=1.0f-8,
-    tspan=Inf32,
-) where {T<:Number}
-    return ContinuousDEQSolver{Val(mode),typeof(alg),T,typeof(tspan)}(
-        alg, abstol, reltol, abstol_termination, reltol_termination, tspan
-    )
+function ContinuousDEQSolver(alg=VCABM3();
+                             mode::Symbol=:rel_deq_default,
+                             abstol::T=1.0f-8,
+                             reltol::T=1.0f-8,
+                             abstol_termination::T=1.0f-8,
+                             reltol_termination::T=1.0f-8,
+                             tspan=Inf32) where {T <: Number}
+    return ContinuousDEQSolver{Val(mode), typeof(alg), T, typeof(tspan)}(alg, abstol,
+                                                                         reltol,
+                                                                         abstol_termination,
+                                                                         reltol_termination,
+                                                                         tspan)
 end

@@ -1,27 +1,28 @@
 module DeepEquilibriumNetworks
 
 using ChainRulesCore,
-    ComponentArrays,
-    CUDA,
-    DiffEqBase,
-    DiffEqCallbacks,
-    DiffEqSensitivity,
-    Functors,
-    LinearAlgebra,
-    LinearSolve,
-    Lux,
-    MLUtils,
-    OrdinaryDiffEq,
-    SciMLBase,
-    Setfield,
-    Static,
-    Statistics,
-    SteadyStateDiffEq,
-    UnPack,
-    Zygote
+      ComponentArrays,
+      CUDA,
+      DiffEqBase,
+      DiffEqCallbacks,
+      DiffEqSensitivity,
+      Functors,
+      LinearAlgebra,
+      LinearSolve,
+      Lux,
+      MLUtils,
+      OrdinaryDiffEq,
+      SciMLBase,
+      Setfield,
+      Static,
+      Statistics,
+      SteadyStateDiffEq,
+      UnPack,
+      Zygote
 
 import DiffEqSensitivity: AbstractAdjointSensitivityAlgorithm
-import Lux: AbstractExplicitContainerLayer, initialparameters, initialstates, parameterlength, statelength
+import Lux: AbstractExplicitContainerLayer, initialparameters, initialstates,
+            parameterlength, statelength
 import Random: AbstractRNG
 
 include("operator.jl")
@@ -45,9 +46,11 @@ include("adjoint.jl")
 export ContinuousDEQSolver, DiscreteDEQSolver, BroydenSolver, LimitedMemoryBroydenSolver
 
 # Utils
-export NormalInitializer, DeepEquilibriumAdjoint, compute_deq_jacobian_loss, DeepEquilibriumSolution
+export NormalInitializer, DeepEquilibriumAdjoint, compute_deq_jacobian_loss,
+       DeepEquilibriumSolution
 
 export DeepEquilibriumNetwork,
-    SkipDeepEquilibriumNetwork, MultiScaleDeepEquilibriumNetwork, MultiScaleSkipDeepEquilibriumNetwork, DEQChain
+       SkipDeepEquilibriumNetwork, MultiScaleDeepEquilibriumNetwork,
+       MultiScaleSkipDeepEquilibriumNetwork, DEQChain
 
 end

@@ -1,4 +1,4 @@
-struct ZygotePullbackMultiplyOperator{T,F,S}
+struct ZygotePullbackMultiplyOperator{T, F, S}
     f::F
     s::S
 end
@@ -10,11 +10,9 @@ Base.size(z::ZygotePullbackMultiplyOperator, ::Int64) = prod(z.s)
 
 Base.eltype(::ZygotePullbackMultiplyOperator{T}) where {T} = T
 
-function LinearAlgebra.mul!(
-    du::AbstractVector,
-    L::ZygotePullbackMultiplyOperator,
-    x::AbstractVector,
-)
+function LinearAlgebra.mul!(du::AbstractVector,
+                            L::ZygotePullbackMultiplyOperator,
+                            x::AbstractVector)
     du .= vec(L * x)
 end
 

@@ -4,12 +4,12 @@ function initialstates(rng::AbstractRNG, deq::AbstractDeepEquilibriumNetwork)
     return (model=initialstates(rng, deq.model), fixed_depth=Val(0))
 end
 
-abstract type AbstractSkipDeepEquilibriumNetwork <: AbstractExplicitContainerLayer{(:model,:shortcut)} end
+abstract type AbstractSkipDeepEquilibriumNetwork <:
+              AbstractExplicitContainerLayer{(:model, :shortcut)} end
 
 function initialstates(rng::AbstractRNG, deq::AbstractSkipDeepEquilibriumNetwork)
-    return (
-        model=initialstates(rng, deq.model), shortcut=initialstates(rng, deq.shortcut), fixed_depth=Val(0)
-    )
+    return (model=initialstates(rng, deq.model), shortcut=initialstates(rng, deq.shortcut),
+            fixed_depth=Val(0))
 end
 
 @inline check_unrolled_mode(::Val{0})::Bool = false
@@ -33,7 +33,7 @@ Stores the solution of a DeepEquilibriumNetwork and its variants.
     * `jacobian_loss`: Jacobian Stabilization Loss (see individual networks to see how it can be computed)
     * `nfe`: Number of Function Evaluations
 """
-struct DeepEquilibriumSolution{T,R<:AbstractFloat}
+struct DeepEquilibriumSolution{T, R <: AbstractFloat}
     z_star::T
     u₀::T
     residual::T

@@ -15,30 +15,33 @@ Creates DeepEquilibriumAdjoint ([johnson2012notes](@cite)) with sensible default
 * `linsolve`: Linear Solver from [LinearSolve.jl](https://github.com/SciML/LinearSolve.jl).
 * `mode`: Adjoint mode. Currently only `:vanilla` & `:jfb` are supported.
 """
-struct DeepEquilibriumAdjoint{CS,AD,FDT,M,VJP,LS} <: AbstractAdjointSensitivityAlgorithm{CS,AD,FDT}
+struct DeepEquilibriumAdjoint{CS, AD, FDT, M, VJP, LS} <:
+       AbstractAdjointSensitivityAlgorithm{CS, AD, FDT}
     autojacvec::VJP
     linsolve::LS
 end
 
-@inline check_adjoint_mode(::DeepEquilibriumAdjoint{CS,AD,FDT,M}, ::Val{M}) where {CS,AD,FDT,M} = true
+@inline function check_adjoint_mode(::DeepEquilibriumAdjoint{CS, AD, FDT, M},
+                                    ::Val{M}) where {CS, AD, FDT, M}
+    true
+end
 @inline check_adjoint_mode(::DeepEquilibriumAdjoint, ::Val) = false
 
-Base.@pure function DeepEquilibriumAdjoint(
-    reltol,
-    abstol,
-    maxiters;
-    autojacvec=ZygoteVJP(),
-    linsolve=KrylovJL_GMRES(; rtol=reltol, atol=abstol, itmax=maxiters),
-    autodiff=true,
-    chunk_size=0,
-    diff_type=Val{:central},
-    mode::Symbol=:vanilla,
-)
+Base.@pure function DeepEquilibriumAdjoint(reltol,
+                                           abstol,
+                                           maxiters;
+                                           autojacvec=ZygoteVJP(),
+                                           linsolve=KrylovJL_GMRES(; rtol=reltol,
+                                                                   atol=abstol,
+                                                                   itmax=maxiters),
+                                           autodiff=true,
+                                           chunk_size=0,
+                                           diff_type=Val{:central},
+                                           mode::Symbol=:vanilla)
     return DeepEquilibriumAdjoint{
-        chunk_size,autodiff,diff_type,mode,typeof(autojacvec),typeof(linsolve)
-    }(
-        autojacvec, linsolve
-    )
+                                  chunk_size, autodiff, diff_type, mode, typeof(autojacvec),
+                                  typeof(linsolve)
+                                  }(autojacvec, linsolve)
 end
 
 # Initialization
@@ -53,7 +56,7 @@ function NormalInitializer(μ=0.0f0, σ²=0.01f0)
 end
 
 # For MultiScale DEQs
-@generated function split_and_reshape(x::AbstractMatrix, ::T, ::S) where {T,S}
+@generated function split_and_reshape(x::AbstractMatrix, ::T, ::S) where {T, S}
     idxs, shapes = known(T), known(S)
     dims = [reshape((idxs[i] + 1):idxs[i + 1], shapes[i]...) for i in 1:(length(idxs) - 1)]
     varnames = [gensym("x_view") for _ in dims]
@@ -80,5 +83,6 @@ end
 @inline _norm(x; dims=Colon()) = sqrt.(sum(abs2, x; dims=dims))
 
 # Compute norm over all dimensions except `except_dim`
-@inline _norm(x::AbstractArray{T,N}, except_dim) where {T,N} =
+@inline function _norm(x::AbstractArray{T, N}, except_dim) where {T, N}
     _norm(x; dims=filter(i -> i != except_dim, 1:N))
+end

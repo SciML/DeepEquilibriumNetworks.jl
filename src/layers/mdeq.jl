@@ -1,4 +1,5 @@
-@generated function evaluate_unrolled_mdeq(model, z_star::NTuple{N}, x, ps, st, ::Val{depth}) where {N,depth}
+@generated function evaluate_unrolled_mdeq(model, z_star::NTuple{N}, x, ps, st,
+                                           ::Val{depth}) where {N, depth}
     calls = []
     for _ in 1:depth
         push!(calls, :((z_star, st) = model(((z_star[1], x), z_star[2:($N)]...), ps, st)))
@@ -52,7 +53,7 @@ model(x, ps, st)
 
 See also: [`DeepEquilibriumNetwork`](@ref), [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleSkipDeepEquilibriumNetwork`](@ref)
 """
-struct MultiScaleDeepEquilibriumNetwork{N,Sc,M,A,S,K} <: AbstractDeepEquilibriumNetwork
+struct MultiScaleDeepEquilibriumNetwork{N, Sc, M, A, S, K} <: AbstractDeepEquilibriumNetwork
     model::M
     solver::A
     sensealg::S
@@ -61,35 +62,33 @@ struct MultiScaleDeepEquilibriumNetwork{N,Sc,M,A,S,K} <: AbstractDeepEquilibrium
 end
 
 function initialstates(rng::AbstractRNG, deq::MultiScaleDeepEquilibriumNetwork)
-    return (
-        model=initialstates(rng, deq.model),
-        split_idxs=static(Tuple(vcat(0, cumsum(prod.(deq.scales))...))),
-        fixed_depth=Val(0),
-        initial_condition=zeros(Float32, 1, 1),
-    )
+    return (model=initialstates(rng, deq.model),
+            split_idxs=static(Tuple(vcat(0, cumsum(prod.(deq.scales))...))),
+            fixed_depth=Val(0),
+            initial_condition=zeros(Float32, 1, 1))
 end
 
-function MultiScaleDeepEquilibriumNetwork(
-    main_layers::Tuple,
-    mapping_layers::Matrix,
-    post_fuse_layer::Union{Nothing,Tuple},
-    solver,
-    scales::NTuple{N,NTuple{L,Int64}};
-    sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
-    kwargs...,
-) where {N,L}
+function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple,
+                                          mapping_layers::Matrix,
+                                          post_fuse_layer::Union{Nothing, Tuple},
+                                          solver,
+                                          scales::NTuple{N, NTuple{L, Int64}};
+                                          sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
+                                          kwargs...) where {N, L}
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
-    model = post_fuse_layer === nothing ? Chain(l1, l2) : Chain(l1, l2, Parallel(nothing, post_fuse_layer...))
+    model = post_fuse_layer === nothing ? Chain(l1, l2) :
+            Chain(l1, l2, Parallel(nothing, post_fuse_layer...))
     scales = static(scales)
     return MultiScaleDeepEquilibriumNetwork{
-        N,typeof(scales),typeof(model),typeof(solver),typeof(sensealg),typeof(kwargs)
-    }(
-        model, solver, sensealg, scales, kwargs
-    )
+                                            N, typeof(scales), typeof(model),
+                                            typeof(solver), typeof(sensealg), typeof(kwargs)
+                                            }(model, solver, sensealg, scales, kwargs)
 end
 
-@generated function get_initial_condition_mdeq(::S, x::AbstractArray{T,N}, st::NamedTuple{fields}) where {S,T,N,fields}
+@generated function get_initial_condition_mdeq(::S, x::AbstractArray{T, N},
+                                               st::NamedTuple{fields}) where {S, T, N,
+                                                                              fields}
     scales = known(S)
     sz = sum(prod.(scales))
     calls = []
@@ -105,25 +104,26 @@ end
 
 ChainRulesCore.@non_differentiable get_initial_condition_mdeq(::Any...)
 
-function (deq::MultiScaleDeepEquilibriumNetwork{N})(
-    x::AbstractArray{T}, ps::Union{ComponentArray,NamedTuple}, st::NamedTuple
-) where {N,T}
+function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T},
+                                                    ps::Union{ComponentArray, NamedTuple},
+                                                    st::NamedTuple) where {N, T}
     z, st = get_initial_condition_mdeq(deq.scales, x, st)
 
     if check_unrolled_mode(st)
         z_star = split_and_reshape(z, st.split_idxs, deq.scales)
-        z_star, st_ = evaluate_unrolled_mdeq(deq.model, z_star, x, ps, st.model, st.fixed_depth)
+        z_star, st_ = evaluate_unrolled_mdeq(deq.model, z_star, x, ps, st.model,
+                                             st.fixed_depth)
 
-        residual = ignore_derivatives(
-            vcat(flatten.(z_star)...) .-
-            vcat(flatten.(evaluate_unrolled_mdeq(deq.model, z_star, x, ps, st_, Val(1))[1])...),
-        )
+        residual = ignore_derivatives(vcat(flatten.(z_star)...) .-
+                                      vcat(flatten.(evaluate_unrolled_mdeq(deq.model,
+                                                                           z_star, x, ps,
+                                                                           st_, Val(1))[1])...))
         st__ = merge(st, (model=st_,))
 
-        return (
-            (z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0, get_unrolled_depth(st))),
-            st__,
-        )
+        return ((z_star,
+                 DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0,
+                                         get_unrolled_depth(st))),
+                st__)
     end
 
     st_ = st.model
@@ -144,7 +144,9 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(
 
     st__ = merge(st, (model=st_,))
 
-    return ((z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0, sol.destats.nf + 1)), st__)
+    return ((z_star,
+             DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0,
+                                     sol.destats.nf + 1)), st__)
 end
 
 """
@@ -223,7 +225,8 @@ model(x, ps, st)
 
 See also: [`DeepEquilibriumNetwork`](@ref), [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref)
 """
-struct MultiScaleSkipDeepEquilibriumNetwork{N,Sc,M,Sh,A,S,K} <: AbstractSkipDeepEquilibriumNetwork
+struct MultiScaleSkipDeepEquilibriumNetwork{N, Sc, M, Sh, A, S, K} <:
+       AbstractSkipDeepEquilibriumNetwork
     model::M
     shortcut::Sh
     solver::A
@@ -233,40 +236,45 @@ struct MultiScaleSkipDeepEquilibriumNetwork{N,Sc,M,Sh,A,S,K} <: AbstractSkipDeep
 end
 
 function initialstates(rng::AbstractRNG, deq::MultiScaleSkipDeepEquilibriumNetwork)
-    return (
-        model=initialstates(rng, deq.model),
-        shortcut=initialstates(rng, deq.shortcut),
-        split_idxs=static(Tuple(vcat(0, cumsum(prod.(deq.scales))...))),
-        fixed_depth=Val(0),
-        initial_condition=zeros(Float32, 1, 1),
-    )
+    return (model=initialstates(rng, deq.model),
+            shortcut=initialstates(rng, deq.shortcut),
+            split_idxs=static(Tuple(vcat(0, cumsum(prod.(deq.scales))...))),
+            fixed_depth=Val(0),
+            initial_condition=zeros(Float32, 1, 1))
 end
 
-function MultiScaleSkipDeepEquilibriumNetwork(
-    main_layers::Tuple,
-    mapping_layers::Matrix,
-    post_fuse_layer::Union{Nothing,Tuple},
-    shortcut_layers::Union{Nothing,Tuple},
-    solver,
-    scales;
-    sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
-    kwargs...,
-)
+function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple,
+                                              mapping_layers::Matrix,
+                                              post_fuse_layer::Union{Nothing, Tuple},
+                                              shortcut_layers::Union{Nothing, Tuple},
+                                              solver,
+                                              scales;
+                                              sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0,
+                                                                              10),
+                                              kwargs...)
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
-    model = post_fuse_layer === nothing ? Chain(l1, l2) : Chain(l1, l2, Parallel(nothing, post_fuse_layer...))
+    model = post_fuse_layer === nothing ? Chain(l1, l2) :
+            Chain(l1, l2, Parallel(nothing, post_fuse_layer...))
     shortcut = shortcut_layers === nothing ? nothing : Parallel(nothing, shortcut_layers...)
     scales = static(scales)
     return MultiScaleSkipDeepEquilibriumNetwork{
-        length(scales),typeof(scales),typeof(model),typeof(shortcut),typeof(solver),typeof(sensealg),typeof(kwargs)
-    }(
-        model, shortcut, solver, sensealg, scales, kwargs
-    )
+                                                length(scales), typeof(scales),
+                                                typeof(model), typeof(shortcut),
+                                                typeof(solver), typeof(sensealg),
+                                                typeof(kwargs)
+                                                }(model, shortcut, solver, sensealg, scales,
+                                                  kwargs)
 end
 
-function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,Sc,M,Sh})(
-    x::AbstractArray{T}, ps::Union{ComponentArray,NamedTuple}, st::NamedTuple
-) where {N,Sc,M,Sh,T}
+function (deq::MultiScaleSkipDeepEquilibriumNetwork{N, Sc, M, Sh})(x::AbstractArray{T},
+                                                                   ps::Union{ComponentArray,
+                                                                             NamedTuple},
+                                                                   st::NamedTuple) where {N,
+                                                                                          Sc,
+                                                                                          M,
+                                                                                          Sh,
+                                                                                          T}
     z, st = if Sh == Nothing
         u0, st_ = get_initial_condition_mdeq(deq.scales, x, st)
         u0_ = split_and_reshape(u0, st.split_idxs, deq.scales)
@@ -279,18 +287,20 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,Sc,M,Sh})(
 
     if check_unrolled_mode(st)
         z_star = split_and_reshape(z, st.split_idxs, deq.scales)
-        z_star, st_ = evaluate_unrolled_mdeq(deq.model, z_star, x, ps.model, st.model, st.fixed_depth)
+        z_star, st_ = evaluate_unrolled_mdeq(deq.model, z_star, x, ps.model, st.model,
+                                             st.fixed_depth)
 
-        residual = ignore_derivatives(
-            vcat(flatten.(z_star)...) .-
-            vcat(flatten.(evaluate_unrolled_mdeq(deq.model, z_star, x, ps.model, st_, Val(1))[1])...),
-        )
+        residual = ignore_derivatives(vcat(flatten.(z_star)...) .-
+                                      vcat(flatten.(evaluate_unrolled_mdeq(deq.model,
+                                                                           z_star, x,
+                                                                           ps.model, st_,
+                                                                           Val(1))[1])...))
         st__ = merge(st, (model=st_,))
 
-        return (
-            (z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0, get_unrolled_depth(st))),
-            st__,
-        )
+        return ((z_star,
+                 DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0,
+                                         get_unrolled_depth(st))),
+                st__)
     end
 
     st_ = st.model
@@ -311,5 +321,7 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N,Sc,M,Sh})(
 
     st__ = merge(st, (model=st_,))
 
-    return ((z_star, DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0, sol.destats.nf + 1)), st)
+    return ((z_star,
+             DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0,
+                                     sol.destats.nf + 1)), st)
 end

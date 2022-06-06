@@ -23,9 +23,9 @@ See also: [`BroydenSolver`](@ref)
 """
 struct LimitedMemoryBroydenSolver end
 
-@inbounds @views function nlsolve(
-    ::LimitedMemoryBroydenSolver, f::Function, y::AbstractMatrix{T}; terminate_condition, maxiters::Int=10
-) where {T}
+@inbounds @views function nlsolve(::LimitedMemoryBroydenSolver, f::Function,
+                                  y::AbstractMatrix{T}; terminate_condition,
+                                  maxiters::Int=10) where {T}
     LBFGS_threshold = min(maxiters, 27)
 
     total_hsize, batch_size = size(y)
@@ -72,10 +72,8 @@ struct LimitedMemoryBroydenSolver end
         VTs[:, mod1(nstep, LBFGS_threshold), :] .= vT
         Us[mod1(nstep, LBFGS_threshold), :, :] .= Δx
 
-        update =
-            -matvec(
-                Us[1:min(LBFGS_threshold, nstep + 1), :, :], VTs[:, 1:min(LBFGS_threshold, nstep + 1), :], fx₁
-            )
+        update = -matvec(Us[1:min(LBFGS_threshold, nstep + 1), :, :],
+                         VTs[:, 1:min(LBFGS_threshold, nstep + 1), :], fx₁)
         copyto!(x₀, x₁)
         copyto!(fx₀, fx₁)
 
@@ -86,17 +84,17 @@ struct LimitedMemoryBroydenSolver end
     return xs, (nf=nstep + 1,)
 end
 
-@inbounds @views function matvec(
-    part_Us::AbstractArray{E,3}, part_VTs::AbstractArray{E,3}, x::AbstractArray{E,2}
-) where {E}
+@inbounds @views function matvec(part_Us::AbstractArray{E, 3},
+                                 part_VTs::AbstractArray{E, 3},
+                                 x::AbstractArray{E, 2}) where {E}
     # part_Us -> (T x D x N) | part_VTs -> (D x T x N) | x -> (D x N)
     xTU = sum(unsqueeze(x; dims=1) .* part_Us; dims=2) # T x 1 x N
     return -x .+ dropdims(sum(permutedims(xTU, (2, 1, 3)) .* part_VTs; dims=2); dims=2)
 end
 
-@inbounds @views function rmatvec(
-    part_Us::AbstractArray{E,3}, part_VTs::AbstractArray{E,3}, x::AbstractArray{E,2}
-) where {E}
+@inbounds @views function rmatvec(part_Us::AbstractArray{E, 3},
+                                  part_VTs::AbstractArray{E, 3},
+                                  x::AbstractArray{E, 2}) where {E}
     # part_Us -> (T x D x N) | part_VTs -> (D x T x N) | x -> (D x N)
     VTx = sum(part_VTs .* unsqueeze(x; dims=2); dims=1) # 1 x T x N
     return -x .+ dropdims(sum(part_Us .* permutedims(VTx, (2, 1, 3)); dims=1); dims=1)
