@@ -8,6 +8,30 @@ DeepEquilibriumNetworks.jl is a framework built on top of [DifferentialEquations
 ] add DeepEquilibriumNetworks
 ```
 
+## Quickstart
+
+```julia
+using Lux, DeepEquilibriumNetworks, Random
+
+seed = 0
+rng = Random.default_rng()
+Random.seed!(rng, seed)
+
+model = DEQChain(Dense(2, 2),
+                 DeepEquilibriumNetwork(Parallel(+, Dense(2, 2; bias=false),
+                                                 Dense(2, 2; bias=false)),
+                                        ContinuousDEQSolver(; abstol=0.1f0,
+                                                            reltol=0.1f0,
+                                                            abstol_termination=0.1f0,
+                                                            reltol_termination=0.1f0)))
+
+ps, st = gpu.(Lux.setup(rng, model))
+x = gpu(rand(rng, Float32, 2, 1))
+y = gpu(rand(rng, Float32, 2, 1))
+
+gs = gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)[1]
+```
+
 ## Citation
 
 If you are using this project for research or other academic purposes consider citing our paper:
