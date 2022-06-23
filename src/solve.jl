@@ -11,7 +11,7 @@ end
 function transform_solution(soln::EquilibriumSolution)
     # Creates a NonlinearSolution/SteadyStateSolution
     return DiffEqBase.build_solution(soln.prob, soln.alg, soln.u, soln.resid;
-                                     retcode=soln.retcode)
+                                     retcode = soln.retcode)
 end
 
 function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},
@@ -27,9 +27,10 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},
                 alg.alg,
                 args...;
                 kwargs...,
-                callback=TerminateSteadyState(alg.abstol_termination,
-                                              alg.reltol_termination,
-                                              get_terminate_condition(alg, terminate_stats)))
+                callback = TerminateSteadyState(alg.abstol_termination,
+                                                alg.reltol_termination,
+                                                get_terminate_condition(alg,
+                                                                        terminate_stats)))
 
     u, t = if terminate_stats[:best_objective_value_iteration] === nothing
         (sol.u[end], sol.t[end])
@@ -50,7 +51,7 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},
 end
 
 function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},
-                            alg::DiscreteDEQSolver, args...; maxiters=10,
+                            alg::DiscreteDEQSolver, args...; maxiters = 10,
                             kwargs...) where {uType}
     terminate_stats = Dict{Symbol, Any}(:best_objective_value => real(eltype(prob.u0))(Inf),
                                         :best_objective_value_iteration => nothing)
@@ -58,8 +59,8 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},
     us, stats = nlsolve(alg.alg,
                         u -> prob.f(u, prob.p, nothing),
                         prob.u0;
-                        maxiters=maxiters,
-                        terminate_condition=get_terminate_condition(alg, terminate_stats))
+                        maxiters = maxiters,
+                        terminate_condition = get_terminate_condition(alg, terminate_stats))
 
     u = if terminate_stats[:best_objective_value_iteration] === nothing
         us[end]
@@ -72,7 +73,7 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},
 
     retcode = has_converged(du, u, alg) ? :Success : :Failure
 
-    destats = (nf=stats.nf,)
+    destats = (nf = stats.nf,)
 
     return EquilibriumSolution{eltype(uType), ndims(uType), uType, typeof(prob),
                                typeof(alg), typeof(destats)}(u, du, prob, alg, retcode,

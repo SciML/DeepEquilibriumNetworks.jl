@@ -38,8 +38,8 @@ struct DeepEquilibriumNetwork{J, M, A, S, K} <: AbstractDeepEquilibriumNetwork
     kwargs::K
 end
 
-function DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=false,
-                                sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
+function DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool = false,
+                                sensealg = DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
                                 kwargs...)
     return DeepEquilibriumNetwork{jacobian_regularization, typeof(model), typeof(solver),
                                   typeof(sensealg), typeof(kwargs)}(model, solver, sensealg,
@@ -60,7 +60,7 @@ function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T},
         end
 
         residual = ignore_derivatives(z_star .- deq.model((z_star, x), ps, st.model)[1])
-        st = merge(st, (model=st_,))
+        st = merge(st, (model = st_,))
 
         return (z_star,
                 DeepEquilibriumSolution(z_star, z, residual, 0.0f0, get_unrolled_depth(st))),
@@ -75,13 +75,13 @@ function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T},
     end
 
     prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps)
-    sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
+    sol = solve(prob, deq.solver; sensealg = deq.sensealg, deq.kwargs...)
     z_star, st_ = deq.model((sol.u, x), ps, st.model)
 
     jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps, st.model, z_star, x) : T(0))
     residual = ignore_derivatives(z_star .- deq.model((z_star, x), ps, st.model)[1])
 
-    st = merge(st, (model=st_,))
+    st = merge(st, (model = st_,))
 
     return (z_star,
             DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J)),
@@ -151,8 +151,8 @@ end
 function SkipDeepEquilibriumNetwork(model,
                                     shortcut,
                                     solver;
-                                    jacobian_regularization::Bool=false,
-                                    sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
+                                    jacobian_regularization::Bool = false,
+                                    sensealg = DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
                                     kwargs...)
     return SkipDeepEquilibriumNetwork{
                                       jacobian_regularization, typeof(model),
@@ -166,10 +166,10 @@ function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T},
                                                     st::NamedTuple) where {J, M, S, T}
     z, st = if S == Nothing
         z__, st__ = deq.model((zero(x), x), ps.model, st.model)
-        z__, merge(st, (model=st__,))
+        z__, merge(st, (model = st__,))
     else
         z__, st__ = deq.shortcut(x, ps.shortcut, st.shortcut)
-        z__, merge(st, (shortcut=st__,))
+        z__, merge(st, (shortcut = st__,))
     end
 
     if check_unrolled_mode(st)
@@ -182,7 +182,7 @@ function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T},
 
         residual = ignore_derivatives(z_star .-
                                       deq.model((z_star, x), ps.model, st.model)[1])
-        st = merge(st, (model=st_,))
+        st = merge(st, (model = st_,))
 
         return (z_star,
                 DeepEquilibriumSolution(z_star, z, residual, 0.0f0, get_unrolled_depth(st))),
@@ -197,14 +197,14 @@ function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T},
     end
 
     prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps.model)
-    sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
+    sol = solve(prob, deq.solver; sensealg = deq.sensealg, deq.kwargs...)
     z_star, st_ = deq.model((sol.u, x), ps.model, st.model)
 
     jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps.model, st.model, z_star, x) :
                 T(0))
     residual = ignore_derivatives(z_star .- deq.model((z_star, x), ps.model, st.model)[1])
 
-    st = merge(st, (model=st_,))
+    st = merge(st, (model = st_,))
 
     return (z_star,
             DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J)),

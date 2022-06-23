@@ -45,5 +45,5 @@ function (deq::DEQChain)(x, ps::Union{ComponentArray, NamedTuple}, st::NamedTupl
     x1, st1 = deq.pre_deq(x, ps.pre_deq, st.pre_deq)
     (x2::T, deq_soln), st2 = deq.deq(x1, ps.deq, st.deq)
     x3, st3 = deq.post_deq(x2, ps.post_deq, st.post_deq)
-    return (x3, deq_soln), (pre_deq=st1, deq=st2, post_deq=st3)
+    return (x3, deq_soln), (pre_deq = st1, deq = st2, post_deq = st3)
 end
