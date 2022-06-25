@@ -1,13 +1,13 @@
 neg(x::Any) = hasmethod(-, (typeof(x),)) ? -x : x
 neg(nt::NamedTuple) = fmap(neg, nt)
 
-@noinline function DiffEqSensitivity.SteadyStateAdjointProblem(sol::EquilibriumSolution,
+@noinline function SciMLSensitivity.SteadyStateAdjointProblem(sol::EquilibriumSolution,
                                                                sensealg::DeepEquilibriumAdjoint,
                                                                g::Nothing, dg;
                                                                save_idxs=nothing)
     @unpack f, p, u0 = sol.prob
 
-    diffcache, y = DiffEqSensitivity.adjointdiffcache(g, sensealg, false, sol, dg, f;
+    diffcache, y = SciMLSensitivity.adjointdiffcache(g, sensealg, false, sol, dg, f;
                                                       quad=false, needs_jac=false)
 
     _save_idxs = save_idxs === nothing ? Colon() : save_idxs
@@ -70,14 +70,14 @@ function DiffEqBase._concrete_solve_adjoint(prob::SteadyStateProblem, alg,
     return out, steadystatebackpass
 end
 
-function DiffEqSensitivity._adjoint_sensitivities(sol, sensealg::DeepEquilibriumAdjoint,
+function SciMLSensitivity._adjoint_sensitivities(sol, sensealg::DeepEquilibriumAdjoint,
                                                   alg, g, dg=nothing; abstol=1e-6,
                                                   reltol=1e-3, kwargs...)
-    return DiffEqSensitivity.SteadyStateAdjointProblem(sol, sensealg, g, dg; kwargs...)
+    return SciMLSensitivity.SteadyStateAdjointProblem(sol, sensealg, g, dg; kwargs...)
 end
 
-function DiffEqSensitivity._adjoint_sensitivities(sol, sensealg::DeepEquilibriumAdjoint,
+function SciMLSensitivity._adjoint_sensitivities(sol, sensealg::DeepEquilibriumAdjoint,
                                                   alg; g=nothing, dg=nothing, abstol=1e-6,
                                                   reltol=1e-3, kwargs...)
-    return DiffEqSensitivity.SteadyStateAdjointProblem(sol, sensealg, g, dg; kwargs...)
+    return SciMLSensitivity.SteadyStateAdjointProblem(sol, sensealg, g, dg; kwargs...)
 end
