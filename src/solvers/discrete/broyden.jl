@@ -21,7 +21,7 @@ See also: [`LimitedMemoryBroydenSolver`](@ref)
 struct BroydenSolver end
 
 function nlsolve(b::BroydenSolver, f::Function, y::AbstractArray{T}; terminate_condition,
-                 maxiters::Int=10) where {T}
+                 maxiters::Int = 10) where {T}
     res, stats = nlsolve(b,
                          u -> vec(f(reshape(u, size(y)))),
                          vec(y);
@@ -31,7 +31,7 @@ function nlsolve(b::BroydenSolver, f::Function, y::AbstractArray{T}; terminate_c
 end
 
 function nlsolve(::BroydenSolver, f::Function, y::AbstractVector{T}; terminate_condition,
-                 maxiters::Int=10) where {T}
+                 maxiters::Int = 10) where {T}
     x = copy(y)
     x_old = copy(y)
     Δx = copy(y)
@@ -87,12 +87,12 @@ function nlsolve(::BroydenSolver, f::Function, y::AbstractVector{T}; terminate_c
         terminate_condition(fx, x) && break
     end
 
-    return xs, (nf=nf,)
+    return xs, (nf = nf,)
 end
 
-function _approximate_norm_descent(f::Function, x::AbstractArray{T, N}, p; λ₀=T(1),
-                                   β=T(0.5), σ₁=T(0.001),
-                                   η=T(0.1), max_iter=50) where {T, N}
+function _approximate_norm_descent(f::Function, x::AbstractArray{T, N}, p; λ₀ = T(1),
+                                   β = T(0.5), σ₁ = T(0.001),
+                                   η = T(0.1), max_iter = 50) where {T, N}
     λ₂, λ₁ = λ₀, λ₀
 
     fx = f(x)
@@ -107,7 +107,7 @@ function _approximate_norm_descent(f::Function, x::AbstractArray{T, N}, p; λ₀
         converged = _test_approximate_norm_descent_convergence(f, x, fx_norm, p, σ₁, λ₂, η)
     end
 
-    return λ₂, (nf=2(j + 1),)
+    return λ₂, (nf = 2(j + 1),)
 end
 
 function _test_approximate_norm_descent_convergence(f, x, fx_norm, p, σ₁, λ₂, η)

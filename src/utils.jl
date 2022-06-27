@@ -30,14 +30,14 @@ end
 Base.@pure function DeepEquilibriumAdjoint(reltol,
                                            abstol,
                                            maxiters;
-                                           autojacvec=ZygoteVJP(),
-                                           linsolve=KrylovJL_GMRES(; rtol=reltol,
-                                                                   atol=abstol,
-                                                                   itmax=maxiters),
-                                           autodiff=true,
-                                           chunk_size=0,
-                                           diff_type=Val{:central},
-                                           mode::Symbol=:vanilla)
+                                           autojacvec = ZygoteVJP(),
+                                           linsolve = KrylovJL_GMRES(; rtol = reltol,
+                                                                     atol = abstol,
+                                                                     itmax = maxiters),
+                                           autodiff = true,
+                                           chunk_size = 0,
+                                           diff_type = Val{:central},
+                                           mode::Symbol = :vanilla)
     return DeepEquilibriumAdjoint{
                                   chunk_size, autodiff, diff_type, mode, typeof(autojacvec),
                                   typeof(linsolve)
@@ -51,7 +51,7 @@ end
 Initializes the weights of the network with a normal distribution. For DEQs the training is stable
 if we use this as the Initialization
 """
-function NormalInitializer(μ=0.0f0, σ²=0.01f0)
+function NormalInitializer(μ = 0.0f0, σ² = 0.01f0)
     return (rng::AbstractRNG, dims...) -> randn(rng, Float32, dims...) .* σ² .+ μ
 end
 
@@ -69,20 +69,20 @@ end
 end
 
 # General Utils
-@inline function _init_identity_matrix(x::AbstractArray{T}, scale::T=T(1)) where {T}
+@inline function _init_identity_matrix(x::AbstractArray{T}, scale::T = T(1)) where {T}
     x_ = vec(x)
     return _init_identity_matrix!(x_ .* x_', scale)
 end
 
-@inline function _init_identity_matrix!(x::AbstractMatrix{T}, scale::T=T(1)) where {T}
+@inline function _init_identity_matrix!(x::AbstractMatrix{T}, scale::T = T(1)) where {T}
     x .= zero(T)
     view(x, diagind(x)) .= scale .* true
     return x
 end
 
-@inline _norm(x; dims=Colon()) = sqrt.(sum(abs2, x; dims=dims))
+@inline _norm(x; dims = Colon()) = sqrt.(sum(abs2, x; dims = dims))
 
 # Compute norm over all dimensions except `except_dim`
 @inline function _norm(x::AbstractArray{T, N}, except_dim) where {T, N}
-    _norm(x; dims=filter(i -> i != except_dim, 1:N))
+    _norm(x; dims = filter(i -> i != except_dim, 1:N))
 end

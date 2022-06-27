@@ -115,8 +115,8 @@ end
 @inline function has_converged(du,
                                u,
                                alg::Union{ContinuousDEQSolver{M}, DiscreteDEQSolver{M}},
-                               abstol=alg.abstol_termination,
-                               reltol=alg.reltol_termination) where {M}
+                               abstol = alg.abstol_termination,
+                               reltol = alg.reltol_termination) where {M}
     return has_converged(du, u, M, abstol, reltol)
 end
 

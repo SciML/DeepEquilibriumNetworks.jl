@@ -1,17 +1,17 @@
 using Documenter, DocumenterCitations, DeepEquilibriumNetworks
 
-bib = CitationBibliography(joinpath(@__DIR__, "ref.bib"), sorting=:nyt)
+bib = CitationBibliography(joinpath(@__DIR__, "ref.bib"), sorting = :nyt)
 
 makedocs(bib,
-         sitename="Fast Deep Equilibrium Networks",
-         authors="Avik Pal et al.",
-         clean=true,
-         doctest=false,
-         modules=[DeepEquilibriumNetworks],
-         format=Documenter.HTML(#  analytics = "",
-                                #  assets = ["assets/favicon.ico"],
-                                canonical="https://deepequilibriumnetworks.sciml.ai/stable/"),
-         pages=[
+         sitename = "Fast Deep Equilibrium Networks",
+         authors = "Avik Pal et al.",
+         clean = true,
+         doctest = false,
+         modules = [DeepEquilibriumNetworks],
+         format = Documenter.HTML(#  analytics = "",
+                                  #  assets = ["assets/favicon.ico"],
+                                  canonical = "https://deepequilibriumnetworks.sciml.ai/stable/"),
+         pages = [
              "Home" => "index.md",
              "Manual" => [
                  "Dynamical Systems" => "manual/solvers.md",
@@ -23,5 +23,5 @@ makedocs(bib,
              "References" => "references.md",
          ])
 
-deploydocs(repo="github.com/SciML/DeepEquilibriumNetworks.jl.git";
-           push_preview=true)
+deploydocs(repo = "github.com/SciML/DeepEquilibriumNetworks.jl.git";
+           push_preview = true)

@@ -4,11 +4,11 @@ neg(nt::NamedTuple) = fmap(neg, nt)
 @noinline function DiffEqSensitivity.SteadyStateAdjointProblem(sol::EquilibriumSolution,
                                                                sensealg::DeepEquilibriumAdjoint,
                                                                g::Nothing, dg;
-                                                               save_idxs=nothing)
+                                                               save_idxs = nothing)
     @unpack f, p, u0 = sol.prob
 
     diffcache, y = DiffEqSensitivity.adjointdiffcache(g, sensealg, false, sol, dg, f;
-                                                      quad=false, needs_jac=false)
+                                                      quad = false, needs_jac = false)
 
     _save_idxs = save_idxs === nothing ? Colon() : save_idxs
     if dg !== nothing
@@ -45,8 +45,8 @@ end
 
 function DiffEqBase._concrete_solve_adjoint(prob::SteadyStateProblem, alg,
                                             sensealg::DeepEquilibriumAdjoint, u0, p,
-                                            args...; save_idxs=nothing, kwargs...)
-    _prob = remake(prob; u0=u0, p=p)
+                                            args...; save_idxs = nothing, kwargs...)
+    _prob = remake(prob; u0 = u0, p = p)
     sol = solve(_prob, alg, args...; kwargs...)
     _save_idxs = save_idxs === nothing ? Colon() : save_idxs
 
@@ -56,8 +56,8 @@ function DiffEqBase._concrete_solve_adjoint(prob::SteadyStateProblem, alg,
     function steadystatebackpass(Δ)
         # Δ = dg/dx or diffcache.dg_val
         # del g/del p = 0
-        dp = adjoint_sensitivities(sol, alg; sensealg=sensealg, g=nothing, dg=Δ,
-                                   save_idxs=save_idxs)
+        dp = adjoint_sensitivities(sol, alg; sensealg = sensealg, g = nothing, dg = Δ,
+                                   save_idxs = save_idxs)
         return (NoTangent(),
                 NoTangent(),
                 NoTangent(),
@@ -71,13 +71,14 @@ function DiffEqBase._concrete_solve_adjoint(prob::SteadyStateProblem, alg,
 end
 
 function DiffEqSensitivity._adjoint_sensitivities(sol, sensealg::DeepEquilibriumAdjoint,
-                                                  alg, g, dg=nothing; abstol=1e-6,
-                                                  reltol=1e-3, kwargs...)
+                                                  alg, g, dg = nothing; abstol = 1e-6,
+                                                  reltol = 1e-3, kwargs...)
     return DiffEqSensitivity.SteadyStateAdjointProblem(sol, sensealg, g, dg; kwargs...)
 end
 
 function DiffEqSensitivity._adjoint_sensitivities(sol, sensealg::DeepEquilibriumAdjoint,
-                                                  alg; g=nothing, dg=nothing, abstol=1e-6,
-                                                  reltol=1e-3, kwargs...)
+                                                  alg; g = nothing, dg = nothing,
+                                                  abstol = 1e-6,
+                                                  reltol = 1e-3, kwargs...)
     return DiffEqSensitivity.SteadyStateAdjointProblem(sol, sensealg, g, dg; kwargs...)
 end
