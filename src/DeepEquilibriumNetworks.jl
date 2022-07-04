@@ -5,7 +5,7 @@ using ChainRulesCore,
       CUDA,
       DiffEqBase,
       DiffEqCallbacks,
-      DiffEqSensitivity,
+      SciMLSensitivity,
       Functors,
       LinearAlgebra,
       LinearSolve,
@@ -20,7 +20,7 @@ using ChainRulesCore,
       UnPack,
       Zygote
 
-import DiffEqSensitivity: AbstractAdjointSensitivityAlgorithm
+import SciMLSensitivity: AbstractAdjointSensitivityAlgorithm
 import Lux: AbstractExplicitContainerLayer, initialparameters, initialstates,
             parameterlength, statelength
 import Random: AbstractRNG
