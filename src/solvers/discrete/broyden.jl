@@ -22,10 +22,7 @@ struct BroydenSolver end
 
 function nlsolve(b::BroydenSolver, f::Function, y::AbstractArray{T}; terminate_condition,
                  maxiters::Int=10) where {T}
-  res, stats = nlsolve(b,
-                       u -> vec(f(reshape(u, size(y)))),
-                       vec(y);
-                       terminate_condition,
+  res, stats = nlsolve(b, u -> vec(f(reshape(u, size(y)))), vec(y); terminate_condition,
                        maxiters)
   return reshape.(res, (size(y),)), stats
 end
@@ -91,8 +88,8 @@ function nlsolve(::BroydenSolver, f::Function, y::AbstractVector{T}; terminate_c
 end
 
 function _approximate_norm_descent(f::Function, x::AbstractArray{T, N}, p; λ₀=T(1),
-                                   β=T(0.5), σ₁=T(0.001),
-                                   η=T(0.1), max_iter=50) where {T, N}
+                                   β=T(0.5), σ₁=T(0.001), η=T(0.1),
+                                   max_iter=50) where {T, N}
   λ₂, λ₁ = λ₀, λ₀
 
   fx = f(x)

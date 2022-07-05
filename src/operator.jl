@@ -10,8 +10,7 @@ Base.size(z::ZygotePullbackMultiplyOperator, ::Int64) = prod(z.s)
 
 Base.eltype(::ZygotePullbackMultiplyOperator{T}) where {T} = T
 
-function LinearAlgebra.mul!(du::AbstractVector,
-                            L::ZygotePullbackMultiplyOperator,
+function LinearAlgebra.mul!(du::AbstractVector, L::ZygotePullbackMultiplyOperator,
                             x::AbstractVector)
   return du .= vec(L * x)
 end

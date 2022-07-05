@@ -15,8 +15,8 @@ function get_terminate_condition(alg::ContinuousDEQSolver{M, A, T}, args...;
 
     function terminate_condition_closure_1(integrator, abstol, reltol, min_t)
       du, u = DiffEqBase.get_du(integrator), integrator.u
-      objective = norm(du) / (mode ∈ (:abs_deq_default, :abs_deq_best) ? 1 :
-                   (norm(du .+ u) + eps(T)))
+      objective = norm(du) /
+                  (mode ∈ (:abs_deq_default, :abs_deq_best) ? 1 : (norm(du .+ u) + eps(T)))
       criteria = mode ∈ (:abs_deq_default, :abs_deq_best) ? abstol : reltol
 
       if mode ∈ (:rel_deq_best, :abs_deq_best)
@@ -36,21 +36,18 @@ function get_terminate_condition(alg::ContinuousDEQSolver{M, A, T}, args...;
       objective <= 3 * criteria &&
         nstep >= 30 &&
         maximum(objective_values[max(1, length(objective_values) - nstep):end]) <
-        1.3 *
-        minimum(objective_values[max(1, length(objective_values) - nstep):end]) &&
+        1.3 * minimum(objective_values[max(1, length(objective_values) - nstep):end]) &&
         return true
 
       # Protective break
-      objective >= objective_values[1] * protective_threshold * length(du) &&
-        return true
+      objective >= objective_values[1] * protective_threshold * length(du) && return true
 
       return false
     end
     return terminate_condition_closure_1
   else
     function terminate_condition_closure_2(integrator, abstol, reltol, min_t)
-      return has_converged(DiffEqBase.get_du(integrator), integrator.u, M, abstol,
-                           reltol)
+      return has_converged(DiffEqBase.get_du(integrator), integrator.u, M, abstol, reltol)
     end
     return terminate_condition_closure_2
   end
@@ -70,8 +67,8 @@ function get_terminate_condition(alg::DiscreteDEQSolver{M, A, T}, args...;
     end
 
     function terminate_condition_closure_1(du, u)
-      objective = norm(du) / (mode ∈ (:abs_deq_default, :abs_deq_best) ? 1 :
-                   (norm(du .+ u) + eps(T)))
+      objective = norm(du) /
+                  (mode ∈ (:abs_deq_default, :abs_deq_best) ? 1 : (norm(du .+ u) + eps(T)))
       criteria = mode ∈ (:abs_deq_default, :abs_deq_best) ? alg.abstol_termination :
                  alg.reltol_termination
 
@@ -92,13 +89,11 @@ function get_terminate_condition(alg::DiscreteDEQSolver{M, A, T}, args...;
       objective <= 3 * criteria &&
         nstep >= 30 &&
         maximum(objective_values[max(1, length(objective_values) - nstep):end]) <
-        1.3 *
-        minimum(objective_values[max(1, length(objective_values) - nstep):end]) &&
+        1.3 * minimum(objective_values[max(1, length(objective_values) - nstep):end]) &&
         return true
 
       # Protective break
-      objective >= objective_values[1] * protective_threshold * length(du) &&
-        return true
+      objective >= objective_values[1] * protective_threshold * length(du) && return true
 
       return false
     end
@@ -112,8 +107,7 @@ function get_terminate_condition(alg::DiscreteDEQSolver{M, A, T}, args...;
 end
 
 # Convergence Criterions
-@inline function has_converged(du,
-                               u,
+@inline function has_converged(du, u,
                                alg::Union{ContinuousDEQSolver{M}, DiscreteDEQSolver{M}},
                                abstol=alg.abstol_termination,
                                reltol=alg.reltol_termination) where {M}

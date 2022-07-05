@@ -25,15 +25,10 @@ struct ContinuousDEQSolver{M, A, T, TS} <: SteadyStateDiffEq.SteadyStateDiffEqAl
   tspan::TS
 end
 
-function ContinuousDEQSolver(alg=VCABM3();
-                             mode::Symbol=:rel_deq_default,
-                             abstol::T=1.0f-8,
-                             reltol::T=1.0f-8,
-                             abstol_termination::T=1.0f-8,
-                             reltol_termination::T=1.0f-8,
-                             tspan=Inf32) where {T <: Number}
-  return ContinuousDEQSolver{Val(mode), typeof(alg), T, typeof(tspan)}(alg, abstol,
-                                                                       reltol,
+function ContinuousDEQSolver(alg=VCABM3(); mode::Symbol=:rel_deq_default, abstol::T=1.0f-8,
+                             reltol::T=1.0f-8, abstol_termination::T=1.0f-8,
+                             reltol_termination::T=1.0f-8, tspan=Inf32) where {T <: Number}
+  return ContinuousDEQSolver{Val(mode), typeof(alg), T, typeof(tspan)}(alg, abstol, reltol,
                                                                        abstol_termination,
                                                                        reltol_termination,
                                                                        tspan)

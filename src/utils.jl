@@ -27,21 +27,14 @@ end
 end
 @inline check_adjoint_mode(::DeepEquilibriumAdjoint, ::Val) = false
 
-Base.@pure function DeepEquilibriumAdjoint(reltol,
-                                           abstol,
-                                           maxiters;
-                                           autojacvec=ZygoteVJP(),
+Base.@pure function DeepEquilibriumAdjoint(reltol, abstol, maxiters; autojacvec=ZygoteVJP(),
                                            linsolve=KrylovJL_GMRES(; rtol=reltol,
                                                                    atol=abstol,
                                                                    itmax=maxiters),
-                                           autodiff=true,
-                                           chunk_size=0,
-                                           diff_type=Val{:central},
-                                           mode::Symbol=:vanilla)
-  return DeepEquilibriumAdjoint{
-                                chunk_size, autodiff, diff_type, mode, typeof(autojacvec),
-                                typeof(linsolve)
-                                }(autojacvec, linsolve)
+                                           autodiff=true, chunk_size=0,
+                                           diff_type=Val{:central}, mode::Symbol=:vanilla)
+  return DeepEquilibriumAdjoint{chunk_size, autodiff, diff_type, mode, typeof(autojacvec),
+                                typeof(linsolve)}(autojacvec, linsolve)
 end
 
 # Initialization

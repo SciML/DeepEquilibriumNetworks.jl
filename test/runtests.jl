@@ -21,8 +21,7 @@ end
   model = DEQChain(Dense(2, 2),
                    DeepEquilibriumNetwork(Parallel(+, Dense(2, 2; bias=false),
                                                    Dense(2, 2; bias=false)),
-                                          ContinuousDEQSolver(; abstol=0.1f0,
-                                                              reltol=0.1f0,
+                                          ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0,
                                                               abstol_termination=0.1f0,
                                                               reltol_termination=0.1f0)))
   ps, st = gpu.(Lux.setup(rng, model))
@@ -49,8 +48,8 @@ end
                                                                   reltol=0.1f0,
                                                                   abstol_termination=0.1f0,
                                                                   reltol_termination=0.1f0);
-                                              sensealg=DeepEquilibriumAdjoint(0.1f0,
-                                                                              0.1f0, 10)))
+                                              sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0,
+                                                                              10)))
   ps, st = gpu.(Lux.setup(rng, model))
   x = gpu(rand(rng, Float32, 2, 1))
   y = gpu(rand(rng, Float32, 2, 1))
@@ -81,8 +80,8 @@ end
                                                                   reltol=0.1f0,
                                                                   abstol_termination=0.1f0,
                                                                   reltol_termination=0.1f0);
-                                              sensealg=DeepEquilibriumAdjoint(0.1f0,
-                                                                              0.1f0, 10)))
+                                              sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0,
+                                                                              10)))
   ps, st = gpu.(Lux.setup(rng, model))
   x = gpu(rand(rng, Float32, 2, 1))
   y = gpu(rand(rng, Float32, 2, 1))
@@ -112,8 +111,8 @@ end
                                               DiscreteDEQSolver(BroydenSolver();
                                                                 abstol_termination=0.1f0,
                                                                 reltol_termination=0.1f0);
-                                              sensealg=DeepEquilibriumAdjoint(0.1f0,
-                                                                              0.1f0, 10)))
+                                              sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0,
+                                                                              10)))
   ps, st = gpu.(Lux.setup(rng, model))
   x = gpu(rand(rng, Float32, 2, 1))
   y = gpu(rand(rng, Float32, 2, 1))
@@ -133,8 +132,8 @@ end
                                               DiscreteDEQSolver(LimitedMemoryBroydenSolver();
                                                                 abstol_termination=0.1f0,
                                                                 reltol_termination=0.1f0);
-                                              sensealg=DeepEquilibriumAdjoint(0.1f0,
-                                                                              0.1f0, 10)))
+                                              sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0,
+                                                                              10)))
   ps, st = gpu.(Lux.setup(rng, model))
   x = gpu(rand(rng, Float32, 2, 1))
   y = gpu(rand(rng, Float32, 2, 1))
@@ -149,17 +148,14 @@ end
   @info "Testing MultiScaleDEQ"
   Random.seed!(rng, seed)
   model = MultiScaleDeepEquilibriumNetwork((Parallel(+, Dense(4, 4, tanh),
-                                                     Dense(4, 4, tanh)),
-                                            Dense(3, 3, tanh),
-                                            Dense(2, 2, tanh),
-                                            Dense(1, 1, tanh)),
+                                                     Dense(4, 4, tanh)), Dense(3, 3, tanh),
+                                            Dense(2, 2, tanh), Dense(1, 1, tanh)),
                                            [NoOpLayer() Dense(4, 3, tanh) Dense(4, 2, tanh) Dense(4, 1, tanh)
                                             Dense(3, 4, tanh) NoOpLayer() Dense(3, 2, tanh) Dense(3, 1, tanh)
                                             Dense(2, 4, tanh) Dense(2, 3, tanh) NoOpLayer() Dense(2, 1, tanh)
                                             Dense(1, 4, tanh) Dense(1, 3, tanh) Dense(1, 2, tanh) NoOpLayer()],
                                            nothing,
-                                           ContinuousDEQSolver(; abstol=0.1f0,
-                                                               reltol=0.1f0,
+                                           ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0,
                                                                abstol_termination=0.1f0,
                                                                reltol_termination=0.1f0),
                                            ((4,), (3,), (2,), (1,));
@@ -191,8 +187,7 @@ end
   Random.seed!(rng, seed)
   model = MultiScaleSkipDeepEquilibriumNetwork((Parallel(+, Dense(4, 4, tanh),
                                                          Dense(4, 4, tanh)),
-                                                Dense(3, 3, tanh),
-                                                Dense(2, 2, tanh),
+                                                Dense(3, 3, tanh), Dense(2, 2, tanh),
                                                 Dense(1, 1, tanh)),
                                                [NoOpLayer() Dense(4, 3, tanh) Dense(4, 2, tanh) Dense(4, 1, tanh)
                                                 Dense(3, 4, tanh) NoOpLayer() Dense(3, 2, tanh) Dense(3, 1, tanh)
@@ -206,8 +201,8 @@ end
                                                                    abstol_termination=0.1f0,
                                                                    reltol_termination=0.1f0),
                                                ((4,), (3,), (2,), (1,));
-                                               sensealg=DeepEquilibriumAdjoint(0.1f0,
-                                                                               0.1f0, 10))
+                                               sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0,
+                                                                               10))
 
   ps, st = gpu.(Lux.setup(rng, model))
   x = gpu(rand(rng, Float32, 4, 2))
@@ -234,22 +229,20 @@ end
   Random.seed!(rng, seed)
   model = MultiScaleSkipDeepEquilibriumNetwork((Parallel(+, Dense(4, 4, tanh),
                                                          Dense(4, 4, tanh)),
-                                                Dense(3, 3, tanh),
-                                                Dense(2, 2, tanh),
+                                                Dense(3, 3, tanh), Dense(2, 2, tanh),
                                                 Dense(1, 1, tanh)),
                                                [NoOpLayer() Dense(4, 3, tanh) Dense(4, 2, tanh) Dense(4, 1, tanh)
                                                 Dense(3, 4, tanh) NoOpLayer() Dense(3, 2, tanh) Dense(3, 1, tanh)
                                                 Dense(2, 4, tanh) Dense(2, 3, tanh) NoOpLayer() Dense(2, 1, tanh)
                                                 Dense(1, 4, tanh) Dense(1, 3, tanh) Dense(1, 2, tanh) NoOpLayer()],
-                                               nothing,
-                                               nothing,
+                                               nothing, nothing,
                                                ContinuousDEQSolver(; abstol=0.1f0,
                                                                    reltol=0.1f0,
                                                                    abstol_termination=0.1f0,
                                                                    reltol_termination=0.1f0),
                                                ((4,), (3,), (2,), (1,));
-                                               sensealg=DeepEquilibriumAdjoint(0.1f0,
-                                                                               0.1f0, 10))
+                                               sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0,
+                                                                               10))
 
   ps, st = gpu.(Lux.setup(rng, model))
   x = gpu(rand(rng, Float32, 4, 2))

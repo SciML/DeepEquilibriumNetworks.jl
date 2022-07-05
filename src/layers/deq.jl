@@ -14,8 +14,7 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite)
 ## Example
 
 ```julia
-model = DeepEquilibriumNetwork(Parallel(+,
-                                        Dense(2, 2; bias=false),
+model = DeepEquilibriumNetwork(Parallel(+, Dense(2, 2; bias=false),
                                         Dense(2, 2; bias=false)),
                                ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0))
 
@@ -59,8 +58,7 @@ function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T},
     st = merge(st, (model=st_,))
 
     return (z_star,
-            DeepEquilibriumSolution(z_star, z, residual, 0.0f0, get_unrolled_depth(st))),
-           st
+            DeepEquilibriumSolution(z_star, z, residual, 0.0f0, get_unrolled_depth(st))), st
   end
 
   st_ = st.model
@@ -102,10 +100,8 @@ Skip Deep Equilibrium Network as proposed in [pal2022mixing](@cite)
 
 ```julia
 # SkipDEQ
-model = SkipDeepEquilibriumNetwork(Parallel(+,
-                                            Dense(2, 2; bias=false),
-                                            Dense(2, 2; bias=false)),
-                                   Dense(2, 2),
+model = SkipDeepEquilibriumNetwork(Parallel(+, Dense(2, 2; bias=false),
+                                            Dense(2, 2; bias=false)), Dense(2, 2),
                                    ContinuousDEQSolver(VCABM3(); abstol=0.01f0,
                                                        reltol=0.01f0))
 
@@ -115,10 +111,8 @@ ps, st = Lux.setup(rng, model)
 model(rand(Float32, 2, 1), ps, st)
 
 # SkipDEQV2
-model = SkipDeepEquilibriumNetwork(Parallel(+,
-                                            Dense(2, 2; bias=false),
-                                            Dense(2, 2; bias=false)),
-                                   nothing,
+model = SkipDeepEquilibriumNetwork(Parallel(+, Dense(2, 2; bias=false),
+                                            Dense(2, 2; bias=false)), nothing,
                                    ContinuousDEQSolver(VCABM3(); abstol=0.01f0,
                                                        reltol=0.01f0))
 
@@ -138,17 +132,14 @@ struct SkipDeepEquilibriumNetwork{J, M, Sh, A, S, K} <: AbstractSkipDeepEquilibr
   kwargs::K
 end
 
-function SkipDeepEquilibriumNetwork(model,
-                                    shortcut,
-                                    solver;
+function SkipDeepEquilibriumNetwork(model, shortcut, solver;
                                     jacobian_regularization::Bool=false,
                                     sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
                                     kwargs...)
-  return SkipDeepEquilibriumNetwork{
-                                    jacobian_regularization, typeof(model),
+  return SkipDeepEquilibriumNetwork{jacobian_regularization, typeof(model),
                                     typeof(shortcut), typeof(solver), typeof(sensealg),
-                                    typeof(kwargs)
-                                    }(model, shortcut, solver, sensealg, kwargs)
+                                    typeof(kwargs)}(model, shortcut, solver, sensealg,
+                                                    kwargs)
 end
 
 function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T},
@@ -170,13 +161,11 @@ function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T},
       z_star, st_ = deq.model((z_star, x), ps.model, st_)
     end
 
-    residual = ignore_derivatives(z_star .-
-                                  deq.model((z_star, x), ps.model, st.model)[1])
+    residual = ignore_derivatives(z_star .- deq.model((z_star, x), ps.model, st.model)[1])
     st = merge(st, (model=st_,))
 
     return (z_star,
-            DeepEquilibriumSolution(z_star, z, residual, 0.0f0, get_unrolled_depth(st))),
-           st
+            DeepEquilibriumSolution(z_star, z, residual, 0.0f0, get_unrolled_depth(st))), st
   end
 
   st_ = st.model

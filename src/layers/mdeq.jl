@@ -27,8 +27,7 @@ Multiscale Deep Equilibrium Network as proposed in [baimultiscale2020](@cite)
 
 ```julia
 model = MultiScaleDeepEquilibriumNetwork((Parallel(+, Dense(4, 4, tanh), Dense(4, 4, tanh)),
-                                          Dense(3, 3, tanh),
-                                          Dense(2, 2, tanh),
+                                          Dense(3, 3, tanh), Dense(2, 2, tanh),
                                           Dense(1, 1, tanh)),
                                          [NoOpLayer() Dense(4, 3, tanh) Dense(4, 2, tanh) Dense(4, 1, tanh);
                                           Dense(3, 4, tanh) NoOpLayer() Dense(3, 2, tanh) Dense(3, 1, tanh);
@@ -59,14 +58,11 @@ end
 function initialstates(rng::AbstractRNG, deq::MultiScaleDeepEquilibriumNetwork)
   return (model=initialstates(rng, deq.model),
           split_idxs=static(Tuple(vcat(0, cumsum(prod.(deq.scales))...))),
-          fixed_depth=Val(0),
-          initial_condition=zeros(Float32, 1, 1))
+          fixed_depth=Val(0), initial_condition=zeros(Float32, 1, 1))
 end
 
-function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple,
-                                          mapping_layers::Matrix,
-                                          post_fuse_layer::Union{Nothing, Tuple},
-                                          solver,
+function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
+                                          post_fuse_layer::Union{Nothing, Tuple}, solver,
                                           scales::NTuple{N, NTuple{L, Int64}};
                                           sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
                                           kwargs...) where {N, L}
@@ -75,10 +71,10 @@ function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple,
   model = post_fuse_layer === nothing ? Chain(l1, l2) :
           Chain(l1, l2, Parallel(nothing, post_fuse_layer...))
   scales = static(scales)
-  return MultiScaleDeepEquilibriumNetwork{
-                                          N, typeof(scales), typeof(model),
-                                          typeof(solver), typeof(sensealg), typeof(kwargs)
-                                          }(model, solver, sensealg, scales, kwargs)
+  return MultiScaleDeepEquilibriumNetwork{N, typeof(scales), typeof(model), typeof(solver),
+                                          typeof(sensealg), typeof(kwargs)}(model, solver,
+                                                                            sensealg,
+                                                                            scales, kwargs)
 end
 
 @generated function get_initial_condition_mdeq(::S, x::AbstractArray{T, N},
@@ -106,19 +102,16 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T},
 
   if check_unrolled_mode(st)
     z_star = split_and_reshape(z, st.split_idxs, deq.scales)
-    z_star, st_ = evaluate_unrolled_mdeq(deq.model, z_star, x, ps, st.model,
-                                         st.fixed_depth)
+    z_star, st_ = evaluate_unrolled_mdeq(deq.model, z_star, x, ps, st.model, st.fixed_depth)
 
     residual = ignore_derivatives(vcat(flatten.(z_star)...) .-
-                                  vcat(flatten.(evaluate_unrolled_mdeq(deq.model,
-                                                                       z_star, x, ps,
-                                                                       st_, Val(1))[1])...))
+                                  vcat(flatten.(evaluate_unrolled_mdeq(deq.model, z_star, x,
+                                                                       ps, st_, Val(1))[1])...))
     st__ = merge(st, (model=st_,))
 
     return ((z_star,
              DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0,
-                                     get_unrolled_depth(st))),
-            st__)
+                                     get_unrolled_depth(st))), st__)
   end
 
   st_ = st.model
@@ -166,8 +159,7 @@ Multiscale Deep Equilibrium Network as proposed in [baimultiscale2020](@cite) co
 # MSkipDEQ
 model = MultiScaleSkipDeepEquilibriumNetwork((Parallel(+, Dense(4, 4, tanh),
                                                        Dense(4, 4, tanh)),
-                                              Dense(3, 3, tanh),
-                                              Dense(2, 2, tanh),
+                                              Dense(3, 3, tanh), Dense(2, 2, tanh),
                                               Dense(1, 1, tanh)),
                                              [NoOpLayer() Dense(4, 3, tanh) Dense(4, 2, tanh) Dense(4, 1, tanh)
                                               Dense(3, 4, tanh) NoOpLayer() Dense(3, 2, tanh) Dense(3, 1, tanh)
@@ -193,15 +185,13 @@ model(x, ps, st)
 # MSkipDEQV2
 model = MultiScaleSkipDeepEquilibriumNetwork((Parallel(+, Dense(4, 4, tanh),
                                                        Dense(4, 4, tanh)),
-                                              Dense(3, 3, tanh),
-                                              Dense(2, 2, tanh),
+                                              Dense(3, 3, tanh), Dense(2, 2, tanh),
                                               Dense(1, 1, tanh)),
                                              [NoOpLayer() Dense(4, 3, tanh) Dense(4, 2, tanh) Dense(4, 1, tanh)
                                               Dense(3, 4, tanh) NoOpLayer() Dense(3, 2, tanh) Dense(3, 1, tanh)
                                               Dense(2, 4, tanh) Dense(2, 3, tanh) NoOpLayer() Dense(2, 1, tanh)
                                               Dense(1, 4, tanh) Dense(1, 3, tanh) Dense(1, 2, tanh) NoOpLayer()],
-                                             nothing,
-                                             nothing,
+                                             nothing, nothing,
                                              ContinuousDEQSolver(; abstol=0.1f0,
                                                                  reltol=0.1f0,
                                                                  abstol_termination=0.1f0,
@@ -230,19 +220,15 @@ struct MultiScaleSkipDeepEquilibriumNetwork{N, Sc, M, Sh, A, S, K} <:
 end
 
 function initialstates(rng::AbstractRNG, deq::MultiScaleSkipDeepEquilibriumNetwork)
-  return (model=initialstates(rng, deq.model),
-          shortcut=initialstates(rng, deq.shortcut),
+  return (model=initialstates(rng, deq.model), shortcut=initialstates(rng, deq.shortcut),
           split_idxs=static(Tuple(vcat(0, cumsum(prod.(deq.scales))...))),
-          fixed_depth=Val(0),
-          initial_condition=zeros(Float32, 1, 1))
+          fixed_depth=Val(0), initial_condition=zeros(Float32, 1, 1))
 end
 
-function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple,
-                                              mapping_layers::Matrix,
+function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
                                               post_fuse_layer::Union{Nothing, Tuple},
                                               shortcut_layers::Union{Nothing, Tuple},
-                                              solver,
-                                              scales;
+                                              solver, scales;
                                               sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0,
                                                                               10),
                                               kwargs...)
@@ -252,13 +238,14 @@ function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple,
           Chain(l1, l2, Parallel(nothing, post_fuse_layer...))
   shortcut = shortcut_layers === nothing ? nothing : Parallel(nothing, shortcut_layers...)
   scales = static(scales)
-  return MultiScaleSkipDeepEquilibriumNetwork{
-                                              length(scales), typeof(scales),
-                                              typeof(model), typeof(shortcut),
-                                              typeof(solver), typeof(sensealg),
-                                              typeof(kwargs)
-                                              }(model, shortcut, solver, sensealg, scales,
-                                                kwargs)
+  return MultiScaleSkipDeepEquilibriumNetwork{length(scales), typeof(scales), typeof(model),
+                                              typeof(shortcut), typeof(solver),
+                                              typeof(sensealg), typeof(kwargs)}(model,
+                                                                                shortcut,
+                                                                                solver,
+                                                                                sensealg,
+                                                                                scales,
+                                                                                kwargs)
 end
 
 function (deq::MultiScaleSkipDeepEquilibriumNetwork{N, Sc, M, Sh})(x::AbstractArray{T},
@@ -285,16 +272,14 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N, Sc, M, Sh})(x::AbstractAr
                                          st.fixed_depth)
 
     residual = ignore_derivatives(vcat(flatten.(z_star)...) .-
-                                  vcat(flatten.(evaluate_unrolled_mdeq(deq.model,
-                                                                       z_star, x,
+                                  vcat(flatten.(evaluate_unrolled_mdeq(deq.model, z_star, x,
                                                                        ps.model, st_,
                                                                        Val(1))[1])...))
     st__ = merge(st, (model=st_,))
 
     return ((z_star,
              DeepEquilibriumSolution(vcat(flatten.(z_star)...), z, residual, 0.0f0,
-                                     get_unrolled_depth(st))),
-            st__)
+                                     get_unrolled_depth(st))), st__)
   end
 
   st_ = st.model
