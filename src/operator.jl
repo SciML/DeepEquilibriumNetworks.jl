@@ -1,6 +1,6 @@
 struct ZygotePullbackMultiplyOperator{T, F, S}
-    f::F
-    s::S
+  f::F
+  s::S
 end
 
 Base.deepcopy(op::ZygotePullbackMultiplyOperator) = op
@@ -13,11 +13,11 @@ Base.eltype(::ZygotePullbackMultiplyOperator{T}) where {T} = T
 function LinearAlgebra.mul!(du::AbstractVector,
                             L::ZygotePullbackMultiplyOperator,
                             x::AbstractVector)
-    du .= vec(L * x)
+  return du .= vec(L * x)
 end
 
 function Base.:*(L::ZygotePullbackMultiplyOperator, x::AbstractVector)
-    return L.f(reshape(x, L.s))[1]
+  return L.f(reshape(x, L.s))[1]
 end
 
 SciMLBase.isinplace(z::ZygotePullbackMultiplyOperator, ::Int64) = false
