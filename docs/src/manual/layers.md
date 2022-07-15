@@ -1,5 +1,0 @@
-# Layers
-
-```@docs
-DEQChain
-```

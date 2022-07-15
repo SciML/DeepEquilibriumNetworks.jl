@@ -1,3 +1,11 @@
+import LinearAlgebra
+import SciMLBase
+
+"""
+    ZygotePullbackMultiplyOperator{T, typeof(pullback), typeof(shape)}(pullback, shape)
+
+Constructs an operator for computing the VJP when operated (via `mul!` or `*`) on a vector.
+"""
 struct ZygotePullbackMultiplyOperator{T, F, S}
   f::F
   s::S

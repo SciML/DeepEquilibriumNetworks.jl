@@ -3,5 +3,4 @@
 ```@docs
 DeepEquilibriumAdjoint
 DeepEquilibriumSolution
-NormalInitializer
 ```

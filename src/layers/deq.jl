@@ -1,30 +1,44 @@
-"""
-    DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=false, sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10), kwargs...)
+import ChainRulesCore as CRC
+import SteadyStateDiffEq
+import OrdinaryDiffEq
 
-Deep Equilibrium Network as proposed in [baideep2019](@cite)
+"""
+    DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=false,
+                           sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10), kwargs...)
+
+Deep Equilibrium Network as proposed in [baideep2019](@cite).
 
 ## Arguments
 
-  - `model`: Neural Network
-  - `solver`: Solver for the optimization problem (See: [`ContinuousDEQSolver`](@ref) & [`DiscreteDEQSolver`](@ref))
-  - `jacobian_regularization`: If true, Jacobian Loss is computed and stored in the [`DeepEquilibriumSolution`](@ref)
-  - `sensealg`: See [`DeepEquilibriumAdjoint`](@ref)
-  - `kwargs`: Additional Parameters that are directly passed to `solve`
+  - `model`:`Lux` Neural Network.
+  - `solver`: Solver for the optimization problem (See: [`ContinuousDEQSolver`](@ref) &
+    [`DiscreteDEQSolver`](@ref)).
+  - `jacobian_regularization`: If true, Jacobian Loss is computed and stored in the
+    [`DeepEquilibriumSolution`](@ref).
+  - `sensealg`: See [`DeepEquilibriumAdjoint`](@ref).
+  - `kwargs`: Additional Parameters that are directly passed to `SciMLBase.solve`.
 
 ## Example
 
 ```julia
-model = DeepEquilibriumNetwork(Parallel(+, Dense(2, 2; bias=false),
-                                        Dense(2, 2; bias=false)),
-                               ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0))
+import DeepEquilibriumNetworks as DEQs
+import Lux
+import Random
+import OrdinaryDiffEq
+
+model = DEQs.DeepEquilibriumNetwork(Lux.Parallel(+, Lux.Dense(2, 2; bias=false),
+                                                 Lux.Dense(2, 2; bias=false)),
+                                    DEQs.ContinuousDEQSolver(OrdinaryDiffEq.VCABM3();
+                                                             abstol=0.01f0, reltol=0.01f0))
 
 rng = Random.default_rng()
 ps, st = Lux.setup(rng, model)
 
-model(rand(Float32, 2, 1), ps, st)
+model(rand(rng, Float32, 2, 1), ps, st)
 ```
 
-See also: [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref), [`MultiScaleSkipDeepEquilibriumNetwork`](@ref)
+See also: [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref),
+[`MultiScaleSkipDeepEquilibriumNetwork`](@ref).
 """
 struct DeepEquilibriumNetwork{J, M, A, S, K} <: AbstractDeepEquilibriumNetwork
   model::M
@@ -41,24 +55,26 @@ function DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=fal
                                                                   kwargs)
 end
 
-function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T},
-                                          ps::Union{ComponentArray, NamedTuple},
+function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T}, ps,
                                           st::NamedTuple) where {J, T}
   z = zero(x)
 
-  if check_unrolled_mode(st)
+  if _check_unrolled_mode(st)
     # Pretraining without Fixed Point Solving
     st_ = st.model
     z_star = z
-    for _ in 1:get_unrolled_depth(st)
+
+    for _ in 1:_get_unrolled_depth(st)
       z_star, st_ = deq.model((z_star, x), ps, st_)
     end
 
-    residual = ignore_derivatives(z_star .- deq.model((z_star, x), ps, st.model)[1])
-    st = merge(st, (model=st_,))
+    residual = CRC.ignore_derivatives(z_star .- deq.model((z_star, x), ps, st.model)[1])
+    st = merge(st,
+               (model=st_,
+                solution=DeepEquilibriumSolution(z_star, z, residual, 0.0f0,
+                                                 _get_unrolled_depth(st))))
 
-    return (z_star,
-            DeepEquilibriumSolution(z_star, z, residual, 0.0f0, get_unrolled_depth(st))), st
+    return z_star, st
   end
 
   st_ = st.model
@@ -68,61 +84,82 @@ function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T},
     return u_ .- u
   end
 
-  prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps)
-  sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
+  prob = SteadyStateDiffEq.SteadyStateProblem(OrdinaryDiffEq.ODEFunction{false}(dudt), z,
+                                              ps)
+  sol = SciMLBase.solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
   z_star, st_ = deq.model((sol.u, x), ps, st.model)
 
-  jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps, st.model, z_star, x) : T(0))
-  residual = ignore_derivatives(z_star .- deq.model((z_star, x), ps, st.model)[1])
+  if J
+    rng = Lux.replicate(st.rng)
+    jac_loss = estimate_jacobian_trace(Val(:finite_diff), deq.model, ps, st.model, z_star,
+                                       x, rng)
+  else
+    rng = st.rng
+    jac_loss = T(0)
+  end
+  residual = CRC.ignore_derivatives(z_star .- deq.model((z_star, x), ps, st.model)[1])
 
-  st = merge(st, (model=st_,))
+  st = merge(st,
+             (model=st_, rng=rng,
+              solution=DeepEquilibriumSolution(z_star, z, residual, jac_loss,
+                                               sol.destats.nf + 1 + J)))
 
-  return (z_star,
-          DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J)),
-         st
+  return z_star, st
 end
 
 """
-    SkipDeepEquilibriumNetwork(model, shortcut, solver; jacobian_regularization::Bool=false, sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10), kwargs...)
+    SkipDeepEquilibriumNetwork(model, shortcut, solver; jacobian_regularization::Bool=false,
+                               sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10), kwargs...)
 
 Skip Deep Equilibrium Network as proposed in [pal2022mixing](@cite)
 
 ## Arguments
 
-  - `model`: Neural Network
-  - `shortcut`: Shortcut for the network (pass `nothing` for SkipDEQV2)
-  - `solver`: Solver for the optimization problem (See: [`ContinuousDEQSolver`](@ref) & [`DiscreteDEQSolver`](@ref))
-  - `jacobian_regularization`: If true, Jacobian Loss is computed and stored in the [`DeepEquilibriumSolution`](@ref)
-  - `sensealg`: See [`DeepEquilibriumAdjoint`](@ref)
-  - `kwargs`: Additional Parameters that are directly passed to `solve`
+  - `model`: Neural Network.
+  - `shortcut`: Shortcut for the network (pass `nothing` for SkipDEQV2).
+  - `solver`: Solver for the optimization problem (See: [`ContinuousDEQSolver`](@ref) &
+    [`DiscreteDEQSolver`](@ref)).
+  - `jacobian_regularization`: If true, Jacobian Loss is computed and stored in the
+    [`DeepEquilibriumSolution`](@ref).
+  - `sensealg`: See [`DeepEquilibriumAdjoint`](@ref).
+  - `kwargs`: Additional Parameters that are directly passed to `SciMLBase.solve`.
 
 ## Example
 
 ```julia
-# SkipDEQ
-model = SkipDeepEquilibriumNetwork(Parallel(+, Dense(2, 2; bias=false),
-                                            Dense(2, 2; bias=false)), Dense(2, 2),
-                                   ContinuousDEQSolver(VCABM3(); abstol=0.01f0,
-                                                       reltol=0.01f0))
+import DeepEquilibriumNetworks as DEQs
+import Lux
+import Random
+import OrdinaryDiffEq
+
+## SkipDEQ
+model = DEQs.SkipDeepEquilibriumNetwork(Lux.Parallel(+, Lux.Dense(2, 2; bias=false),
+                                                     Lux.Dense(2, 2; bias=false)),
+                                        Lux.Dense(2, 2),
+                                        DEQs.ContinuousDEQSolver(OrdinaryDiffEq.VCABM3();
+                                                                 abstol=0.01f0,
+                                                                 reltol=0.01f0))
 
 rng = Random.default_rng()
 ps, st = Lux.setup(rng, model)
 
-model(rand(Float32, 2, 1), ps, st)
+model(rand(rng, Float32, 2, 1), ps, st)
 
-# SkipDEQV2
-model = SkipDeepEquilibriumNetwork(Parallel(+, Dense(2, 2; bias=false),
-                                            Dense(2, 2; bias=false)), nothing,
-                                   ContinuousDEQSolver(VCABM3(); abstol=0.01f0,
-                                                       reltol=0.01f0))
+## SkipDEQV2
+model = DEQs.SkipDeepEquilibriumNetwork(Lux.Parallel(+, Lux.Dense(2, 2; bias=false),
+                                                     Lux.Dense(2, 2; bias=false)), nothing,
+                                        DEQs.ContinuousDEQSolver(OrdinaryDiffEq.VCABM3();
+                                                                 abstol=0.01f0,
+                                                                 reltol=0.01f0))
 
 rng = Random.default_rng()
 ps, st = Lux.setup(rng, model)
 
-model(rand(Float32, 2, 1), ps, st)
+model(rand(rng, Float32, 2, 1), ps, st)
 ```
 
-See also: [`DeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref), [`MultiScaleSkipDeepEquilibriumNetwork`](@ref)
+See also: [`DeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref),
+[`MultiScaleSkipDeepEquilibriumNetwork`](@ref)
 """
 struct SkipDeepEquilibriumNetwork{J, M, Sh, A, S, K} <: AbstractSkipDeepEquilibriumNetwork
   model::M
@@ -142,8 +179,7 @@ function SkipDeepEquilibriumNetwork(model, shortcut, solver;
                                                     kwargs)
 end
 
-function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T},
-                                                    ps::Union{ComponentArray, NamedTuple},
+function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T}, ps,
                                                     st::NamedTuple) where {J, M, S, T}
   z, st = if S == Nothing
     z__, st__ = deq.model((zero(x), x), ps.model, st.model)
@@ -153,19 +189,22 @@ function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T},
     z__, merge(st, (shortcut=st__,))
   end
 
-  if check_unrolled_mode(st)
+  if _check_unrolled_mode(st)
     # Pretraining without Fixed Point Solving
     st_ = st.model
     z_star = z
-    for _ in 1:get_unrolled_depth(st)
+    for _ in 1:_get_unrolled_depth(st)
       z_star, st_ = deq.model((z_star, x), ps.model, st_)
     end
 
-    residual = ignore_derivatives(z_star .- deq.model((z_star, x), ps.model, st.model)[1])
-    st = merge(st, (model=st_,))
+    residual = CRC.ignore_derivatives(z_star .-
+                                      deq.model((z_star, x), ps.model, st.model)[1])
+    st = merge(st,
+               (model=st_,
+                solution=DeepEquilibriumSolution(z_star, z, residual, 0.0f0,
+                                                 _get_unrolled_depth(st))))
 
-    return (z_star,
-            DeepEquilibriumSolution(z_star, z, residual, 0.0f0, get_unrolled_depth(st))), st
+    return z_star, st
   end
 
   st_ = st.model
@@ -175,17 +214,25 @@ function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T},
     return u_ .- u
   end
 
-  prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps.model)
-  sol = solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
+  prob = SteadyStateDiffEq.SteadyStateProblem(OrdinaryDiffEq.ODEFunction{false}(dudt), z,
+                                              ps.model)
+  sol = SciMLBase.solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
   z_star, st_ = deq.model((sol.u, x), ps.model, st.model)
 
-  jac_loss = (J ? compute_deq_jacobian_loss(deq.model, ps.model, st.model, z_star, x) :
-              T(0))
-  residual = ignore_derivatives(z_star .- deq.model((z_star, x), ps.model, st.model)[1])
+  if J
+    rng = Lux.replicate(st.rng)
+    jac_loss = estimate_jacobian_trace(Val(:finite_diff), deq.model, ps.model, st.model,
+                                       z_star, x, rng)
+  else
+    rng = st.rng
+    jac_loss = T(0)
+  end
+  residual = CRC.ignore_derivatives(z_star .- deq.model((z_star, x), ps.model, st.model)[1])
 
-  st = merge(st, (model=st_,))
+  st = merge(st,
+             (model=st_, rng=rng,
+              solution=DeepEquilibriumSolution(z_star, z, residual, jac_loss,
+                                               sol.destats.nf + 1 + J)))
 
-  return (z_star,
-          DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J)),
-         st
+  return z_star, st
 end
