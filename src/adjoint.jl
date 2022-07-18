@@ -1,84 +1,122 @@
-neg(x::Any) = hasmethod(-, (typeof(x),)) ? -x : x
-neg(nt::NamedTuple) = fmap(neg, nt)
+import ChainRulesCore as CRC
+import DiffEqBase
+import Functors
+import LinearSolve
+import SciMLBase
+import SciMLSensitivity
+import UnPack
+import Zygote
 
-@noinline function SciMLSensitivity.SteadyStateAdjointProblem(sol::EquilibriumSolution,
-                                                              sensealg::DeepEquilibriumAdjoint,
-                                                              g::Nothing, dg;
-                                                              save_idxs=nothing, kwargs...)
-  @unpack f, p, u0 = sol.prob
+# TODO(@avik-pal): Move to Lux.jl or maybe CRC?
+function CRC.rrule(::Type{T}, args...) where {T <: NamedTuple}
+  y = T(args...)
+  function nt_pullback(dy)
+    fnames = fieldnames(T)
+    if dy isa CRC.Tangent
+      dy = CRC.backing(dy)
+    end
+    return (CRC.NoTangent(), getfield.((dy,), fnames)...)
+  end
+  return y, nt_pullback
+end
 
-  diffcache, y = SciMLSensitivity.adjointdiffcache(g, sensealg, false, sol, dg, f;
-                                                   quad=false, needs_jac=false)
+@generated neg(x::T) where {T} = hasmethod(-, (T,)) ? :(-x) : :(x)
+neg(nt::NamedTuple) = Functors.fmap(neg, nt)
 
-  _save_idxs = save_idxs === nothing ? Colon() : save_idxs
-  if dg !== nothing
-    if typeof(_save_idxs) <: Number
-      diffcache.dg_val[_save_idxs] = dg[_save_idxs]
-    elseif typeof(dg) <: Number
-      @. diffcache.dg_val[_save_idxs] = dg
-    else
-      @. diffcache.dg_val[_save_idxs] = dg[_save_idxs]
+@noinline function SteadyStateAdjointProblem(sol::EquilibriumSolution,
+                                             sensealg::DeepEquilibriumAdjoint,
+                                             dgdu::DG1=nothing, dgdp::DG2=nothing,
+                                             g::G=nothing; kwargs...) where {DG1, DG2, G}
+  UnPack.@unpack f, p, u0 = sol.prob
+
+  if dgdu === nothing && dgdp === nothing && g === nothing
+    throw(ArgumentError("Either `dgdu`, `dgdp`, or `g` must be specified."))
+  end
+
+  diffcache, y = SciMLSensitivity.adjointdiffcache(g, sensealg, false, sol, dgdu, dgdp, f;
+                                                   quad=false, needs_jac=false,
+                                                   noiseterm=false)
+
+  if dgdp === nothing && g === nothing
+    dgdu_val = diffcache.dg_val
+    dgdp_val = nothing
+  else
+    dgdu_val, dgdp_val = diffcache.dg_val
+  end
+
+  if dgdu !== nothing
+    dgdu(dgdu_val, y, p, nothing, nothing)
+  else
+    if g !== nothing
+      if dgdp_val !== nothing
+        SciMLSensitivity.gradient!(vec(dgdu_val), diffcache.g[1], y, sensealg,
+                                   diffcache.g_grad_config[1])
+      else
+        SciMLSensitivity.gradient!(vec(dgdu_val), diffcache.g, y, sensealg,
+                                   diffcache.g_grad_config)
+      end
     end
   end
 
-  if check_adjoint_mode(sensealg, Val(:vanilla))
+  if _check_adjoint_mode(sensealg, Val(:vanilla))
     # Solve the Linear Problem
     _val, back = Zygote.pullback(x -> f(x, p, nothing), y)
     s_val = size(_val)
-    op = ZygotePullbackMultiplyOperator{eltype(y), typeof(back), typeof(s_val)}(back,
-                                                                                s_val)
-    linear_problem = LinearProblem(op, vec(diffcache.dg_val))
-    λ = solve(linear_problem, sensealg.linsolve).u
-  elseif check_adjoint_mode(sensealg, Val(:jfb))
+    op = ZygotePullbackMultiplyOperator{eltype(y), typeof(back), typeof(s_val)}(back, s_val)
+    linear_problem = LinearSolve.LinearProblem(op, vec(diffcache.dg_val))
+    res = SciMLBase.solve(linear_problem, sensealg.linsolve).u
+  elseif _check_adjoint_mode(sensealg, Val(:jfb))
     # Jacobian Free Backpropagation
-    λ = diffcache.dg_val
+    res = diffcache.dg_val
   else
-    error("Unknown adjoint mode")
+    throw(ArgumentError("Unknown adjoint mode"))
   end
 
   # Compute the VJP
   _, back = Zygote.pullback(p -> vec(f(y, p, nothing)), p)
-  dp = back(vec(λ))[1]
+  dp = back(vec(res))[1]
 
   return neg(dp)
 end
 
-function DiffEqBase._concrete_solve_adjoint(prob::SteadyStateProblem, alg,
+function DiffEqBase._concrete_solve_adjoint(prob::DiffEqBase.SteadyStateProblem, alg,
                                             sensealg::DeepEquilibriumAdjoint, u0, p,
-                                            ::SciMLBase.ADOriginator, args...;
+                                            originator::SciMLBase.ADOriginator, args...;
                                             save_idxs=nothing, kwargs...)
-  _prob = remake(prob; u0=u0, p=p)
-  sol = solve(_prob, alg, args...; kwargs...)
+  _prob = SciMLBase.remake(prob; u0=u0, p=p)
+  sol = SciMLBase.solve(_prob, alg, args...; kwargs...)
   _save_idxs = save_idxs === nothing ? Colon() : save_idxs
 
-  out = save_idxs === nothing ? sol :
-        DiffEqBase.sensitivity_solution(sol, sol[_save_idxs])
+  out = save_idxs === nothing ? sol : DiffEqBase.sensitivity_solution(sol, sol[_save_idxs])
 
   function steadystatebackpass(Δ)
-    # Δ = dg/dx or diffcache.dg_val
-    # del g/del p = 0
-    dp = adjoint_sensitivities(sol, alg; sensealg=sensealg, g=nothing, dg=Δ,
-                               save_idxs=save_idxs)
-    return (NoTangent(),
-            NoTangent(),
-            NoTangent(),
-            NoTangent(),
-            dp,
-            NoTangent(),
-            ntuple(_ -> NoTangent(), length(args))...)
+    function df(_out, u, p, t, i)
+      if typeof(_save_idxs) <: Number
+        _out[_save_idxs] = Δ[_save_idxs]
+      elseif typeof(Δ) <: Number
+        _out[_save_idxs] .= Δ
+      else
+        _out[_save_idxs] .= Δ[_save_idxs]
+      end
+    end
+
+    dp = SciMLSensitivity.adjoint_sensitivities(sol, alg; sensealg=sensealg, dgdu=df)
+
+    if originator isa SciMLBase.TrackerOriginator ||
+       originator isa SciMLBase.ReverseDiffOriginator
+      return (CRC.NoTangent(), CRC.NoTangent(), CRC.NoTangent(), dp, CRC.NoTangent(),
+              ntuple(_ -> CRC.NoTangent(), length(args))...)
+    else
+      return (CRC.NoTangent(), CRC.NoTangent(), CRC.NoTangent(), CRC.NoTangent(), dp,
+              CRC.NoTangent(), ntuple(_ -> CRC.NoTangent(), length(args))...)
+    end
   end
 
   return out, steadystatebackpass
 end
 
-function SciMLSensitivity._adjoint_sensitivities(sol, sensealg::DeepEquilibriumAdjoint,
-                                                 alg, g, dg=nothing; abstol=1e-6,
-                                                 reltol=1e-3, kwargs...)
-  return SciMLSensitivity.SteadyStateAdjointProblem(sol, sensealg, g, dg; kwargs...)
-end
-
-function SciMLSensitivity._adjoint_sensitivities(sol, sensealg::DeepEquilibriumAdjoint,
-                                                 alg; g=nothing, dg=nothing, abstol=1e-6,
-                                                 reltol=1e-3, kwargs...)
-  return SciMLSensitivity.SteadyStateAdjointProblem(sol, sensealg, g, dg; kwargs...)
+function SciMLSensitivity._adjoint_sensitivities(sol, sensealg::DeepEquilibriumAdjoint, alg;
+                                                 g=nothing, dgdu=nothing, dgdp=nothing,
+                                                 abstol=1e-6, reltol=1e-3, kwargs...)
+  return SteadyStateAdjointProblem(sol, sensealg, dgdu, dgdp, g; kwargs...)
 end

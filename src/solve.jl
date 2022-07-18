@@ -1,3 +1,15 @@
+import DiffEqCallbacks
+import DiffEqBase
+import OrdinaryDiffEq
+import SciMLBase
+
+"""
+    EquilibriumSolution
+
+Wraps the solution of a SteadyStateProblem using either ContinuousDEQSolver or
+DiscreteDEQSolver. This is mostly an internal implementation detail, which allows proper
+dispatch during adjoint computation without type piracy.
+"""
 struct EquilibriumSolution{T, N, uType, P, A, D} <:
        SciMLBase.AbstractNonlinearSolution{T, N}
   u::uType
@@ -8,28 +20,20 @@ struct EquilibriumSolution{T, N, uType, P, A, D} <:
   destats::D
 end
 
-function transform_solution(soln::EquilibriumSolution)
-  # Creates a NonlinearSolution/SteadyStateSolution
-  return DiffEqBase.build_solution(soln.prob, soln.alg, soln.u, soln.resid;
-                                   retcode=soln.retcode)
-end
-
 function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},
                             alg::ContinuousDEQSolver, args...; kwargs...) where {uType}
   tspan = alg.tspan isa Tuple ? alg.tspan :
           convert.(real(eltype(prob.u0)), (zero(alg.tspan), alg.tspan))
-  _prob = ODEProblem(prob.f, prob.u0, tspan, prob.p)
+  _prob = OrdinaryDiffEq.ODEProblem(prob.f, prob.u0, tspan, prob.p)
 
   terminate_stats = Dict{Symbol, Any}(:best_objective_value => real(eltype(prob.u0))(Inf),
                                       :best_objective_value_iteration => nothing)
 
-  sol = solve(_prob,
-              alg.alg,
-              args...;
-              kwargs...,
-              callback=TerminateSteadyState(alg.abstol_termination,
-                                            alg.reltol_termination,
-                                            get_terminate_condition(alg, terminate_stats)))
+  callback = DiffEqCallbacks.TerminateSteadyState(alg.abstol_termination,
+                                                  alg.reltol_termination,
+                                                  get_terminate_condition(alg,
+                                                                          terminate_stats))
+  sol = SciMLBase.solve(_prob, alg.alg, args...; callback, kwargs...)
 
   u, t = if terminate_stats[:best_objective_value_iteration] === nothing
     (sol.u[end], sol.t[end])
@@ -41,12 +45,10 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},
   # Dont count towards NFE since this is mostly a check for convergence
   du = prob.f(u, prob.p, t)
 
-  retcode = (sol.retcode == :Terminated && has_converged(du, u, alg) ? :Success :
-             :Failure)
+  retcode = (sol.retcode == :Terminated && has_converged(du, u, alg) ? :Success : :Failure)
 
-  return EquilibriumSolution{eltype(uType), ndims(uType), uType, typeof(prob),
-                             typeof(alg), typeof(sol.destats)}(u, du, prob, alg, retcode,
-                                                               sol.destats)
+  return EquilibriumSolution{eltype(uType), ndims(uType), uType, typeof(prob), typeof(alg),
+                             typeof(sol.destats)}(u, du, prob, alg, retcode, sol.destats)
 end
 
 function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},
@@ -55,10 +57,7 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},
   terminate_stats = Dict{Symbol, Any}(:best_objective_value => real(eltype(prob.u0))(Inf),
                                       :best_objective_value_iteration => nothing)
 
-  us, stats = nlsolve(alg.alg,
-                      u -> prob.f(u, prob.p, nothing),
-                      prob.u0;
-                      maxiters=maxiters,
+  us, stats = nlsolve(alg.alg, u -> prob.f(u, prob.p, nothing), prob.u0; maxiters=maxiters,
                       terminate_condition=get_terminate_condition(alg, terminate_stats))
 
   u = if terminate_stats[:best_objective_value_iteration] === nothing
@@ -74,7 +73,6 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},
 
   destats = (nf=stats.nf,)
 
-  return EquilibriumSolution{eltype(uType), ndims(uType), uType, typeof(prob),
-                             typeof(alg), typeof(destats)}(u, du, prob, alg, retcode,
-                                                           destats)
+  return EquilibriumSolution{eltype(uType), ndims(uType), uType, typeof(prob), typeof(alg),
+                             typeof(destats)}(u, du, prob, alg, retcode, destats)
 end
