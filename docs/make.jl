@@ -2,6 +2,8 @@ using Documenter, DocumenterCitations, DeepEquilibriumNetworks
 
 bib = CitationBibliography(joinpath(@__DIR__, "ref.bib"); sorting=:nyt)
 
+include("pages.jl")
+
 makedocs(bib; sitename="Fast Deep Equilibrium Networks", authors="Avik Pal et al.",
          clean=true, doctest=false, modules=[DeepEquilibriumNetworks],
          strict=[
@@ -15,15 +17,6 @@ makedocs(bib; sitename="Fast Deep Equilibrium Networks", authors="Avik Pal et al
          ], checkdocs=:all,
          format=Documenter.HTML(;
                                 canonical="https://deepequilibriumnetworks.sciml.ai/stable/"),
-         pages=[
-           "Home" => "index.md",
-           "Manual" => [
-             "Dynamical Systems" => "manual/solvers.md",
-             "Non Linear Solvers" => "manual/nlsolve.md",
-             "DEQ Layers" => "manual/deqs.md",
-             "Miscellaneous" => "manual/misc.md",
-           ],
-           "References" => "references.md",
-         ])
+         pages=pages)
 
 deploydocs(; repo="github.com/SciML/DeepEquilibriumNetworks.jl.git", push_preview=true)
