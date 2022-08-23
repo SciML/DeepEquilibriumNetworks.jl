@@ -115,7 +115,7 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
 
   # Setup Logging
   loggers = DEQExperiments.create_logger(log_dir, cfg.train.total_steps - initial_step,
-                                         length(ds_test), expt_name,
+                                         cfg.train.total_steps - initial_step, expt_name,
                                          SimpleConfig.flatten_configuration(cfg))
 
   best_test_accuracy = 0
@@ -131,6 +131,7 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
 
     ret_val = DEQExperiments.run_training_step(vjp_rule, loss_function, (x, y), tstate)
     loss, _, stats, tstate, gs, step_stats = ret_val
+    Setfield.@set! tstate.states = Lux.update_state(tstate.states, :update_mask, Val(true))
 
     # LR Update
     lr_new = sched(step + 1)
