@@ -65,4 +65,4 @@ train:
   expt_subdir: "cifar10/tiny/"
   expt_id: ""
   print_frequency: 100
-  w_skip: 0.01
+  w_skip: 0.001
