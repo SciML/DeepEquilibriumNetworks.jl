@@ -308,7 +308,7 @@ function construct(cfg::SolverConfig)
                                    cfg.reltol_termination)
   else
     return DEQ.DiscreteDEQSolver(DEQ.LimitedMemoryBroydenSolver();
-                                 mode=Symbol(cfg.step_mode), cfg.abstol_termination,
+                                 mode=Symbol(cfg.stop_mode), cfg.abstol_termination,
                                  cfg.reltol_termination)
   end
 end

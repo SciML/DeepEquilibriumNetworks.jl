@@ -78,7 +78,7 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
   _, ds_train_iter = iterate(ds_train)
 
   # Setup
-  expt_name = ("config-$(config_name)_discrete-$(cfg.model.solver.continuous)" *
+  expt_name = ("config-$(config_name)_continuous-$(cfg.model.solver.continuous)" *
                "_type-$(cfg.model.model_type)_seed-$(cfg.seed)" *
                "_jfb-$(cfg.model.sensealg.jfb)_id-$(cfg.train.expt_id)")
 
