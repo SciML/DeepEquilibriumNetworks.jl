@@ -52,13 +52,13 @@ optimizer:
   nesterov: false
   momentum: 0.0
   weight_decay: 0.000025
-  cycle_length: 50000
+  cycle_length: 180000
 
 dataset:
   augment: false
   data_root: "data/cifar10"
-  eval_batchsize: 32
-  train_batchsize: 32
+  eval_batchsize: 64
+  train_batchsize: 64
 
 train:
   total_steps: 180000
@@ -71,4 +71,4 @@ train:
   expt_subdir: "cifar10/large/"
   expt_id: ""
   print_frequency: 100
-  w_skip: 0.01
+  w_skip: 0.001

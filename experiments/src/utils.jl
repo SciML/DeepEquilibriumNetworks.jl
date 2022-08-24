@@ -1,4 +1,4 @@
-import CUDA, FluxMPI, Functors, JLD2, OneHotArrays, Setfield, Statistics, Zygote
+import CUDA, FluxMPI, Functors, JLSO, OneHotArrays, Setfield, Statistics, Zygote
 import Lux.Training
 
 """
@@ -149,9 +149,9 @@ end
 
 function save_checkpoint(state::NamedTuple; is_best::Bool, filename::String)
   isdir(dirname(filename)) || mkpath(dirname(filename))
-  JLD2.save(filename, Dict("state" => state))
-  is_best && _symlink_safe(filename, joinpath(dirname(filename), "model_best.jld2"))
-  _symlink_safe(filename, joinpath(dirname(filename), "model_current.jld2"))
+  JLSO.save(filename, :state => state)
+  is_best && _symlink_safe(filename, joinpath(dirname(filename), "model_best.jlso"))
+  _symlink_safe(filename, joinpath(dirname(filename), "model_current.jlso"))
   return nothing
 end
 
@@ -163,7 +163,7 @@ end
 function load_checkpoint(fname::String)
   try
     # NOTE(@avik-pal): ispath is failing for symlinks?
-    return JLD2.load(fname, "state")
+    return JLSO.load(fname)[:state]
   catch
     @warn """$fname could not be loaded. This might be because the file is absent or is
              corrupt. Proceeding by returning `nothing`."""

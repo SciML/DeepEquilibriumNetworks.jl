@@ -2,7 +2,7 @@ seed: 0  # Always control using command-line arguments
 
 model:
   num_classes: 10
-  dropout_rate: 0.3
+  dropout_rate: 0.2
   group_count: 8
   weight_norm: false
   downsample_times: 0
@@ -46,7 +46,7 @@ optimizer:
   nesterov: false
   momentum: 0.0
   weight_decay: 0.000025
-  cycle_length: 50000
+  cycle_length: 20000
 
 dataset:
   augment: false
@@ -65,4 +65,4 @@ train:
   expt_subdir: "cifar10/tiny/"
   expt_id: ""
   print_frequency: 100
-  w_skip: 0.01
+  w_skip: 0.001

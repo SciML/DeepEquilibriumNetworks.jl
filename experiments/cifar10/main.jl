@@ -78,10 +78,14 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
   _, ds_train_iter = iterate(ds_train)
 
   # Setup
-  ckpt_dir = joinpath(cfg.train.expt_subdir, cfg.train.checkpoint_dir, cfg.train.expt_id)
-  log_dir = joinpath(cfg.train.expt_subdir, cfg.train.log_dir, cfg.train.expt_id)
+  expt_name = ("config-$(config_name)_discrete-$(cfg.model.solver.continuous)" *
+               "_type-$(cfg.model.model_type)_seed-$(cfg.seed)" *
+               "_jfb-$(cfg.model.sensealg.jfb)_id-$(cfg.train.expt_id)")
+
+  ckpt_dir = joinpath(cfg.train.expt_subdir, cfg.train.checkpoint_dir, expt_name)
+  log_dir = joinpath(cfg.train.expt_subdir, cfg.train.log_dir, expt_name)
   if cfg.train.resume == ""
-    rpath = joinpath(ckpt_dir, "model_current.jld2")
+    rpath = joinpath(ckpt_dir, "model_current.jlso")
   else
     rpath = cfg.train.resume
   end
@@ -99,15 +103,10 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
     if DEQExperiments.should_log()
       @info "Will pretrain for $(cfg.train.pretrain_steps) steps"
     end
-    Setfield.@set! tstate.states = Lux.update_state(tstate.states, :fixed_depth,
-                                                    Val(cfg.model.maxiters))
+    Setfield.@set! tstate.states = Lux.update_state(tstate.states, :fixed_depth, Val(5))
   end
 
   # Setup Logging
-  expt_name = ("config-$(config_name)_discrete-$(cfg.model.solver.continuous)" *
-               "_type-$(cfg.model.model_type)_seed-$(cfg.seed)" *
-               "_jfb-$(cfg.model.sensealg.jfb)_id-$(cfg.train.expt_id)")
-
   loggers = DEQExperiments.create_logger(log_dir, cfg.train.total_steps - initial_step,
                                          length(ds_test), expt_name,
                                          SimpleConfig.flatten_configuration(cfg))
@@ -217,7 +216,7 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
 
       ckpt = (tstate = tstate, step = initial_step)
       DEQExperiments.save_checkpoint(ckpt; is_best,
-                                     filename=joinpath(ckpt_dir, "model_$(step).jld2"))
+                                     filename=joinpath(ckpt_dir, "model_$(step).jlso"))
     end
   end
 
