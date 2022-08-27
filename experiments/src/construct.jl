@@ -72,23 +72,9 @@ function upsample_module(mapping, level_difference, activation; group_count=8,
                          upsample_mode::Symbol=:nearest)
   in_channels, out_channels = mapping
 
-  function intermediate_mapping(i)
-    if out_channels * (2^level_difference) == in_channels
-      (in_channels ÷ (2^(i - 1))) => (in_channels ÷ (2^i))
-    else
-      i == level_difference ? in_channels => out_channels : in_channels => in_channels
-    end
-  end
-
-  layers = Lux.AbstractExplicitLayer[]
-  for i in 1:level_difference
-    in_chs, out_chs = intermediate_mapping(i)
-    push!(layers,
-          Lux.Chain(conv3x3(in_chs => out_chs),
-                    Lux.BatchNorm(out_chs, activation; affine=true, track_stats=false),
-                    Lux.Upsample(upsample_mode; scale=2)))
-  end
-  return Lux.Chain(layers...; disable_optimizations=true)
+  return Lux.Chain(conv3x3(in_channels => out_channels),
+                   Lux.BatchNorm(out_channels, activation; affine=true, track_stats=false),
+                   Lux.Upsample(upsample_mode; scale=2^level_difference))
 end
 
 struct ResidualBlock{C1, C2, Dr, Do, N1, N2, N3} <:
