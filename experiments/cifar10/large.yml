@@ -4,9 +4,9 @@ model:
   num_classes: 10
   dropout_rate: 0.3
   group_count: 8
-  weight_norm: false
+  weight_norm: true
   downsample_times: 0
-  expansion_factor: 5
+  expansion_factor: 4
   image_size:
     - 32
     - 32
@@ -27,7 +27,7 @@ model:
     - 128
     - 256
   fuse_method: "sum"
-  final_channelsize: 200
+  final_channelsize: 1680
   model_type: "vanilla"
   maxiters: 18
   in_channels: 3
@@ -51,19 +51,19 @@ optimizer:
   learning_rate: 0.001
   nesterov: false
   momentum: 0.0
-  weight_decay: 0.000025
-  cycle_length: 180000
+  weight_decay: 0.0000
+  cycle_length: 90000
 
 dataset:
-  augment: false
+  augment: true
   data_root: "data/cifar10"
-  eval_batchsize: 64
-  train_batchsize: 64
+  eval_batchsize: 128
+  train_batchsize: 128
 
 train:
-  total_steps: 180000
-  pretrain_steps: 20000
-  evaluate_every: 2500
+  total_steps: 90000
+  pretrain_steps: 0
+  evaluate_every: 500
   resume: ""
   evaluate: false
   checkpoint_dir: "checkpoints/"

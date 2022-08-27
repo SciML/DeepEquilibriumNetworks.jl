@@ -21,16 +21,23 @@ function get_dataloaders(; augment, data_root, eval_batchsize, train_batchsize)
     return img, label
   end
 
-  ds_train = ds_train.map(normalize)
-  ds_test = ds_test.map(normalize)
+  ds_train = ds_train.cache()
+  ds_test = ds_test.cache().map(normalize)
   if augment
+    tf_rng = tf.random.Generator.from_seed(12345, alg="philox")
     function augmentation(img, label)
-      img = tf.image.random_flip_left_right(img, 0)
-      img = tf.image.resize(img, (36, 36))
-      img = tf.image.random_crop(img, (32, 32, 3), 0)
+      seed = tf_rng.make_seeds(2)[1]
+
+      img, label = normalize(img, label)
+      img = tf.image.stateless_random_flip_left_right(img, seed)
+      img = tf.image.resize(img, (42, 42))
+      img = tf.image.stateless_random_crop(img, (32, 32, 3), seed)
+
       return img, label
     end
-    ds_train = ds_train.map(augmentation)
+    ds_train = ds_train.map(augmentation, num_parallel_calls=tf.data.AUTOTUNE)
+  else
+    ds_train = ds_train.map(normalize, num_parallel_calls=tf.data.AUTOTUNE)
   end
 
   if DEQExperiments.is_distributed()
@@ -38,8 +45,8 @@ function get_dataloaders(; augment, data_root, eval_batchsize, train_batchsize)
     ds_test = ds_test.shard(FluxMPI.total_worders(), FluxMPI.local_rank())
   end
 
-  ds_train = ds_train.prefetch(tf.data.AUTOTUNE).cache().shuffle(1024).repeat(-1)
-  ds_test = ds_test.prefetch(tf.data.AUTOTUNE).cache().repeat(1)
+  ds_train = ds_train.prefetch(tf.data.AUTOTUNE).shuffle(1024).repeat(-1)
+  ds_test = ds_test.prefetch(tf.data.AUTOTUNE).repeat(1)
 
   return (tfds.as_numpy(ds_train.batch(train_batchsize)),
           tfds.as_numpy(ds_test.batch(eval_batchsize)))
@@ -170,13 +177,14 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
     if step % cfg.train.evaluate_every == 1 || step == cfg.train.total_steps
       is_best = true
 
+      st_eval = Lux.testmode(tstate.states)
       for (x, y) in ds_test
         t = time()
         x, y = _data_postprocess(x, y)
         dtime = time() - t
 
         t = time()
-        loss, st_, stats = loss_function(model, tstate.parameters, tstate.states, (x, y))
+        loss, st_, stats = loss_function(model, tstate.parameters, st_eval, (x, y))
         fwd_time = time() - t
 
         bsize = size(x, ndims(x))

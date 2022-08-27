@@ -23,21 +23,27 @@ end
 
 # Building Blocks
 function conv1x1(mapping, activation=identity; stride::Int=1, use_bias=false, dilation=1,
-                 groups=1)
-  return Lux.Conv((1, 1), mapping, activation; pad=0, init_weight=normal_initializer,
-                  stride, use_bias, dilation, groups)
+                 groups=1, weight_norm=false)
+  c = Lux.Conv((1, 1), mapping, activation; pad=0, init_weight=normal_initializer,
+               stride, use_bias, dilation, groups)
+  weight_norm || return c
+  return Lux.WeightNorm(c, (:weight,), (4,))
 end
 
 function conv3x3(mapping, activation=identity; stride::Int=1, use_bias=false, dilation=1,
-                 groups=1)
-  return Lux.Conv((3, 3), mapping, activation; pad=1, init_weight=normal_initializer,
-                  stride, use_bias, dilation, groups)
+                 groups=1, weight_norm=false)
+  c = Lux.Conv((3, 3), mapping, activation; pad=1, init_weight=normal_initializer,
+               stride, use_bias, dilation, groups)
+  weight_norm || return c
+  return Lux.WeightNorm(c, (:weight,), (4,))
 end
 
 function conv5x5(mapping, activation=identity; stride::Int=1, use_bias=false, dilation=1,
-                 groups=1)
-  return Lux.Conv((5, 5), mapping, activation; pad=2, init_weight=normal_initializer,
-                  stride, use_bias, dilation, groups)
+                 groups=1, weight_norm=false)
+  c = Lux.Conv((5, 5), mapping, activation; pad=2, init_weight=normal_initializer,
+               stride, use_bias, dilation, groups)
+  weight_norm || return c
+  return Lux.WeightNorm(c, (:weight,), (4,))
 end
 
 function downsample_module(mapping, level_difference, activation; group_count=8)
@@ -98,7 +104,7 @@ struct ResidualBlock{C1, C2, Dr, Do, N1, N2, N3} <:
   norm3::N3
 end
 
-function ResidualBlock(mapping; deq_expand::Int=5, num_gn_groups::Int=4,
+function ResidualBlock(mapping; deq_expand::Int=3, num_gn_groups::Int=4,
                        downsample=Lux.NoOpLayer(), n_big_kernels::Int=0,
                        dropout_rate::Real=0.0f0, gn_affine::Bool=true,
                        weight_norm::Bool=true)
@@ -199,7 +205,7 @@ function get_model(; num_channels, downsample_times, num_branches, expansion_fac
     push!(downsample_layers,
           Lux.Chain(conv3x3(in_channels => init_channel_size; stride),
                     Lux.BatchNorm(init_channel_size, NNlib.relu; affine=true,
-                                  track_stats=true)))
+                                  track_stats=false)))
   end
   downsample = Lux.Chain(downsample_layers...; disable_optimizations=true)
 
@@ -208,7 +214,7 @@ function get_model(; num_channels, downsample_times, num_branches, expansion_fac
   else
     stage0 = Lux.Chain(conv1x1(init_channel_size => init_channel_size),
                        Lux.BatchNorm(init_channel_size, NNlib.relu; affine=true,
-                                     track_stats=true))
+                                     track_stats=false))
   end
 
   initial_layers = Lux.Chain(downsample, stage0; disable_optimizations=true)
@@ -232,8 +238,8 @@ function get_model(; num_channels, downsample_times, num_branches, expansion_fac
     end
   end
 
-  post_fuse_layers = Tuple(Lux.Chain(Lux.WrappedFunction(Base.Fix1(broadcast, NNlib.relu)),
-                                     conv1x1(num_channels[i] => num_channels[i]),
+  post_fuse_layers = Tuple(Lux.Chain(conv1x1(num_channels[i] => num_channels[i], NNlib.relu;
+                                             weight_norm),
                                      Lux.BatchNorm(num_channels[i]; affine=true,
                                                    track_stats=false))
                            for i in 1:num_branches)
