@@ -41,7 +41,7 @@ model:
     abstol: 5.0e-2
     reltol: 5.0e-2
     ode_solver: "vcab3"
-    stop_mode: "rel_norm"
+    stop_mode: "rel_deq_best"
     abstol_termination: 5.0e-2
     reltol_termination: 5.0e-2
 
