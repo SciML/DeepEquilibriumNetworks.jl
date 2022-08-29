@@ -1,12 +1,15 @@
 # DeepEquilibriumNetworks
 
-[![Latest Docs](https://img.shields.io/badge/docs-latest-blue.svg)](https://deepequilibriumnetworks.sciml.ai/dev/)
-[![Stable Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://deepequilibriumnetworks.sciml.ai/stable/)
-[![CI](https://github.com/SciML/DeepEquilibriumNetworks.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/SciML/DeepEquilibriumNetworks.jl/actions/workflows/CI.yml)
-[![codecov](https://codecov.io/gh/SciML/DeepEquilibriumNetworks.jl/branch/main/graph/badge.svg?token=plksEh6pUG)](https://codecov.io/gh/SciML/DeepEquilibriumNetworks.jl)
+
+[![Join the chat at https://julialang.zulipchat.com #sciml-bridged](https://img.shields.io/static/v1?label=Zulip&message=chat&color=9558b2&labelColor=389826)](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](http://deepequilibriumnetworks.sciml.ai/stable/)
+[![Global Docs](https://img.shields.io/badge/docs-SciML-blue.svg)](https://docs.sciml.ai/dev/modules/DeepEquilibriumNetworks/)
+
+[![codecov](https://codecov.io/gh/SciML/DeepEquilibriumNetworks.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/SciML/DeepEquilibriumNetworks.jl)
+[![Build Status](https://github.com/SciML/DeepEquilibriumNetworks.jl/workflows/CI/badge.svg)](https://github.com/SciML/DeepEquilibriumNetworks.jl/actions?query=workflow%3ACI)
+
 [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
-[![Package Downloads](https://shields.io/endpoint?url=https://pkgs.genieframework.com/api/v1/badge/DeepEquilibriumNetworks)](https://pkgs.genieframework.com?packages=DeepEquilibriumNetworks)
 
 DeepEquilibriumNetworks.jl is a framework built on top of
 [DifferentialEquations.jl](https://diffeq.sciml.ai/stable/) and
