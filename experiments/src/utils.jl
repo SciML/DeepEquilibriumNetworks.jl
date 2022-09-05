@@ -61,7 +61,7 @@ function accuracy(y_pred::AbstractMatrix, y::AbstractMatrix,
   maxk = maximum(topk)
 
   pred_labels = partialsortperm.(eachcol(y_pred), (1:maxk,), rev=true)
-  true_labels = onecold(y)
+  true_labels = OneHotArrays.onecold(y)
 
   accuracies = Tuple(sum(map((a, b) -> sum(view(a, 1:k) .== b), pred_labels, true_labels))
                      for k in topk)
@@ -112,8 +112,22 @@ end
 
 (s::ConstantSchedule)(t) = s.val
 
+struct Step{T, S}
+  start::T
+  decay::T
+  step_sizes::S
+
+  function Step(start::T, decay::T, step_sizes::S) where {T, S}
+    _step_sizes = (S <: Integer) ? Iterators.repeated(step_sizes) : step_sizes
+
+    return new{T, typeof(_step_sizes)}(start, decay, _step_sizes)
+  end
+end
+
+(s::Step)(t) = s.start * s.decay^(searchsortedfirst(s.step_sizes, t - 1) - 1)
+
 # Generic Stuff
-is_distributed() = FluxMPI.Initialized() && FluxMPI.total_worders() > 1
+is_distributed() = FluxMPI.Initialized() && FluxMPI.total_workers() > 1
 
 should_log() = !is_distributed() || FluxMPI.local_rank() == 1
 
@@ -181,6 +195,9 @@ function run_training_step(::Training.ZygoteVJP, objective_function, data,
 
   t = time()
   grads = back((one(loss), nothing, nothing))[1]
+  if is_distributed()
+    grads = FluxMPI.allreduce_gradients(grads)
+  end
   bwd_time = time() - t
 
   Setfield.@set! ts.states = st
@@ -189,4 +206,12 @@ function run_training_step(::Training.ZygoteVJP, objective_function, data,
   opt_time = time() - t
 
   return loss, st, stats, ts, grads, (; fwd_time, bwd_time, opt_time)
+end
+
+function FluxMPI.synchronize!(tstate::Training.TrainState; root_rank::Int=0)
+  Setfield.@set! tstate.parameters = FluxMPI.synchronize!(tstate.parameters; root_rank)
+  Setfield.@set! tstate.states = FluxMPI.synchronize!(tstate.states; root_rank)
+  Setfield.@set! tstate.optimizer_state = FluxMPI.synchronize!(tstate.optimizer_state;
+                                                               root_rank)
+  return tstate
 end

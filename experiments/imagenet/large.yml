@@ -1,0 +1,74 @@
+seed: 0  # Always control using command-line arguments
+
+model:
+  num_classes: 1000
+  dropout_rate: 0.0
+  group_count: 8
+  weight_norm: true
+  downsample_times: 2
+  expansion_factor: 5
+  image_size:
+    - 224
+    - 224
+  num_branches: 4
+  big_kernels:
+    - 0
+    - 0
+    - 0
+    - 0
+  head_channels:
+    - 32
+    - 64
+    - 128
+    - 256
+  num_channels:
+    - 80
+    - 160
+    - 320
+    - 640
+  fuse_method: "sum"
+  final_channelsize: 2048
+  model_type: "vanilla"
+  maxiters: 26
+  in_channels: 3
+  sensealg:
+    jfb: false
+    abstol: 5.0e-2
+    reltol: 5.0e-2
+    maxiters: 27
+  solver:
+    continuous: true
+    abstol: 5.0e-2
+    reltol: 5.0e-2
+    ode_solver: "vcab3"
+    stop_mode: "abs_deq_best"
+    abstol_termination: 5.0e-2
+    reltol_termination: 5.0e-2
+
+optimizer:
+  lr_scheduler: "cosine"
+  optimizer: "sgd"
+  learning_rate: 0.05
+  nesterov: true
+  momentum: 0.9
+  weight_decay: 0.0001
+  cycle_length: 400000
+
+dataset:
+  augment: true
+  data_root: "data/imagenet"
+  eval_batchsize: 64
+  train_batchsize: 64
+
+train:
+  total_steps: 800000
+  pretrain_steps: 0
+  evaluate_every: 5000
+  resume: ""
+  evaluate: false
+  checkpoint_dir: "checkpoints/"
+  log_dir: "logs/"
+  expt_subdir: "imagenet/large/"
+  expt_id: ""
+  print_frequency: 100
+  w_skip: 0.01

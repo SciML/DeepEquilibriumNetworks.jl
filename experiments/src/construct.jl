@@ -24,24 +24,24 @@ end
 # Building Blocks
 function conv1x1(mapping, activation=identity; stride::Int=1, use_bias=false, dilation=1,
                  groups=1, weight_norm=false)
-  c = Lux.Conv((1, 1), mapping, activation; pad=0, init_weight=normal_initializer,
-               stride, use_bias, dilation, groups)
+  c = Lux.Conv((1, 1), mapping, activation; pad=0, init_weight=normal_initializer, stride,
+               use_bias, dilation, groups)
   weight_norm || return c
   return Lux.WeightNorm(c, (:weight,), (4,))
 end
 
 function conv3x3(mapping, activation=identity; stride::Int=1, use_bias=false, dilation=1,
                  groups=1, weight_norm=false)
-  c = Lux.Conv((3, 3), mapping, activation; pad=1, init_weight=normal_initializer,
-               stride, use_bias, dilation, groups)
+  c = Lux.Conv((3, 3), mapping, activation; pad=1, init_weight=normal_initializer, stride,
+               use_bias, dilation, groups)
   weight_norm || return c
   return Lux.WeightNorm(c, (:weight,), (4,))
 end
 
 function conv5x5(mapping, activation=identity; stride::Int=1, use_bias=false, dilation=1,
                  groups=1, weight_norm=false)
-  c = Lux.Conv((5, 5), mapping, activation; pad=2, init_weight=normal_initializer,
-               stride, use_bias, dilation, groups)
+  c = Lux.Conv((5, 5), mapping, activation; pad=2, init_weight=normal_initializer, stride,
+               use_bias, dilation, groups)
   weight_norm || return c
   return Lux.WeightNorm(c, (:weight,), (4,))
 end
@@ -198,12 +198,21 @@ function get_model(; num_channels, downsample_times, num_branches, expansion_fac
                    image_size, weight_norm, in_channels)
   init_channel_size = first(num_channels)
 
-  downsample_layers = Lux.AbstractExplicitLayer[]
-  for i in 1:(downsample_times + 2)
-    stride = i <= 2 ? (downsample_times >= i ? 2 : 1) : 2
-    in_channels = i == 1 ? in_channels : init_channel_size
+  downsample_layers = Lux.AbstractExplicitLayer[conv3x3(in_channels => init_channel_size;
+                                                        stride=(downsample_times >= 1 ? 2 :
+                                                                1)),
+                                                Lux.BatchNorm(init_channel_size, NNlib.relu;
+                                                              affine=true,
+                                                              track_stats=false),
+                                                conv3x3(init_channel_size => init_channel_size;
+                                                        stride=(downsample_times >= 2 ? 2 :
+                                                                1)),
+                                                Lux.BatchNorm(init_channel_size, NNlib.relu;
+                                                              affine=true,
+                                                              track_stats=false)]
+  for i in 3:downsample_times
     push!(downsample_layers,
-          Lux.Chain(conv3x3(in_channels => init_channel_size; stride),
+          Lux.Chain(conv3x3(init_channel_size => init_channel_size; stride=2),
                     Lux.BatchNorm(init_channel_size, NNlib.relu; affine=true,
                                   track_stats=false)))
   end
@@ -327,7 +336,7 @@ end
 function construct(cfg::OptimizerConfig)
   if cfg.optimizer == "adam"
     opt = Optimisers.Adam(cfg.learning_rate)
-  elseif cfg.opimizer == "sgd"
+  elseif cfg.optimizer == "sgd"
     if cfg.nesterov
       opt = Optimisers.Nesterov(cfg.learning_rate, cfg.momentum)
     elseif cfg.momentum == 0
@@ -349,9 +358,11 @@ function construct(cfg::OptimizerConfig)
                                      cfg.cycle_length; dampen=1.2f0)
   elseif cfg.lr_scheduler == "constant"
     scheduler = ConstantSchedule(cfg.learning_rate)
+  elseif cfg.lr_scheduler == "step"
+    scheduler = Step(cfg.learning_rate, cfg.lr_step_decay, cfg.lr_step)
   else
     throw(ArgumentError("unknown value for `lr_scheduler` = $(cfg.lr_scheduler). " *
-                        "Supported options are: `constant` and `cosine`."))
+                        "Supported options are: `constant`, `step` and `cosine`."))
   end
 
   return opt, scheduler

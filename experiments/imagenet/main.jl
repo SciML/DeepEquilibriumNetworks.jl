@@ -1,60 +1,122 @@
-import CUDA, DEQExperiments, FluxMPI, Logging, Lux, OneHotArrays, Optimisers, PyCall,
-       Random, Setfield, SimpleConfig, Statistics, Wandb
+import Augmentor, CUDA, DEQExperiments, FluxMPI, Images, Logging, Lux, MLUtils,
+       OneHotArrays, Optimisers, Random, Setfield, SimpleConfig, Statistics, Wandb
 import Lux.Training
 
+FluxMPI.Init(; verbose=true)
+
 # Dataloaders
-function get_dataloaders(; augment, data_root, eval_batchsize, train_batchsize)
-  tf = PyCall.pyimport("tensorflow")
-  tfds = PyCall.pyimport("tensorflow_datasets")
-
-  tf.config.set_visible_devices([], "GPU")
-
-  ds_train, ds_test = tfds.load("cifar10"; split=["train", "test"], as_supervised=true,
-                                data_dir=data_root)
-
-  image_mean = tf.constant([[[0.4914f0, 0.4822f0, 0.4465f0]]])
-  image_std = tf.constant([[[0.2023f0, 0.1994f0, 0.2010f0]]])
-
-  function normalize(img, label)
-    img = tf.cast(img, tf.float32) / 255.0f0
-    img = (img - image_mean) / image_std
-    return img, label
-  end
-
-  ds_train = ds_train.cache()
-  ds_test = ds_test.cache().map(normalize)
-  if augment
-    tf_rng = tf.random.Generator.from_seed(12345; alg="philox")
-    function augmentation(img, label)
-      seed = tf_rng.make_seeds(2)[1]
-
-      img, label = normalize(img, label)
-      img = tf.image.stateless_random_flip_left_right(img, seed)
-      img = tf.image.resize(img, (42, 42))
-      img = tf.image.stateless_random_crop(img, (32, 32, 3), seed)
-
-      return img, label
-    end
-    ds_train = ds_train.map(augmentation; num_parallel_calls=tf.data.AUTOTUNE)
-  else
-    ds_train = ds_train.map(normalize; num_parallel_calls=tf.data.AUTOTUNE)
-  end
-
-  if DEQExperiments.is_distributed()
-    ds_train = ds_train.shard(FluxMPI.total_worders(), FluxMPI.local_rank())
-    ds_test = ds_test.shard(FluxMPI.total_worders(), FluxMPI.local_rank())
-  end
-
-  ds_train = ds_train.prefetch(tf.data.AUTOTUNE).shuffle(1024).repeat(-1)
-  ds_test = ds_test.prefetch(tf.data.AUTOTUNE).repeat(1)
-
-  return (tfds.as_numpy(ds_train.batch(train_batchsize)),
-          tfds.as_numpy(ds_test.batch(eval_batchsize)))
+struct ImageDataset
+  image_files::Any
+  labels::Any
+  mapping::Any
+  augmentation_pipeline::Any
+  normalization_parameters::Any
 end
 
-function _data_postprocess(image, label)
-  return (Lux.gpu(permutedims(image, (3, 2, 4, 1))),
-          Lux.gpu(OneHotArrays.onehotbatch(label, 0:9)))
+function ImageDataset(folder::String, augmentation_pipeline, normalization_parameters)
+  ulabels = readdir(folder)
+  label_dirs = joinpath.((folder,), ulabels)
+  @assert length(label_dirs)==1000 "There should be 1000 subdirectories in $folder"
+
+  classes = readlines(joinpath(@__DIR__, "synsets.txt"))
+  mapping = Dict(z => i for (i, z) in enumerate(ulabels))
+
+  istrain = endswith(folder, r"train|train/")
+
+  if istrain
+    image_files = vcat(map((x, y) -> joinpath.((x,), y), label_dirs,
+                           readdir.(label_dirs))...)
+
+    remove_files = [
+      "n01739381_1309.JPEG",
+      "n02077923_14822.JPEG",
+      "n02447366_23489.JPEG",
+      "n02492035_15739.JPEG",
+      "n02747177_10752.JPEG",
+      "n03018349_4028.JPEG",
+      "n03062245_4620.JPEG",
+      "n03347037_9675.JPEG",
+      "n03467068_12171.JPEG",
+      "n03529860_11437.JPEG",
+      "n03544143_17228.JPEG",
+      "n03633091_5218.JPEG",
+      "n03710637_5125.JPEG",
+      "n03961711_5286.JPEG",
+      "n04033995_2932.JPEG",
+      "n04258138_17003.JPEG",
+      "n04264628_27969.JPEG",
+      "n04336792_7448.JPEG",
+      "n04371774_5854.JPEG",
+      "n04596742_4225.JPEG",
+      "n07583066_647.JPEG",
+      "n13037406_4650.JPEG",
+      "n02105855_2933.JPEG",
+    ]
+    remove_files = joinpath.((folder,),
+                             joinpath.(first.(rsplit.(remove_files, "_", limit=2)),
+                                       remove_files))
+
+    image_files = [setdiff(Set(image_files), Set(remove_files))...]
+
+    labels = [mapping[x] for x in map(x -> x[2], rsplit.(image_files, "/", limit=3))]
+  else
+    vallist = hcat(split.(readlines(joinpath(@__DIR__, "val_list.txt")))...)
+    labels = parse.(Int, vallist[2, :]) .+ 1
+    filenames = [joinpath(classes[l], vallist[1, i]) for (i, l) in enumerate(labels)]
+    image_files = joinpath.((folder,), filenames)
+    idxs = findall(isfile, image_files)
+    image_files = image_files[idxs]
+    labels = labels[idxs]
+  end
+
+  return ImageDataset(image_files, labels, mapping, augmentation_pipeline,
+                      normalization_parameters)
+end
+
+function Base.getindex(data::ImageDataset, i::Int)
+  img = Images.load(data.image_files[i])
+  img = Augmentor.augment(img, data.augmentation_pipeline)
+  cimg = Images.channelview(img)
+  if ndims(cimg) == 2
+    cimg = reshape(cimg, 1, size(cimg, 1), size(cimg, 2))
+    cimg = vcat(cimg, cimg, cimg)
+  end
+  img = Float32.(permutedims(cimg, (3, 2, 1)))
+  img = (img .- data.normalization_parameters.mean) ./ data.normalization_parameters.std
+  return img, OneHotArrays.onehot(data.labels[i], 1:1000)
+end
+
+Base.length(data::ImageDataset) = length(data.image_files)
+
+function get_dataloaders(; augment, data_root, eval_batchsize, train_batchsize)
+  normalization_parameters = (mean=reshape([0.485f0, 0.456f0, 0.406f0], 1, 1, 3),
+                              std=reshape([0.229f0, 0.224f0, 0.225f0], 1, 1, 3))
+  train_data_augmentation = Augmentor.Resize(256, 256) |>
+                            Augmentor.FlipX(0.5) |>
+                            Augmentor.RCropSize(224, 224)
+  val_data_augmentation = Augmentor.Resize(256, 256) |> Augmentor.CropSize(224, 224)
+  train_dataset = ImageDataset(joinpath(data_root, "train"), train_data_augmentation,
+                               normalization_parameters)
+  val_dataset = ImageDataset(joinpath(data_root, "val"), val_data_augmentation,
+                             normalization_parameters)
+  if DEQExperiments.is_distributed()
+    train_dataset = FluxMPI.DistributedDataContainer(train_dataset)
+    val_dataset = FluxMPI.DistributedDataContainer(val_dataset)
+  end
+
+  train_data = MLUtils.BatchView(MLUtils.shuffleobs(train_dataset);
+                                 batchsize=train_batchsize, partial=false, collate=true)
+
+  val_data = MLUtils.BatchView(val_dataset; batchsize=eval_batchsize, partial=true,
+                               collate=true)
+
+  train_iter = Iterators.cycle(MLUtils.eachobsparallel(train_data;
+                                                       executor=FLoops.ThreadedEx(),
+                                                       buffer=true))
+
+  val_iter = MLUtils.eachobsparallel(val_data; executor=FLoops.ThreadedEx(), buffer=true)
+
+  return train_iter, val_iter
 end
 
 function main(filename, args)
@@ -73,16 +135,18 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
 
   opt, sched = DEQExperiments.construct(cfg.optimizer)
 
+  ds_train, ds_val = get_dataloaders(; cfg.dataset.augment, cfg.dataset.data_root,
+                                     cfg.dataset.eval_batchsize,
+                                     cfg.dataset.train_batchsize)
+  _, ds_train_iter = iterate(ds_train)
+
   tstate = Training.TrainState(rng, model, opt; transform_variables=Lux.gpu)
+  tstate = DEQExperiments.is_distributed() ? FluxMPI.synchronize!(tstate; root_rank=0) :
+           tstate
   vjp_rule = Training.ZygoteVJP()
 
   DEQExperiments.warmup_model(loss_function, model, tstate.parameters, tstate.states, cfg;
                               transform_input=Lux.gpu)
-
-  ds_train, ds_test = get_dataloaders(; cfg.dataset.augment, cfg.dataset.data_root,
-                                      cfg.dataset.eval_batchsize,
-                                      cfg.dataset.train_batchsize)
-  _, ds_train_iter = iterate(ds_train)
 
   # Setup
   expt_name = ("config-$(config_name)_continuous-$(cfg.model.solver.continuous)" *
@@ -115,29 +179,31 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
 
   # Setup Logging
   loggers = DEQExperiments.create_logger(log_dir, cfg.train.total_steps - initial_step,
-                                         length(ds_test), expt_name,
+                                         cfg.train.total_steps - initial_step, expt_name,
                                          SimpleConfig.flatten_configuration(cfg))
 
-  best_test_accuracy = 0
+  best_val_accuracy = 0
 
   for step in initial_step:(cfg.train.total_steps)
     # Train Step
     t = time()
     (x, y), ds_train_iter = iterate(ds_train, ds_train_iter)
-    x, y = _data_postprocess(x, y)
+    x = x |> Lux.gpu
+    y = y |> Lux.gpu
     data_time = time() - t
 
     bsize = size(x, ndims(x))
 
     ret_val = DEQExperiments.run_training_step(vjp_rule, loss_function, (x, y), tstate)
     loss, _, stats, tstate, gs, step_stats = ret_val
+    Setfield.@set! tstate.states = Lux.update_state(tstate.states, :update_mask, Val(true))
 
     # LR Update
     lr_new = sched(step + 1)
     Setfield.@set! tstate.optimizer_state = Optimisers.adjust(tstate.optimizer_state,
                                                               lr_new)
 
-    accuracy = DEQExperiments.accuracy(Lux.cpu(stats.y_pred), Lux.cpu(y))
+    acc1, acc5 = DEQExperiments.accuracy(Lux.cpu(stats.y_pred), Lux.cpu(y), (1, 5))
     residual = abs(Statistics.mean(stats.residual))
 
     # Logging
@@ -153,8 +219,8 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
     loggers.progress_loggers.train.avg_meters.ce_loss(stats.ce_loss, bsize)
     loggers.progress_loggers.train.avg_meters.skip_loss(stats.skip_loss, bsize)
     loggers.progress_loggers.train.avg_meters.residual(residual, bsize)
-    loggers.progress_loggers.train.avg_meters.top1(accuracy, bsize)
-    loggers.progress_loggers.train.avg_meters.top5(-1, bsize)
+    loggers.progress_loggers.train.avg_meters.top1(acc1, bsize)
+    loggers.progress_loggers.train.avg_meters.top5(acc5, bsize)
     loggers.progress_loggers.train.avg_meters.nfe(stats.nfe, bsize)
 
     if step % cfg.train.print_frequency == 1 && DEQExperiments.should_log()
@@ -170,17 +236,14 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
       Setfield.@set! tstate.states = Lux.update_state(tstate.states, :fixed_depth, Val(0))
     end
 
-    # Free memory eagarly
-    CUDA.unsafe_free!(x)
-    CUDA.unsafe_free!(y)
-
     if step % cfg.train.evaluate_every == 1 || step == cfg.train.total_steps
       is_best = true
 
       st_eval = Lux.testmode(tstate.states)
-      for (x, y) in ds_test
+      for (x, y) in ds_val
         t = time()
-        x, y = _data_postprocess(x, y)
+        x = x |> Lux.gpu
+        y = y |> Lux.gpu
         dtime = time() - t
 
         t = time()
@@ -189,7 +252,7 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
 
         bsize = size(x, ndims(x))
 
-        acc = DEQExperiments.accuracy(Lux.cpu(stats.y_pred), Lux.cpu(y))
+        acc1, acc5 = DEQExperiments.accuracy(Lux.cpu(stats.y_pred), Lux.cpu(y), (1, 5))
 
         loggers.progress_loggers.eval.avg_meters.batch_time(dtime + fwd_time, bsize)
         loggers.progress_loggers.eval.avg_meters.data_time(dtime, bsize)
@@ -199,13 +262,9 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
         loggers.progress_loggers.eval.avg_meters.skip_loss(stats.skip_loss, bsize)
         loggers.progress_loggers.eval.avg_meters.residual(abs(Statistics.mean(stats.residual)),
                                                           bsize)
-        loggers.progress_loggers.eval.avg_meters.top1(acc, bsize)
-        loggers.progress_loggers.eval.avg_meters.top5(-1, bsize)
+        loggers.progress_loggers.eval.avg_meters.top1(acc1, bsize)
+        loggers.progress_loggers.eval.avg_meters.top5(acc5, bsize)
         loggers.progress_loggers.eval.avg_meters.nfe(stats.nfe, bsize)
-
-        # Free memory eagarly
-        CUDA.unsafe_free!(x)
-        CUDA.unsafe_free!(y)
       end
 
       if DEQExperiments.should_log()
@@ -217,14 +276,16 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
       end
 
       accuracy = loggers.progress_loggers.eval.avg_meters.top1.average
-      is_best = accuracy >= best_test_accuracy
+      is_best = accuracy >= best_val_accuracy
       if is_best
-        best_test_accuracy = accuracy
+        best_val_accuracy = accuracy
       end
 
       ckpt = (tstate=tstate, step=initial_step)
-      DEQExperiments.save_checkpoint(ckpt; is_best,
-                                     filename=joinpath(ckpt_dir, "model_$(step).jlso"))
+      if DEQExperiments.should_log()
+        DEQExperiments.save_checkpoint(ckpt; is_best,
+                                       filename=joinpath(ckpt_dir, "model_$(step).jlso"))
+      end
     end
   end
 

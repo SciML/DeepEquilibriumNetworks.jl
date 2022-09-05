@@ -1,4 +1,4 @@
-import Dates, Formatting, Logging, LoggingExtras, Wandb
+import Dates, FluxMPI, Formatting, Logging, LoggingExtras, Wandb
 
 # Average Meter
 Base.@kwdef mutable struct AverageMeter
@@ -16,7 +16,14 @@ end
 
 function (meter::AverageMeter)(val, n::Int)
   meter.val = val
-  meter.sum += val * n
+  s = val * n
+  if is_distributed()
+    v = [s, typeof(val)(n)]
+    v = FluxMPI.MPIExtensions.allreduce!(v, +, FluxMPI.MPI.COMM_WORLD)
+    s = v[1]
+    n = Int(v[2])
+  end
+  meter.sum += s
   meter.count += n
   meter.average = meter.sum / meter.count
   return meter.average
@@ -102,7 +109,8 @@ function create_logger(base_dir::String, train_length::Int, eval_length::Int,
   @info config
 
   # Wandb Logger
-  wandb_logger = Wandb.WandbLogger(; project="skipdeq", name=expt_name, config=config)
+  wandb_log_api = is_distributed() ? Wandb.WandbLogger : Wandb.WandbLoggerMPI
+  wandb_logger = wandb_log_api(; project="skipdeq", name=expt_name, config=config)
 
   # CSV Logger
   train_csv_header = [

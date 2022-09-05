@@ -47,6 +47,8 @@ end
   momentum::Float32 = 0.0f0
   weight_decay::Float32 = 0.0f0
   cycle_length::Int = 50000
+  lr_step::Vector{Int64} = [30, 60, 90]
+  lr_step_decay::Float32 = 0.1f0
 end
 
 @option struct TrainConfig
