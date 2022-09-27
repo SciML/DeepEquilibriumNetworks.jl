@@ -29,13 +29,13 @@ model:
   fuse_method: "sum"
   final_channelsize: 2048
   model_type: "vanilla"
-  maxiters: 26
+  maxiters: 27
   in_channels: 3
   sensealg:
     jfb: false
     abstol: 5.0e-2
     reltol: 5.0e-2
-    maxiters: 27
+    maxiters: 28
   solver:
     continuous: true
     abstol: 5.0e-2
@@ -51,13 +51,13 @@ optimizer:
   learning_rate: 0.05
   nesterov: true
   momentum: 0.9
-  weight_decay: 0.0005
-  cycle_length: 400000
+  weight_decay: 0.000001
+  cycle_length: 200000
   lr_step_decay: 0.1
   lr_step:
     - 100000
-    - 350000
-    - 750000
+    - 150000
+    - 250000
 
 dataset:
   augment: true
@@ -66,7 +66,7 @@ dataset:
   train_batchsize: 64
 
 train:
-  total_steps: 800000
+  total_steps: 500000
   pretrain_steps: 0
   evaluate_every: 10000
   resume: ""

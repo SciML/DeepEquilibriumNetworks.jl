@@ -109,7 +109,7 @@ function create_logger(base_dir::String, train_length::Int, eval_length::Int,
   @info config
 
   # Wandb Logger
-  wandb_log_api = is_distributed() ? Wandb.WandbLogger : Wandb.WandbLoggerMPI
+  wandb_log_api = is_distributed() ? Wandb.WandbLoggerMPI : Wandb.WandbLogger
   wandb_logger = wandb_log_api(; project="skipdeq", name=expt_name, config=config)
 
   # CSV Logger

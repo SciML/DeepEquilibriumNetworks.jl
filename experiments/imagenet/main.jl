@@ -1,8 +1,9 @@
-import Augmentor, CUDA, DEQExperiments, FluxMPI, Images, Logging, Lux, MLUtils,
+import Augmentor, CUDA, DEQExperiments, FluxMPI, FLoops, Images, Logging, Lux, MLUtils,
        OneHotArrays, Optimisers, Random, Setfield, SimpleConfig, Statistics, Wandb
 import Lux.Training
 
-FluxMPI.Init(; verbose=true)
+# CUDA.math_mode!(CUDA.FAST_MATH)
+# FluxMPI.Init(; verbose=true)
 
 # Dataloaders
 struct ImageDataset
@@ -94,7 +95,7 @@ function get_dataloaders(; augment, data_root, eval_batchsize, train_batchsize)
   train_data_augmentation = Augmentor.Resize(256, 256) |>
                             Augmentor.FlipX(0.5) |>
                             Augmentor.RCropSize(224, 224)
-  val_data_augmentation = Augmentor.Resize(256, 256) |> Augmentor.CropSize(224, 224)
+  val_data_augmentation = Augmentor.Resize(224, 224)
   train_dataset = ImageDataset(joinpath(data_root, "train"), train_data_augmentation,
                                normalization_parameters)
   val_dataset = ImageDataset(joinpath(data_root, "val"), val_data_augmentation,
@@ -112,9 +113,13 @@ function get_dataloaders(; augment, data_root, eval_batchsize, train_batchsize)
 
   train_iter = Iterators.cycle(MLUtils.eachobsparallel(train_data;
                                                        executor=FLoops.ThreadedEx(),
-                                                       buffer=true))
+                                                       buffer=true,
+                                                       channelsize=max(1,
+                                                                       Threads.nthreads() //
+                                                                       2)))
 
-  val_iter = MLUtils.eachobsparallel(val_data; executor=FLoops.ThreadedEx(), buffer=true)
+  val_iter = MLUtils.eachobsparallel(val_data; executor=FLoops.ThreadedEx(), buffer=true,
+                                     channelsize=max(1, Threads.nthreads() // 2))
 
   return train_iter, val_iter
 end
@@ -236,6 +241,9 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
       Setfield.@set! tstate.states = Lux.update_state(tstate.states, :fixed_depth, Val(0))
     end
 
+    CUDA.unsafe_free!(x)
+    CUDA.unsafe_free!(y)
+
     if step % cfg.train.evaluate_every == 1 || step == cfg.train.total_steps
       is_best = true
 
@@ -265,6 +273,9 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
         loggers.progress_loggers.eval.avg_meters.top1(acc1, bsize)
         loggers.progress_loggers.eval.avg_meters.top5(acc5, bsize)
         loggers.progress_loggers.eval.avg_meters.nfe(stats.nfe, bsize)
+
+        CUDA.unsafe_free!(x)
+        CUDA.unsafe_free!(y)
       end
 
       if DEQExperiments.should_log()
