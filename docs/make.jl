@@ -1,7 +1,7 @@
 using Documenter, DocumenterCitations, DeepEquilibriumNetworks
 
-cp("./docs/Manifest.toml", "./docs/src/assets/Manifest.toml", force = true)
-cp("./docs/Project.toml", "./docs/src/assets/Project.toml", force = true)
+cp("./docs/Manifest.toml", "./docs/src/assets/Manifest.toml"; force=true)
+cp("./docs/Project.toml", "./docs/src/assets/Project.toml"; force=true)
 
 bib = CitationBibliography(joinpath(@__DIR__, "ref.bib"); sorting=:nyt)
 
