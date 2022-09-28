@@ -1,6 +1,17 @@
 import DeepEquilibriumNetworks as DEQs
 import Functors
-import JET
+
+global test_call(args...; kwargs...) = nothing
+global test_opt(args...; kwargs...) = nothing
+
+try
+  import JET
+  global test_call(args...; kwargs...) = JET.test_call(args...; kwargs...)
+  global test_opt(args...; kwargs...) = JET.test_opt(args...; kwargs...)
+catch
+  @warn "JET not not precompiling. All JET tests will be skipped." maxlog=1
+end
+
 import Lux
 import Random
 
@@ -32,8 +43,8 @@ end
 
 function run_JET_tests(f, args...; call_broken=false, opt_broken=false, kwargs...)
   @static if VERSION >= v"1.7"
-    JET.test_call(f, typeof.(args); broken=call_broken)
-    JET.test_opt(f, typeof.(args); broken=opt_broken, target_modules=(DEQs,))
+    test_call(f, typeof.(args); broken=call_broken)
+    test_opt(f, typeof.(args); broken=opt_broken, target_modules=(DEQs,))
   end
 end
 
