@@ -18,7 +18,7 @@ function test_jacobian_trace_estimation()
   reverse_mode_estimate = DEQs.estimate_jacobian_trace(Val(:reverse_mode), model, ps, st, z,
                                                        x, Lux.replicate(rng))
   run_JET_tests(DEQs.estimate_jacobian_trace, Val(:reverse_mode), model, ps, st, z, x,
-                Lux.replicate(rng); call_broken=true)
+                Lux.replicate(rng))
 
   finite_diff_estimate = DEQs.estimate_jacobian_trace(Val(:finite_diff), model, ps, st, z,
                                                       x, Lux.replicate(rng))
@@ -36,7 +36,7 @@ function test_jacobian_trace_estimation()
   reverse_mode_estimate = DEQs.estimate_jacobian_trace(Val(:reverse_mode), model, ps, st, z,
                                                        x, Lux.replicate(rng))
   run_JET_tests(DEQs.estimate_jacobian_trace, Val(:reverse_mode), model, ps, st, z, x,
-                Lux.replicate(rng); call_broken=true)
+                Lux.replicate(rng))
 
   finite_diff_estimate = DEQs.estimate_jacobian_trace(Val(:finite_diff), model, ps, st, z,
                                                       x, Lux.replicate(rng))
