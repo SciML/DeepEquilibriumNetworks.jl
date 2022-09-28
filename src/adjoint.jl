@@ -24,7 +24,7 @@ end
 neg(nt::NamedTuple) = Functors.fmap(neg, nt)
 
 @noinline function SteadyStateAdjointProblem(sol::EquilibriumSolution,
-                                             sensealg::DeepEquilibriumAdjoint,
+                                             sensealg::DeepEquilibriumAdjoint, alg,
                                              dgdu::DG1=nothing, dgdp::DG2=nothing,
                                              g::G=nothing; kwargs...) where {DG1, DG2, G}
   UnPack.@unpack f, p, u0 = sol.prob
@@ -33,8 +33,8 @@ neg(nt::NamedTuple) = Functors.fmap(neg, nt)
     throw(ArgumentError("Either `dgdu`, `dgdp`, or `g` must be specified."))
   end
 
-  diffcache, y = SciMLSensitivity.adjointdiffcache(g, sensealg, false, sol, dgdu, dgdp, f;
-                                                   quad=false, needs_jac=false,
+  diffcache, y = SciMLSensitivity.adjointdiffcache(g, sensealg, false, sol, dgdu, dgdp, f,
+                                                   alg; quad=false, needs_jac=false,
                                                    noiseterm=false)
 
   if dgdp === nothing && g === nothing
@@ -118,5 +118,5 @@ end
 function SciMLSensitivity._adjoint_sensitivities(sol, sensealg::DeepEquilibriumAdjoint, alg;
                                                  g=nothing, dgdu=nothing, dgdp=nothing,
                                                  abstol=1e-6, reltol=1e-3, kwargs...)
-  return SteadyStateAdjointProblem(sol, sensealg, dgdu, dgdp, g; kwargs...)
+  return SteadyStateAdjointProblem(sol, sensealg, alg, dgdu, dgdp, g; kwargs...)
 end
