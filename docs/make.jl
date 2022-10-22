@@ -16,7 +16,7 @@ makedocs(bib; sitename="Fast Deep Equilibrium Networks", authors="Avik Pal et al
            # :footnote, :meta_block, :missing_docs, :setup_block
          ], checkdocs=:all,
          format=Documenter.HTML(;
-                                canonical="https://deepequilibriumnetworks.sciml.ai/stable/"),
+                                canonical="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/"),
          pages=pages)
 
 deploydocs(; repo="github.com/SciML/DeepEquilibriumNetworks.jl.git", push_preview=true)
