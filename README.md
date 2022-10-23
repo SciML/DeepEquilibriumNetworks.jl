@@ -12,14 +12,15 @@
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
 
 DeepEquilibriumNetworks.jl is a framework built on top of
-[DifferentialEquations.jl](https://diffeq.sciml.ai/stable/) and
-[Lux.jl](https://lux.csail.mit.edu/dev/) enabling the efficient training and inference for
+[DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/) and
+[Lux.jl](https://docs.sciml.ai/Lux/stable/) enabling the efficient training and inference for
 Deep Equilibrium Networks (Infinitely Deep Neural Networks).
 
 ## Installation
 
 ```julia
-] add DeepEquilibriumNetworks
+using Pkg
+Pkg.add("DeepEquilibriumNetworks")
 ```
 
 ## Quickstart
