@@ -15,7 +15,7 @@ makedocs(bib; sitename="Fast Deep Equilibrium Networks", authors="Avik Pal et al
            # :autodocs_block, :cross_references, :docs_block, :eval_block, :example_block,
            # :footnote, :meta_block, :missing_docs, :setup_block
          ], checkdocs=:all,
-         format=Documenter.HTML(;
+         format=Documenter.HTML(; assets=["assets/favicon.ico"],
                                 canonical="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/"),
          pages=pages)
 
