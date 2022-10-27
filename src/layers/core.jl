@@ -10,7 +10,7 @@ function Lux.initialstates(rng::Random.AbstractRNG, deq::AbstractDeepEquilibrium
   _rng = Lux.replicate(rng)
   randn(_rng, 1)
   return (model=Lux.initialstates(rng, deq.model), fixed_depth=Val(0), solution=nothing,
-          rng=_rng)
+          rng=_rng, kwargs_override=NamedTuple())
 end
 
 abstract type AbstractSkipDeepEquilibriumNetwork <:
@@ -21,7 +21,7 @@ function Lux.initialstates(rng::Random.AbstractRNG, deq::AbstractSkipDeepEquilib
   randn(_rng, 1)
   return (model=Lux.initialstates(rng, deq.model),
           shortcut=Lux.initialstates(rng, deq.shortcut), fixed_depth=Val(0),
-          solution=nothing, rng=_rng)
+          solution=nothing, rng=_rng, kwargs_override=NamedTuple())
 end
 
 @inline _check_unrolled_mode(::Val{d}) where {d} = (d >= 1)::Bool

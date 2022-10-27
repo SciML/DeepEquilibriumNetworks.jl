@@ -87,7 +87,8 @@ function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T}, ps,
 
   prob = SteadyStateDiffEq.SteadyStateProblem(OrdinaryDiffEq.ODEFunction{false}(dudt), z,
                                               ps)
-  sol = SciMLBase.solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
+  sol = SciMLBase.solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...,
+                        st.kwargs_override...)
   z_star, st_ = deq.model((sol.u, x), ps, st.model)
 
   if J
@@ -218,7 +219,8 @@ function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T}, ps,
 
   prob = SteadyStateDiffEq.SteadyStateProblem(OrdinaryDiffEq.ODEFunction{false}(dudt), z,
                                               ps.model)
-  sol = SciMLBase.solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
+  sol = SciMLBase.solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...,
+                        st.kwargs_override...)
   z_star, st_ = deq.model((sol.u, x), ps.model, st.model)
 
   if J

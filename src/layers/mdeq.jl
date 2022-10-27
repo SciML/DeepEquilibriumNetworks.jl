@@ -79,7 +79,8 @@ end
 function Lux.initialstates(rng::Random.AbstractRNG, deq::MultiScaleDeepEquilibriumNetwork)
   return (model=Lux.initialstates(rng, deq.model),
           split_idxs=Static.static(Tuple(vcat(0, cumsum(prod.(deq.scales))...))),
-          fixed_depth=Val(0), initial_condition=zeros(Float32, 1, 1), solution=nothing)
+          fixed_depth=Val(0), initial_condition=zeros(Float32, 1, 1), solution=nothing,
+          kwargs_override=NamedTuple())
 end
 
 function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
@@ -152,7 +153,8 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T}, ps,
 
   prob = SteadyStateDiffEq.SteadyStateProblem(OrdinaryDiffEq.ODEFunction{false}(dudt), z,
                                               ps)
-  sol = SciMLBase.solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
+  sol = SciMLBase.solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...,
+                        st.kwargs_override...)
   z_star, st_ = dudt_(sol.u, ps, nothing)
 
   residual = CRC.ignore_derivatives(dudt(sol.u, ps, nothing))
@@ -251,7 +253,8 @@ function Lux.initialstates(rng::Random.AbstractRNG,
   return (model=Lux.initialstates(rng, deq.model),
           shortcut=Lux.initialstates(rng, deq.shortcut),
           split_idxs=Static.static(Tuple(vcat(0, cumsum(prod.(deq.scales))...))),
-          fixed_depth=Val(0), initial_condition=zeros(Float32, 1, 1), solution=nothing)
+          fixed_depth=Val(0), initial_condition=zeros(Float32, 1, 1), solution=nothing,
+          kwargs_override=NamedTuple())
 end
 
 function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
@@ -328,7 +331,8 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N, Sc, M, Sh})(x::AbstractAr
 
   prob = SteadyStateDiffEq.SteadyStateProblem(OrdinaryDiffEq.ODEFunction{false}(dudt), z,
                                               ps.model)
-  sol = SciMLBase.solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...)
+  sol = SciMLBase.solve(prob, deq.solver; sensealg=deq.sensealg, deq.kwargs...,
+                        st.kwargs_override...)
   z_star, st_ = dudt_(sol.u, ps.model, nothing)
 
   residual = CRC.ignore_derivatives(dudt(sol.u, ps.model, nothing))
