@@ -7,19 +7,6 @@ import SciMLSensitivity
 import UnPack
 import Zygote
 
-# TODO(@avik-pal): Move to Lux.jl or maybe CRC?
-function CRC.rrule(::Type{T}, args...) where {T <: NamedTuple}
-  y = T(args...)
-  function nt_pullback(dy)
-    fnames = fieldnames(T)
-    if dy isa CRC.Tangent
-      dy = CRC.backing(dy)
-    end
-    return (CRC.NoTangent(), getfield.((dy,), fnames)...)
-  end
-  return y, nt_pullback
-end
-
 @generated neg(x::T) where {T} = hasmethod(-, (T,)) ? :(-x) : :(x)
 neg(nt::NamedTuple) = Functors.fmap(neg, nt)
 

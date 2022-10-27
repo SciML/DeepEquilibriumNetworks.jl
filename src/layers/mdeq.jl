@@ -114,7 +114,9 @@ end
     push!(calls, :(($sz, size(x, $N)) == size(u0) && return u0, st))
   end
   push!(calls, :(u0 = fill!(similar(x, $(sz), size(x, N)), $(T(0)))))
-  push!(calls, :(st = merge(st, (initial_condition=u0,))))
+  push!(calls,
+        :(st = (; initial_condition=u0, st.model, st.split_idxs, st.fixed_depth,
+                st.solution, st.kwargs_override)))
   push!(calls, :(return u0, st))
   return Expr(:block, calls...)
 end
@@ -136,7 +138,8 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T}, ps,
     sol = UnrolledDEQSolution(z_star_, residual, (; nf=_get_unrolled_depth(st)))
     solution = DeepEquilibriumSolution(z_star_, z, residual, 0.0f0, _get_unrolled_depth(st),
                                        sol)
-    st__ = merge(st, (model=st_, solution=solution))
+    st__ = (; model=st_, st.split_idxs, st.fixed_depth, st.initial_condition, solution,
+            st.kwargs_override)
 
     return z_star, st__
   end
@@ -161,7 +164,8 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T}, ps,
 
   solution = DeepEquilibriumSolution(vcat(MLUtils.flatten.(z_star)...), z, residual, 0.0f0,
                                      sol.destats.nf + 1, sol)
-  st__ = merge(st, (model=st_, solution=solution))
+  st__ = (; model=st_, st.split_idxs, st.fixed_depth, st.initial_condition, solution,
+          st.kwargs_override)
 
   return z_star, st__
 end
@@ -169,7 +173,7 @@ end
 """
     MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
                                          post_fuse_layer::Union{Nothing,Tuple},
-                                         shortcut_layers::Union{Nothing,Tuple}, solver,
+                                         [shortcut_layers::Union{Nothing,Tuple},] solver,
                                          scales;
                                          sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
                                          kwargs...)
@@ -285,6 +289,12 @@ function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers
                                                                                 kwargs)
 end
 
+function MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, post_fuse_layer,
+                                              solver, scales; kwargs...)
+  return MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, post_fuse_layer,
+                                              nothing, solver, scales; kwargs...)
+end
+
 function (deq::MultiScaleSkipDeepEquilibriumNetwork{N, Sc, M, Sh})(x::AbstractArray{T}, ps,
                                                                    st::NamedTuple) where {N,
                                                                                           Sc,
@@ -296,11 +306,13 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N, Sc, M, Sh})(x::AbstractAr
     u0_ = split_and_reshape(u0, st.split_idxs, deq.scales)
     z0, st__ = deq.model(((u0_[1], x), u0_[2:N]...), ps.model, st_.model)
     z = vcat(MLUtils.flatten.(z0)...)
-    st = merge(st_, (model=st__,))
+    st = (; model=st__, st.shortcut, st.split_idxs, st.fixed_depth, st.initial_condition,
+          st.solution, st.kwargs_override)
   else
     z0, st_ = deq.shortcut(x, ps.shortcut, st.shortcut)
     z = vcat(MLUtils.flatten.(z0)...)
-    st = merge(st, (shortcut=st_,))
+    st = (; st.model, shortcut=st_, st.split_idxs, st.fixed_depth, st.initial_condition,
+          st.solution, st.kwargs_override)
   end
 
   if _check_unrolled_mode(st)
@@ -314,7 +326,8 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N, Sc, M, Sh})(x::AbstractAr
     sol = UnrolledDEQSolution(z_star_, residual, (; nf=_get_unrolled_depth(st)))
     solution = DeepEquilibriumSolution(z_star_, z, residual, 0.0f0, _get_unrolled_depth(st),
                                        sol)
-    st__ = merge(st, (model=st_, solution=solution))
+    st__ = (; model=st_, st.split_idxs, st.fixed_depth, st.initial_condition, solution,
+            st.kwargs_override)
 
     return z_star, st__
   end
@@ -337,10 +350,10 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N, Sc, M, Sh})(x::AbstractAr
 
   residual = CRC.ignore_derivatives(dudt(sol.u, ps.model, nothing))
 
-  st__ = merge(st,
-               (model=st_,
-                solution=DeepEquilibriumSolution(vcat(MLUtils.flatten.(z_star)...), z,
-                                                 residual, 0.0f0, sol.destats.nf + 1, sol)))
+  solution = DeepEquilibriumSolution(vcat(MLUtils.flatten.(z_star)...), z, residual, 0.0f0,
+                                     sol.destats.nf + 1, sol)
+  st__ = (; model=st_, st.split_idxs, st.fixed_depth, st.initial_condition, solution,
+          st.kwargs_override)
 
   return z_star, st__
 end

@@ -70,10 +70,10 @@ function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T}, ps,
 
     residual = CRC.ignore_derivatives(z_star .- deq.model((z_star, x), ps, st.model)[1])
     sol = UnrolledDEQSolution(z_star, residual, (; nf=_get_unrolled_depth(st)))
-    st = merge(st,
-               (model=st_,
-                solution=DeepEquilibriumSolution(z_star, z, residual, 0.0f0,
-                                                 _get_unrolled_depth(st), sol)))
+
+    solution = DeepEquilibriumSolution(z_star, z, residual, 0.0f0, _get_unrolled_depth(st),
+                                       sol)
+    st = (; model=st_, st.rng, solution, st.kwargs_override, st.fixed_depth)
 
     return z_star, st
   end
@@ -101,16 +101,16 @@ function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T}, ps,
   end
   residual = CRC.ignore_derivatives(z_star .- deq.model((z_star, x), ps, st.model)[1])
 
-  st = merge(st,
-             (model=st_, rng=rng,
-              solution=DeepEquilibriumSolution(z_star, z, residual, jac_loss,
-                                               sol.destats.nf + 1 + J, sol)))
+  solution = DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J,
+                                     sol)
+  st = (; model=st_, rng, solution, st.kwargs_override, st.fixed_depth)
 
   return z_star, st
 end
 
 """
-    SkipDeepEquilibriumNetwork(model, shortcut, solver; jacobian_regularization::Bool=false,
+    SkipDeepEquilibriumNetwork(model, [shortcut,] solver;
+                               jacobian_regularization::Bool=false,
                                sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10), kwargs...)
 
 Skip Deep Equilibrium Network as proposed in [pal2022mixing](@cite)
@@ -181,14 +181,22 @@ function SkipDeepEquilibriumNetwork(model, shortcut, solver;
                                                     kwargs)
 end
 
+function SkipDeepEquilibriumNetwork(model, solver; kwargs...)
+  return SkipDeepEquilibriumNetwork(model, nothing, solver; kwargs...)
+end
+
 function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T}, ps,
                                                     st::NamedTuple) where {J, M, S, T}
   z, st = if S == Nothing
     z__, st__ = deq.model((zero(x), x), ps.model, st.model)
-    z__, merge(st, (model=st__,))
+    st___ = (; model=st__, st.shortcut, st.rng, st.solution, st.kwargs_override,
+             st.fixed_depth)
+    z__, st___
   else
     z__, st__ = deq.shortcut(x, ps.shortcut, st.shortcut)
-    z__, merge(st, (shortcut=st__,))
+    st___ = (; shortcut=st__, st.model, st.rng, st.solution, st.kwargs_override,
+             st.fixed_depth)
+    z__, st___
   end
 
   if _check_unrolled_mode(st)
@@ -202,10 +210,9 @@ function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T}, ps,
     residual = CRC.ignore_derivatives(z_star .-
                                       deq.model((z_star, x), ps.model, st.model)[1])
     sol = UnrolledDEQSolution(z_star, residual, (; nf=_get_unrolled_depth(st)))
-    st = merge(st,
-               (model=st_,
-                solution=DeepEquilibriumSolution(z_star, z, residual, 0.0f0,
-                                                 _get_unrolled_depth(st), sol)))
+    solution = DeepEquilibriumSolution(z_star, z, residual, 0.0f0, _get_unrolled_depth(st),
+                                       sol)
+    st = (; model=st_, solution, st.fixed_depth, st.rng, st.kwargs_override)
 
     return z_star, st
   end
@@ -233,10 +240,9 @@ function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T}, ps,
   end
   residual = CRC.ignore_derivatives(z_star .- deq.model((z_star, x), ps.model, st.model)[1])
 
-  st = merge(st,
-             (model=st_, rng=rng,
-              solution=DeepEquilibriumSolution(z_star, z, residual, jac_loss,
-                                               sol.destats.nf + 1 + J, sol)))
+  solution = DeepEquilibriumSolution(z_star, z, residual, jac_loss, sol.destats.nf + 1 + J,
+                                     sol)
+  st = (; model=st_, solution, st.fixed_depth, st.rng, st.kwargs_override)
 
   return z_star, st
 end
