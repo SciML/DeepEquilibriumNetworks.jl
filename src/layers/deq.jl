@@ -69,10 +69,11 @@ function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T}, ps,
     end
 
     residual = CRC.ignore_derivatives(z_star .- deq.model((z_star, x), ps, st.model)[1])
+    sol = UnrolledDEQSolution(z_star, residual, (; nf=_get_unrolled_depth(st)))
     st = merge(st,
                (model=st_,
                 solution=DeepEquilibriumSolution(z_star, z, residual, 0.0f0,
-                                                 _get_unrolled_depth(st))))
+                                                 _get_unrolled_depth(st), sol)))
 
     return z_star, st
   end
@@ -102,7 +103,7 @@ function (deq::DeepEquilibriumNetwork{J})(x::AbstractArray{T}, ps,
   st = merge(st,
              (model=st_, rng=rng,
               solution=DeepEquilibriumSolution(z_star, z, residual, jac_loss,
-                                               sol.destats.nf + 1 + J)))
+                                               sol.destats.nf + 1 + J, sol)))
 
   return z_star, st
 end
@@ -199,10 +200,11 @@ function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T}, ps,
 
     residual = CRC.ignore_derivatives(z_star .-
                                       deq.model((z_star, x), ps.model, st.model)[1])
+    sol = UnrolledDEQSolution(z_star, residual, (; nf=_get_unrolled_depth(st)))
     st = merge(st,
                (model=st_,
                 solution=DeepEquilibriumSolution(z_star, z, residual, 0.0f0,
-                                                 _get_unrolled_depth(st))))
+                                                 _get_unrolled_depth(st), sol)))
 
     return z_star, st
   end
@@ -232,7 +234,7 @@ function (deq::SkipDeepEquilibriumNetwork{J, M, S})(x::AbstractArray{T}, ps,
   st = merge(st,
              (model=st_, rng=rng,
               solution=DeepEquilibriumSolution(z_star, z, residual, jac_loss,
-                                               sol.destats.nf + 1 + J)))
+                                               sol.destats.nf + 1 + J, sol)))
 
   return z_star, st
 end

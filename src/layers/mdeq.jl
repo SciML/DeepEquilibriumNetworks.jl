@@ -129,14 +129,12 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T}, ps,
     z_star, st_ = _evaluate_unrolled_mdeq(deq.model, z_star, x, ps, st.model,
                                           st.fixed_depth)
 
-    residual = CRC.ignore_derivatives(vcat(MLUtils.flatten.(z_star)...) .-
-                                      vcat(MLUtils.flatten.(_evaluate_unrolled_mdeq(deq.model,
-                                                                                    z_star,
-                                                                                    x, ps,
-                                                                                    st_,
-                                                                                    Val(1))[1])...))
-    solution = DeepEquilibriumSolution(vcat(MLUtils.flatten.(z_star)...), z, residual,
-                                       0.0f0, _get_unrolled_depth(st))
+    z_star_next = _evaluate_unrolled_mdeq(deq.model, z_star, x, ps, st_, Val(1))[1]
+    z_star_ = vcat(MLUtils.flatten.(z_star)...)
+    residual = CRC.ignore_derivatives(z_star_ .- vcat(MLUtils.flatten.(z_star_next)...))
+    sol = UnrolledDEQSolution(z_star_, residual, (; nf=_get_unrolled_depth(st)))
+    solution = DeepEquilibriumSolution(z_star_, z, residual, 0.0f0, _get_unrolled_depth(st),
+                                       sol)
     st__ = merge(st, (model=st_, solution=solution))
 
     return z_star, st__
@@ -160,7 +158,7 @@ function (deq::MultiScaleDeepEquilibriumNetwork{N})(x::AbstractArray{T}, ps,
   residual = CRC.ignore_derivatives(dudt(sol.u, ps, nothing))
 
   solution = DeepEquilibriumSolution(vcat(MLUtils.flatten.(z_star)...), z, residual, 0.0f0,
-                                     sol.destats.nf + 1)
+                                     sol.destats.nf + 1, sol)
   st__ = merge(st, (model=st_, solution=solution))
 
   return z_star, st__
@@ -307,18 +305,13 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N, Sc, M, Sh})(x::AbstractAr
     z_star, st_ = _evaluate_unrolled_mdeq(deq.model, z_star, x, ps.model, st.model,
                                           st.fixed_depth)
 
-    residual = CRC.ignore_derivatives(vcat(MLUtils.flatten.(z_star)...) .-
-                                      vcat(MLUtils.flatten.(_evaluate_unrolled_mdeq(deq.model,
-                                                                                    z_star,
-                                                                                    x,
-                                                                                    ps.model,
-                                                                                    st_,
-                                                                                    Val(1))[1])...))
-    st__ = merge(st,
-                 (model=st_,
-                  solution=DeepEquilibriumSolution(vcat(MLUtils.flatten.(z_star)...), z,
-                                                   residual, 0.0f0,
-                                                   _get_unrolled_depth(st))))
+    z_star_next = _evaluate_unrolled_mdeq(deq.model, z_star, x, ps.model, st_, Val(1))[1]
+    z_star_ = vcat(MLUtils.flatten.(z_star)...)
+    residual = CRC.ignore_derivatives(z_star_ .- vcat(MLUtils.flatten.(z_star_next)...))
+    sol = UnrolledDEQSolution(z_star_, residual, (; nf=_get_unrolled_depth(st)))
+    solution = DeepEquilibriumSolution(z_star_, z, residual, 0.0f0, _get_unrolled_depth(st),
+                                       sol)
+    st__ = merge(st, (model=st_, solution=solution))
 
     return z_star, st__
   end
@@ -343,7 +336,7 @@ function (deq::MultiScaleSkipDeepEquilibriumNetwork{N, Sc, M, Sh})(x::AbstractAr
   st__ = merge(st,
                (model=st_,
                 solution=DeepEquilibriumSolution(vcat(MLUtils.flatten.(z_star)...), z,
-                                                 residual, 0.0f0, sol.destats.nf + 1)))
+                                                 residual, 0.0f0, sol.destats.nf + 1, sol)))
 
   return z_star, st__
 end

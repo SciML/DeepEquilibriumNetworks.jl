@@ -52,12 +52,14 @@ We recommend not accessing the fields directly, rather use the functions
 `equilibrium_solution`, `initial_condition`, `residual`, `jacobian_loss` and
 `number_of_function_evaluations`.
 """
-struct DeepEquilibriumSolution{T, R <: AbstractFloat}
+struct DeepEquilibriumSolution{T, R <: AbstractFloat,
+                               S <: Union{EquilibriumSolution, UnrolledDEQSolution}}
   z_star::T
   u0::T
   residual::T
   jacobian_loss::R
   nfe::Int
+  sol::S
 end
 
 function Base.show(io::IO, l::DeepEquilibriumSolution)
@@ -81,11 +83,12 @@ function skip_loss(l::DeepEquilibriumSolution)
 end
 
 function CRC.rrule(::Type{<:DeepEquilibriumSolution}, z_star::T, u0::T, residual::T,
-                   jacobian_loss::R, nfe::Int) where {T, R <: AbstractFloat}
+                   jacobian_loss::R, nfe::Int,
+                   sol::Union{EquilibriumSolution, UnrolledDEQSolution}) where {T, R}
   function DeepEquilibriumSolution_pullback(dsol)
     return (CRC.NoTangent(), dsol.z_star, dsol.u0, dsol.residual, dsol.jacobian_loss,
-            dsol.nfe)
+            dsol.nfe, dsol.sol)
   end
-  return (DeepEquilibriumSolution(z_star, u0, residual, jacobian_loss, nfe),
+  return (DeepEquilibriumSolution(z_star, u0, residual, jacobian_loss, nfe, sol),
           DeepEquilibriumSolution_pullback)
 end
