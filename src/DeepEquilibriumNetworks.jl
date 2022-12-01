@@ -14,6 +14,7 @@ include("layers/core.jl")
 include("layers/jacobian_stabilization.jl")
 include("layers/deq.jl")
 include("layers/mdeq.jl")
+include("layers/neuralode.jl")
 
 include("adjoint.jl")
 
