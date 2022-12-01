@@ -279,13 +279,18 @@ function get_model(; num_channels, downsample_times, num_branches, expansion_fac
     end
     deq = DEQ.MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers,
                                                    post_fuse_layers, shortcut, solver,
-                                                   scales; maxiters=maxiters,
-                                                   sensealg=sensealg, verbose=false)
+                                                   scales; maxiters, sensealg,
+                                                   verbose=false)
+  elseif model_type == "neural_ode"
+    @assert solver isa DEQ.ContinuousDEQSolver
+    # Don't pass sensealg for NeuralODE. Use the default InterpolatingAdjoint
+    deq = DEQ.MultiScaleNeuralODE(main_layers, mapping_layers, post_fuse_layers, solver.alg,
+                                  scales; maxiters, verbose=false, solver.abstol,
+                                  solver.reltol)
   else
     deq = DEQ.MultiScaleDeepEquilibriumNetwork(main_layers, mapping_layers,
-                                               post_fuse_layers, solver, scales;
-                                               maxiters=maxiters, sensealg=sensealg,
-                                               verbose=false)
+                                               post_fuse_layers, solver, scales; maxiters,
+                                               sensealg, verbose=false)
   end
 
   return Lux.Chain(initial_layers, deq, final_layers; disable_optimizations=true)
