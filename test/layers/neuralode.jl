@@ -19,9 +19,8 @@ function test_multiscale_neural_ode()
                     get_dense_layer(1, 4) get_dense_layer(1, 3) get_dense_layer(1, 2) Lux.NoOpLayer()]
 
   scales = ((4,), (3,), (2,), (1,))
-  model = DEQs.MultiScaleDeepEquilibriumNetwork(main_layers, mapping_layers, nothing,
-                                                solver, scales; abstol=0.01f0,
-                                                reltol=0.01f0)
+  model = DEQs.MultiScaleNeuralODE(main_layers, mapping_layers, nothing, solver, scales;
+                                   abstol=0.01f0, reltol=0.01f0)
 
   ps, st = Lux.setup(rng, model)
   ps = Lux.ComponentArray(ps)

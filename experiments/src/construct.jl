@@ -359,7 +359,7 @@ function construct(cfg::OptimizerConfig)
 end
 
 function get_loss_function(cfg::ExperimentConfig)
-  if cfg.model.model_type == "vanilla"
+  if cfg.model.model_type in ("vanilla", "neural_ode")
     function _loss_function_vanilla(model, ps, st, (x, y))
       y_pred, st_ = model(x, ps, st)
       soln = st_.layer_2.solution

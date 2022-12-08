@@ -63,18 +63,20 @@ function (node::MultiScaleNeuralODE{N})(x::AbstractArray{T}, ps,
 
   function dudt(u, p, t)
     u_split = split_and_reshape(u, st.split_idxs, node.scales)
-    u_, st_ = node.model(((u_split[1], x), u_split[2:N]...), p, st_)
-    return vcat(MLUtils.flatten.(u_)...), st_
+    return node.model(((u_split[1], x), u_split[2:N]...), p, st_)
   end
 
-  prob = OrdinaryDiffEq.ODEProblem(OrdinaryDiffEq.ODEFunction{false}(first ∘ dudt), z,
+  dudt_(u, p, t) = vcat(MLUtils.flatten.(first(dudt(u, p, t)))...)
+
+  prob = OrdinaryDiffEq.ODEProblem(OrdinaryDiffEq.ODEFunction{false}(dudt_), z,
                                    (0.0f0, 1.0f0), ps)
   sol = SciMLBase.solve(prob, node.solver; node.sensealg, node.kwargs...)
   z_star, st_ = dudt(sol.u[end], ps, nothing)
 
   # The solution is not actually the Equilibrium Solution. Just makes life easier to call
   # it that.
-  solution = DeepEquilibriumSolution(z_star, z, 0.0f0, 0.0f0, sol.destats.nf + 1)
+  solution = DeepEquilibriumSolution(vcat(MLUtils.flatten.(z_star)...), z, 0.0f0, 0.0f0,
+                                     sol.destats.nf + 1)
   st__ = merge(st, (; model=st_, solution))
 
   return z_star, st__

@@ -73,7 +73,15 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
 
   opt, sched = DEQExperiments.construct(cfg.optimizer)
 
-  tstate = Training.TrainState(rng, model, opt; transform_variables=Lux.gpu)
+  tstate = if cfg.model.model_type != "neural_ode"
+    Training.TrainState(rng, model, opt; transform_variables=Lux.gpu)
+  else
+    ps, st = Lux.setup(rng, model)
+    ps = ps |> Lux.ComponentArray |> Lux.gpu
+    st = st |> Lux.gpu
+    opt_state = Optimisers.setup(opt, ps)
+    Training.TrainState(model, ps, st, opt_state, 0)
+  end
   vjp_rule = Training.ZygoteVJP()
 
   DEQExperiments.warmup_model(loss_function, model, tstate.parameters, tstate.states, cfg;
