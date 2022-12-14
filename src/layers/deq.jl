@@ -20,7 +20,7 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite).
 
 ## Example
 
-```julia
+```@example
 import DeepEquilibriumNetworks as DEQs
 import Lux
 import Random
@@ -126,7 +126,7 @@ Skip Deep Equilibrium Network as proposed in [pal2022mixing](@cite)
 
 ## Example
 
-```julia
+```@example
 import DeepEquilibriumNetworks as DEQs
 import Lux
 import Random

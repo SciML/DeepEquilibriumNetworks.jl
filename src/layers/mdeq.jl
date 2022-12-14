@@ -40,7 +40,7 @@ Multiscale Deep Equilibrium Network as proposed in [baimultiscale2020](@cite)
 
 ## Example
 
-```julia
+```@example
 import DeepEquilibriumNetworks as DEQs
 import Lux
 import OrdinaryDiffEq
@@ -194,7 +194,7 @@ Skip Deep Equilibrium Network as proposed in [pal2022mixing](@cite).
 
 ## Example
 
-```julia
+```@example
 import DeepEquilibriumNetworks as DEQs
 import Lux
 import OrdinaryDiffEq

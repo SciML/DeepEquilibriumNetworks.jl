@@ -60,7 +60,7 @@ Splits up the AbstractMatrix into chunks and reshapes them.
 
 ## Example
 
-```julia
+```@example
 import DeepEquilibriumNetworks as DEQs
 import Static
 
