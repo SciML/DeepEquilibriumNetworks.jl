@@ -14,8 +14,11 @@ include("layers/core.jl")
 include("layers/jacobian_stabilization.jl")
 include("layers/deq.jl")
 include("layers/mdeq.jl")
+include("layers/neuralode.jl")
 
 include("adjoint.jl")
+
+Base.similar(ca::Lux.ComponentArray, l::Int64) = similar(Lux.getdata(ca), l)
 
 # DEQ Solvers
 export ContinuousDEQSolver, DiscreteDEQSolver, BroydenSolver, LimitedMemoryBroydenSolver

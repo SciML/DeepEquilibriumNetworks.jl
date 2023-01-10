@@ -1,0 +1,68 @@
+seed: 0  # Always control using command-line arguments
+
+model:
+  num_classes: 10
+  dropout_rate: 0.2
+  group_count: 8
+  weight_norm: false
+  downsample_times: 0
+  expansion_factor: 5
+  image_size:
+    - 32
+    - 32
+  num_branches: 2
+  big_kernels:
+    - 0
+    - 0
+  head_channels:
+    - 8
+    - 16
+  num_channels:
+    - 24
+    - 24
+  fuse_method: "sum"
+  final_channelsize: 200
+  model_type: "vanilla"
+  maxiters: 18
+  in_channels: 3
+  sensealg:
+    jfb: false
+    abstol: 5.0e-2
+    reltol: 5.0e-2
+    maxiters: 20
+  solver:
+    continuous: true
+    abstol: 5.0e-2
+    reltol: 5.0e-2
+    ode_solver: "vcab3"
+    stop_mode: "rel_norm"
+    abstol_termination: 5.0e-2
+    reltol_termination: 5.0e-2
+
+optimizer:
+  lr_scheduler: "cosine"
+  optimizer: "adam"
+  learning_rate: 0.001
+  nesterov: false
+  momentum: 0.0
+  weight_decay: 0.000025
+  cycle_length: 20000
+
+dataset:
+  augment: false
+  data_root: "data/cifar10"
+  eval_batchsize: 128
+  train_batchsize: 128
+
+train:
+  total_steps: 20000
+  pretrain_steps: 3000
+  evaluate_every: 2500
+  resume: ""
+  evaluate: false
+  checkpoint_dir: "checkpoints/"
+  log_dir: "logs/"
+  expt_subdir: "cifar10/tiny/"
+  expt_id: ""
+  print_frequency: 100
+  w_skip: 0.01

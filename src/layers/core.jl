@@ -52,10 +52,10 @@ We recommend not accessing the fields directly, rather use the functions
 `equilibrium_solution`, `initial_condition`, `residual`, `jacobian_loss` and
 `number_of_function_evaluations`.
 """
-struct DeepEquilibriumSolution{T, R <: AbstractFloat}
+struct DeepEquilibriumSolution{T, R <: AbstractFloat, TRes}
   z_star::T
   u0::T
-  residual::T
+  residual::TRes
   jacobian_loss::R
   nfe::Int
 end
