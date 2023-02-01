@@ -24,7 +24,7 @@ UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
-CUDA = "3"
+CUDA = "3, 4"
 ChainRulesCore = "1"
 DiffEqBase = "6"
 DiffEqCallbacks = "2.20.1"
