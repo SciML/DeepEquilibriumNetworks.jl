@@ -30,16 +30,16 @@ gs = Zygote.gradient(p -&gt; sum(abs2, model(x, p, st)[1][1] .- y), ps)[1]</code
   archivePrefix={arXiv},
   primaryClass={cs.LG}
 }</code></pre><p>For specific algorithms, check the respective documentations and cite the corresponding papers.</p><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><details><summary>The documentation of this SciML package was built using these direct dependencies,</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl/docs/Project.toml`
-  [6748aba7] DeepEquilibriumNetworks v0.2.4 `~/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl`
+  [6748aba7] DeepEquilibriumNetworks v0.2.5 `~/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl`
   [e30172f5] Documenter v0.27.24
   [daee34ce] DocumenterCitations v0.2.12</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.8.5
 Commit 17cfb8e65ea (2023-01-08 06:45 UTC)
 Platform Info:
   OS: Linux (x86_64-linux-gnu)
-  CPU: 2 × Intel(R) Xeon(R) Platinum 8171M CPU @ 2.60GHz
+  CPU: 2 × Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz
   WORD_SIZE: 64
   LIBM: libopenlibm
-  LLVM: libLLVM-13.0.1 (ORCJIT, skylake-avx512)
+  LLVM: libLLVM-13.0.1 (ORCJIT, icelake-server)
   Threads: 1 on 2 virtual cores
 Environment:
   JULIA_DEBUG = Documenter</code></pre></details><details><summary>A more complete overview of all dependencies and their versions is also provided.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl/docs/Manifest.toml`
@@ -87,7 +87,7 @@ Environment:
   [9a962f9c] DataAPI v1.14.0
   [864edb3b] DataStructures v0.18.13
   [e2d170a0] DataValueInterfaces v1.0.0
-  [6748aba7] DeepEquilibriumNetworks v0.2.4 `~/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl`
+  [6748aba7] DeepEquilibriumNetworks v0.2.5 `~/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl`
   [244e2a9f] DefineSingletons v0.1.2
   [b429d917] DensityInterface v0.4.0
   [2b5f629d] DiffEqBase v6.115.3
@@ -307,5 +307,5 @@ Environment:
   [8e850ede] nghttp2_jll v1.48.0+0
   [3f19e933] p7zip_jll v17.4.0+0
 Info Packages marked with ⌃ and ⌅ have new versions available, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`</code></pre></details>You can also download the 
-<a href="https://github.com/SciML/DeepEquilibriumNetworks.jl/tree/gh-pages/v0.2.4/assets/Manifest.toml">manifest</a> file and the
-<a href="https://github.com/SciML/DeepEquilibriumNetworks.jl/tree/gh-pages/v0.2.4/assets/Project.toml">project</a> file.</article><nav class="docs-footer"><a class="docs-footer-nextpage" href="manual/solvers/">Dynamical Systems »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Wednesday 8 February 2023 16:28">Wednesday 8 February 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+<a href="https://github.com/SciML/DeepEquilibriumNetworks.jl/tree/gh-pages/v0.2.5/assets/Manifest.toml">manifest</a> file and the
+<a href="https://github.com/SciML/DeepEquilibriumNetworks.jl/tree/gh-pages/v0.2.5/assets/Project.toml">project</a> file.</article><nav class="docs-footer"><a class="docs-footer-nextpage" href="manual/solvers/">Dynamical Systems »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Wednesday 8 February 2023 16:29">Wednesday 8 February 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
