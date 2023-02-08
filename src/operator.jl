@@ -1,5 +1,6 @@
 import LinearAlgebra
 import SciMLBase
+import SciMLOperators
 
 """
     ZygotePullbackMultiplyOperator{T, typeof(pullback), typeof(shape)}(pullback, shape)
@@ -11,6 +12,7 @@ struct ZygotePullbackMultiplyOperator{T, F, S}
   s::S
 end
 
+SciMLOperators.issquare(::ZygotePullbackMultiplyOperator) = true
 Base.deepcopy(op::ZygotePullbackMultiplyOperator) = op
 
 Base.size(z::ZygotePullbackMultiplyOperator) = (prod(z.s), prod(z.s))
