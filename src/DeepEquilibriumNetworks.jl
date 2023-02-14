@@ -1,6 +1,9 @@
 module DeepEquilibriumNetworks
 
-include("operator.jl")
+using LinearAlgebra, OrdinaryDiffEq, SciMLBase, SciMLOperators, SteadyStateDiffEq
+using SteadyStateDiffEq: SteadyStateDiffEqAlgorithm
+
+const DEQs = DeepEquilibriumNetworks
 
 include("solvers/solvers.jl")
 include("solvers/discrete/broyden.jl")
@@ -17,6 +20,9 @@ include("layers/mdeq.jl")
 include("layers/neuralode.jl")
 
 include("adjoint.jl")
+
+# Useful Shorthand
+export DEQs
 
 # DEQ Solvers
 export ContinuousDEQSolver, DiscreteDEQSolver, BroydenSolver, LimitedMemoryBroydenSolver

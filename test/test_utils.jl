@@ -1,5 +1,4 @@
-import DeepEquilibriumNetworks as DEQs
-import Functors
+using DeepEquilibriumNetworks, Functors, Lux, Random
 
 global test_call(args...; kwargs...) = nothing
 global test_opt(args...; kwargs...) = nothing
@@ -11,9 +10,6 @@ try
 catch
   @warn "JET not not precompiling. All JET tests will be skipped." maxlog=1
 end
-
-import Lux
-import Random
 
 function get_prng(seed::Int)
   @static if VERSION >= v"1.7"

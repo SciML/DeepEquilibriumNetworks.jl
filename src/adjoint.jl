@@ -7,6 +7,15 @@ import SciMLSensitivity
 import UnPack
 import Zygote
 
+function _zygote_pullback_operator(f, input)
+  output = f(input)[1]
+  function f_operator!(du, u, p, t)
+    du .= f(reshape(u, size(input)))[1]
+    return du
+  end
+  return FunctionOperator(f_operator!, input, output)
+end
+
 # TODO(@avik-pal): Move to Lux.jl or maybe CRC?
 function CRC.rrule(::Type{T}, args...) where {T <: NamedTuple}
   y = T(args...)
@@ -61,8 +70,7 @@ neg(nt::NamedTuple) = Functors.fmap(neg, nt)
   if _check_adjoint_mode(sensealg, Val(:vanilla))
     # Solve the Linear Problem
     _val, back = Zygote.pullback(x -> f(x, p, nothing), y)
-    s_val = size(_val)
-    op = ZygotePullbackMultiplyOperator{eltype(y), typeof(back), typeof(s_val)}(back, s_val)
+    op = _zygote_pullback_operator(back, _val)
     linear_problem = LinearSolve.LinearProblem(op, vec(diffcache.dg_val))
     res = SciMLBase.solve(linear_problem, sensealg.linsolve).u
   elseif _check_adjoint_mode(sensealg, Val(:jfb))

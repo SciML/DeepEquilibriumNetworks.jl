@@ -1,7 +1,7 @@
 name = "DeepEquilibriumNetworks"
 uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 authors = ["Avik Pal <avikpal@mit.edu>"]
-version = "0.2.6"
+version = "0.3.0"
 
 [deps]
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
@@ -38,7 +38,7 @@ SciMLBase = "1.19"
 SciMLOperators = "0.1.20"
 SciMLSensitivity = "7"
 Static = "0.6, 0.7, 0.8"
-SteadyStateDiffEq = "1.6"
+SteadyStateDiffEq = "1.12"
 UnPack = "1"
 Zygote = "0.6.34"
 julia = "1.6"
