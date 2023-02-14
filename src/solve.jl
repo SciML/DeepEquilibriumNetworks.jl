@@ -22,33 +22,16 @@ end
 
 function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},
                             alg::ContinuousDEQSolver, args...; kwargs...) where {uType}
-  tspan = alg.tspan isa Tuple ? alg.tspan :
-          convert.(real(eltype(prob.u0)), (zero(alg.tspan), alg.tspan))
-  _prob = OrdinaryDiffEq.ODEProblem(prob.f, prob.u0, tspan, prob.p)
+  sol = DiffEqBase.__solve(prob, alg.alg, args...; kwargs...)
 
-  terminate_stats = Dict{Symbol, Any}(:best_objective_value => real(eltype(prob.u0))(Inf),
-                                      :best_objective_value_iteration => nothing)
+  u, du = sol.u, sol.resid
+  uType = typeof(u)
 
-  callback = DiffEqCallbacks.TerminateSteadyState(alg.abstol_termination,
-                                                  alg.reltol_termination,
-                                                  get_terminate_condition(alg,
-                                                                          terminate_stats))
-  sol = SciMLBase.solve(_prob, alg.alg, args...; callback, kwargs...)
-
-  u, t = if terminate_stats[:best_objective_value_iteration] === nothing
-    (sol.u[end], sol.t[end])
-  else
-    (sol.u[terminate_stats[:best_objective_value_iteration] + 1],
-     sol.t[terminate_stats[:best_objective_value_iteration] + 1])
-  end
-
-  # Dont count towards NFE since this is mostly a check for convergence
-  du = prob.f(u, prob.p, t)
-
-  retcode = (sol.retcode == :Terminated && has_converged(du, u, alg) ? :Success : :Failure)
+  # TODO: Allow propagation of destats in NonlinearSolution?
+  destats = (nf=-1,)
 
   return EquilibriumSolution{eltype(uType), ndims(uType), uType, typeof(prob), typeof(alg),
-                             typeof(sol.destats)}(u, du, prob, alg, retcode, sol.destats)
+                             typeof(destats)}(u, du, prob, alg, retcode, destats)
 end
 
 function DiffEqBase.__solve(prob::DiffEqBase.AbstractSteadyStateProblem{uType},

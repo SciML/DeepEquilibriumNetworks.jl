@@ -1,45 +1,44 @@
-import OrdinaryDiffEq
-import SteadyStateDiffEq
-
+# NOTE(@avik-pal): Keeping the ContinuousDEQSolver struct for now, as I feel the defaults
+#                  for typical SteadyStateProblems are not really appropriate for DEQs.
+#                  Also allows me to create a custom solution which I will remove in later
+#                  steps.
 """
-    ContinuousDEQSolver(alg=OrdinaryDiffEq.VCABM3(); mode::Symbol=:rel_deq_default,
-                        abstol=1f-8, reltol=1f-8, abstol_termination=1f-8,
-                        reltol_termination=1f-8, tspan=Inf32)
+    ContinuousDEQSolver(alg=VCABM3(); mode=SteadyStateTerminationMode.RelSafeBest,
+                        abstol=1.0f-8, reltol=1.0f-6, abstol_termination=1.0f-8,
+                        reltol_termination=1.0f-6, tspan=Inf32, kwargs...)
 
-Solver for Continuous DEQ Problem ([pal2022mixing](@cite)). Similar to `DynamicSS`, but
-provides more flexibility needed for solving DEQ problems.
+Solver for Continuous DEQ Problem ([pal2022mixing](@cite)). Effectively a wrapper around
+`DynamicSS` with more sensible defaults for DEQs.
 
 ## Arguments
 
-  - `alg`: Algorithm to solve the ODEProblem. (Default: `VCABM3()`)
-  - `mode`: Termination Mode of the solver. See below for a description of the various
-    termination conditions (Default: `:rel_deq_default`)
+  - `alg`: Algorithm to solve the ODEProblem. (Default: `VCAB3()`)
+  - `mode`: Termination Mode of the solver. See the documentation for
+    `SteadyStateTerminationCriteria` for more information.
+    (Default: `SteadyStateTerminationMode.RelSafeBest`)
   - `abstol`: Absolute tolerance for time stepping. (Default: `1f-8`)
-  - `reltol`: Relative tolerance for time stepping. (Default: `1f-8`)
-  - `abstol_termination`: Absolute tolerance for termination. (Default: `1f-8`)
-  - `reltol_termination`: Relative tolerance for termination. (Default: `1f-8`)
+  - `reltol`: Relative tolerance for time stepping. (Default: `1f-6`)
+  - `abstol_termination`: Absolute tolerance for termination. (Default: `abstol`)
+  - `reltol_termination`: Relative tolerance for termination. (Default: `reltol`)
   - `tspan`: Time span. Users should not change this value, instead control termination
     through `maxiters` in `solve` (Default: `Inf32`)
+  - `kwargs`: Additional Parameters that are directly passed to
+    `SteadyStateTerminationCriteria`.
 
 See also: [`DiscreteDEQSolver`](@ref)
 """
-struct ContinuousDEQSolver{M, A, T, TS} <: SteadyStateDiffEq.SteadyStateDiffEqAlgorithm
+struct ContinuousDEQSolver{A <: DynamicSS} <: SteadyStateDiffEqAlgorithm
   alg::A
-  abstol::T
-  reltol::T
-  abstol_termination::T
-  reltol_termination::T
-  tspan::TS
 end
 
-function ContinuousDEQSolver(alg=OrdinaryDiffEq.VCABM3(); mode::Symbol=:rel_deq_default,
-                             abstol::T=1.0f-8, reltol::T=1.0f-8,
-                             abstol_termination::T=1.0f-8, reltol_termination::T=1.0f-8,
-                             tspan=Inf32) where {T <: Number}
-  return ContinuousDEQSolver{Val(mode), typeof(alg), T, typeof(tspan)}(alg, abstol, reltol,
-                                                                       abstol_termination,
-                                                                       reltol_termination,
-                                                                       tspan)
+function ContinuousDEQSolver(alg=VCAB3(); mode=SteadyStateTerminationMode.RelSafeBest,
+                             abstol=1.0f-8, reltol=1.0f-6, abstol_termination=abstol,
+                             reltol_termination=reltol, tspan=Inf32, kwargs...)
+  termination_condition = SteadyStateTerminationCriteria(mode; abstol=abstol_termination,
+                                                         reltol=reltol_termination,
+                                                         kwargs...)
+  ss_alg = DynamicSS(alg; abstol, reltol, tspan, termination_condition)
+  return ContinuousDEQSolver{typeof(ss_alg)}(ss_alg)
 end
 
 """
