@@ -4,7 +4,6 @@ import Test
 const GROUP = get(ENV, "GROUP", "ALL")
 
 if GROUP == "ALL" || GROUP == "CORE"
-  SafeTestsets.@safetestset "Operator" begin include("operator.jl") end
   SafeTestsets.@safetestset "Discrete Solvers: Broyden" begin include("solvers/discrete/broyden.jl") end
   SafeTestsets.@safetestset "Discrete Solvers: L-Broyden" begin include("solvers/discrete/limited_memory_broyden.jl") end
   SafeTestsets.@safetestset "Solve" begin include("solve.jl") end

@@ -1,14 +1,16 @@
 module DeepEquilibriumNetworks
 
-using LinearAlgebra, OrdinaryDiffEq, SciMLBase, SciMLOperators, SteadyStateDiffEq
-using SteadyStateDiffEq: SteadyStateDiffEqAlgorithm
+using DiffEqBase, LinearAlgebra, OrdinaryDiffEq, SciMLBase, SciMLOperators,
+      SteadyStateDiffEq
+using DiffEqBase: AbstractSteadyStateProblem
+using SciMLBase: AbstractNonlinearSolution
+using SteadyStateDiffEq: SteadyStateDiffEqAlgorithm, _get_termination_condition
 
 const DEQs = DeepEquilibriumNetworks
 
 include("solvers/solvers.jl")
 include("solvers/discrete/broyden.jl")
 include("solvers/discrete/limited_memory_broyden.jl")
-include("solvers/termination.jl")
 
 include("solve.jl")
 include("utils.jl")

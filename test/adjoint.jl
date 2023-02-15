@@ -28,6 +28,22 @@ function loss_function(model::DEQs.MultiScaleSkipDeepEquilibriumNetwork, x, ps, 
   return sum(sum, y) + DEQs.jacobian_loss(st_.solution) + DEQs.skip_loss(st_.solution)
 end
 
+function test_zygote_pullback_multiply_operator()
+  rng = get_prng(0)
+  model = Lux.Chain(Lux.Dense(4 => 5, tanh), Lux.Dense(5 => 2))
+  ps, st = Lux.setup(rng, model)
+
+  x = randn(rng, Float32, 4, 1)
+  v = randn(rng, Float32, 2)
+
+  _val, pullback = Zygote.pullback(x -> model(x, ps, st)[1], x)
+  op = DEQs._zygote_pullback_operator(pullback, _val)
+
+  Test.@test size(op * v) == size(x)
+
+  return nothing
+end
+
 function test_deep_equilibrium_network_adjoint()
   rng = get_prng(0)
 
@@ -321,6 +337,8 @@ function test_multiscale_neural_ode_adjoint()
   return nothing
 end
 
+
+Test.@testset "ZygotePullbackMultiplyOperator" begin test_zygote_pullback_multiply_operator() end
 Test.@testset "DeepEquilibriumNetwork" begin test_deep_equilibrium_network_adjoint() end
 Test.@testset "SkipDeepEquilibriumNetwork" begin test_skip_deep_equilibrium_network_adjoint() end
 Test.@testset "SkipDeepEquilibriumNetworkV2" begin test_skip_deep_equilibrium_network_v2_adjoint() end
