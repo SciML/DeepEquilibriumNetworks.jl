@@ -11,7 +11,7 @@ See also: [`BroydenSolver`](@ref)
 struct LimitedMemoryBroydenSolver end
 
 @inbounds function nlsolve(::LimitedMemoryBroydenSolver, f::Function, y::AbstractMatrix{T};
-                           terminate_condition, maxiters::Int=10) where {T}
+                           terminate_condition, maxiters::Int, abstol, reltol) where {T}
   LBFGS_threshold = min(maxiters, 27)
 
   total_hsize, batch_size = size(y)
@@ -44,7 +44,7 @@ struct LimitedMemoryBroydenSolver end
     push!(xs, copy(x1))
 
     # Convergence Check
-    terminate_condition(fx1, x1) && break
+    terminate_condition(fx1, x1, xs[end - 1], abstol, reltol) && break
 
     # Compute the update
     part_Us = view(Us, 1:min(LBFGS_threshold, nstep), :, :)

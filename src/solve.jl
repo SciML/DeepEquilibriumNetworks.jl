@@ -16,7 +16,7 @@ end
 
 function DiffEqBase.__solve(prob::AbstractSteadyStateProblem, alg::ContinuousDEQSolver,
                             args...; kwargs...)
-  sol = DiffEqBase.__solve(prob, alg.alg, args...; kwargs...)
+  sol = solve(prob, alg.alg, args...; kwargs...)
 
   u, du = sol.u, sol.resid
   uType = typeof(u)
@@ -28,32 +28,15 @@ function DiffEqBase.__solve(prob::AbstractSteadyStateProblem, alg::ContinuousDEQ
                              typeof(destats)}(u, du, prob, alg, retcode, destats)
 end
 
-# ========================================
-# TODO(@avik-pal): Very Temporary Solution. Remove before Merging!!!
-struct _FakeIntegrator{DU, U}
-  du::DU
-  u::U
-end
-
-DiffEqBase.get_du(integrator::_FakeIntegrator) = integrator.du
-
-function _get_terminate_condition(alg::DiscreteDEQSolver, args...; kwargs...)
-  tc = alg.termination_condition
-  termination_condition = _get_termination_condition(tc, args...; kwargs...)
-  function _termination_condition_closure_discrete_deq(du, u)
-    return termination_condition(_FakeIntegrator(du, u), tc.abstol, tc.reltol, nothing)
-  end
-  return _termination_condition_closure_discrete_deq
-end
-# ========================================
-
 function DiffEqBase.__solve(prob::AbstractSteadyStateProblem{uType}, alg::DiscreteDEQSolver,
                             args...; maxiters=10, kwargs...) where {uType}
   terminate_stats = Dict{Symbol, Any}(:best_objective_value => real(eltype(prob.u0))(Inf),
                                       :best_objective_value_iteration => nothing)
 
   us, stats = nlsolve(alg.alg, u -> prob.f(u, prob.p, nothing), prob.u0; maxiters,
-                      terminate_condition=_get_terminate_condition(alg, terminate_stats))
+                      terminate_condition=alg.termination_condition(terminate_stats),
+                      abstol=alg.termination_condition.abstol,
+                      reltol=alg.termination_condition.reltol)
 
   u = if terminate_stats[:best_objective_value_iteration] === nothing
     us[end]

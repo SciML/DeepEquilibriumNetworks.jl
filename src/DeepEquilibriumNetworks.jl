@@ -1,7 +1,7 @@
 module DeepEquilibriumNetworks
 
 using DiffEqBase, LinearAlgebra, OrdinaryDiffEq, SciMLBase, SciMLOperators,
-      SteadyStateDiffEq
+      SimpleNonlinearSolve, SteadyStateDiffEq
 using DiffEqBase: AbstractSteadyStateProblem
 using SciMLBase: AbstractNonlinearSolution
 using SteadyStateDiffEq: SteadyStateDiffEqAlgorithm, _get_termination_condition

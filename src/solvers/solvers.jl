@@ -1,7 +1,5 @@
 # NOTE(@avik-pal): Keeping the ContinuousDEQSolver struct for now, as I feel the defaults
 #                  for typical SteadyStateProblems are not really appropriate for DEQs.
-#                  Also allows me to create a custom solution which I will remove in later
-#                  steps.
 """
     ContinuousDEQSolver(alg=VCABM3(); mode=SteadyStateTerminationMode.RelSafeBest,
                         abstol=1.0f-8, reltol=1.0f-6, abstol_termination=abstol,
@@ -14,8 +12,8 @@ Solver for Continuous DEQ Problem ([pal2022mixing](@cite)). Effectively a wrappe
 
   - `alg`: Algorithm to solve the ODEProblem. (Default: `VCAB3()`)
   - `mode`: Termination Mode of the solver. See the documentation for
-    `SteadyStateTerminationCriteria` for more information.
-    (Default: `SteadyStateTerminationMode.RelSafeBest`)
+    `NLSolveTerminationCondition` for more information.
+    (Default: `NLSolveTerminationMode.RelSafeBest`)
   - `abstol`: Absolute tolerance for time stepping. (Default: `1f-8`)
   - `reltol`: Relative tolerance for time stepping. (Default: `1f-6`)
   - `abstol_termination`: Absolute tolerance for termination. (Default: `abstol`)
@@ -23,7 +21,7 @@ Solver for Continuous DEQ Problem ([pal2022mixing](@cite)). Effectively a wrappe
   - `tspan`: Time span. Users should not change this value, instead control termination
     through `maxiters` in `solve`. (Default: `Inf32`)
   - `kwargs`: Additional Parameters that are directly passed to
-    `SteadyStateTerminationCriteria`.
+    `NLSolveTerminationCondition`.
 
 See also: [`DiscreteDEQSolver`](@ref)
 """
@@ -31,12 +29,11 @@ struct ContinuousDEQSolver{A <: DynamicSS} <: SteadyStateDiffEqAlgorithm
   alg::A
 end
 
-function ContinuousDEQSolver(alg=VCAB3(); mode=SteadyStateTerminationMode.RelSafeBest,
+function ContinuousDEQSolver(alg=VCAB3(); mode=NLSolveTerminationMode.RelSafeBest,
                              abstol=1.0f-8, reltol=1.0f-6, abstol_termination=abstol,
                              reltol_termination=reltol, tspan=Inf32, kwargs...)
-  termination_condition = SteadyStateTerminationCriteria(mode; abstol=abstol_termination,
-                                                         reltol=reltol_termination,
-                                                         kwargs...)
+  termination_condition = NLSolveTerminationCondition(mode; abstol=abstol_termination,
+                                                      reltol=reltol_termination, kwargs...)
   return ContinuousDEQSolver(DynamicSS(alg; abstol, reltol, tspan, termination_condition))
 end
 
@@ -53,7 +50,7 @@ more flexibility needed for solving DEQ problems.
     (Default: [`LimitedMemoryBroydenSolver`](@ref))
   - `mode`: Termination Mode of the solver. See the documentation for
     `SteadyStateTerminationCriteria` for more information.
-    (Default: `SteadyStateTerminationMode.RelSafeBest`)
+    (Default: `NLSolveTerminationMode.RelSafe`)
   - `abstol_termination`: Absolute tolerance for termination. (Default: `1f-8`)
   - `reltol_termination`: Relative tolerance for termination. (Default: `1f-6`)
 
@@ -65,11 +62,10 @@ struct DiscreteDEQSolver{A, TC} <: SteadyStateDiffEqAlgorithm
 end
 
 function DiscreteDEQSolver(alg=LimitedMemoryBroydenSolver();
-                           mode=SteadyStateTerminationMode.RelSafeBest,
-                           abstol_termination=1f-8, reltol_termination=1f-6, kwargs...)
-  termination_condition = SteadyStateTerminationCriteria(mode; abstol=abstol_termination,
-                                                         reltol=reltol_termination,
-                                                         kwargs...)
+                           mode=NLSolveTerminationMode.RelSafe, abstol_termination=1.0f-8,
+                           reltol_termination=1.0f-6, kwargs...)
+  termination_condition = NLSolveTerminationCriteria(mode; abstol=abstol_termination,
+                                                     reltol=reltol_termination, kwargs...)
   # TODO: Get termination criterias into NonlinearSolve.jl or SimpleNonlinearSolve.jl
   return DiscreteDEQSolver(alg, termination_condition)
 end

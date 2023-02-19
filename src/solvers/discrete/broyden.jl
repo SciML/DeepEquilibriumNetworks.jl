@@ -10,15 +10,13 @@ See also: [`LimitedMemoryBroydenSolver`](@ref)
 """
 struct BroydenSolver end
 
-function nlsolve(b::BroydenSolver, f::Function, y::AbstractArray{T}; terminate_condition,
-                 maxiters::Int=10) where {T}
-  res, stats = nlsolve(b, u -> vec(f(reshape(u, size(y)))), vec(y); terminate_condition,
-                       maxiters)
+function nlsolve(b::BroydenSolver, f::Function, y::AbstractArray{T}; kwargs...) where {T}
+  res, stats = nlsolve(b, u -> vec(f(reshape(u, size(y)))), vec(y); kwargs...)
   return reshape.(res, (size(y),)), stats
 end
 
 function nlsolve(::BroydenSolver, f::Function, y::AbstractVector{T}; terminate_condition,
-                 maxiters::Int=10) where {T}
+                 maxiters::Int, abstol, reltol) where {T}
   x, x_old, dx, fx_old = copy(y), copy(y), copy(y), f(y)
   dfx = copy(fx_old)
   Jinv = init_identity_matrix(x)
@@ -69,7 +67,7 @@ function nlsolve(::BroydenSolver, f::Function, y::AbstractVector{T}; terminate_c
     push!(xs, copy(x))
 
     # Convergence Check
-    terminate_condition(fx, x) && break
+    terminate_condition(fx, x, xs[end - 1], abstol, reltol) && break
   end
 
   return xs, (nf=nf,)
