@@ -6,7 +6,7 @@ import SteadyStateDiffEq
                         abstol=1f-8, reltol=1f-8, abstol_termination=1f-8,
                         reltol_termination=1f-8, tspan=Inf32)
 
-Solver for Continuous DEQ Problem ([pal2022mixing](@cite)). Similar to `DynamicSS` but
+Solver for Continuous DEQ Problem ([pal2022mixing](@cite)). Similar to `DynamicSS`, but
 provides more flexibility needed for solving DEQ problems.
 
 ## Arguments
@@ -46,7 +46,7 @@ end
     DiscreteDEQSolver(alg=LimitedMemoryBroydenSolver(); mode::Symbol=:rel_deq_default,
                       abstol_termination::T=1.0f-8, reltol_termination::T=1.0f-8)
 
-Solver for Discrete DEQ Problem ([baideep2019](@cite)). Similar to `SSrootfind` but provides
+Solver for Discrete DEQ Problem ([baideep2019](@cite)). Similar to `SSrootfind`, but provides
 more flexibility needed for solving DEQ problems.
 
 ## Arguments

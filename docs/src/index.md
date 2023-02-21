@@ -1,18 +1,21 @@
-# DeepEquilibriumNetworks: (Fast) Deep Equlibrium Networks
+# DeepEquilibriumNetworks: (Fast) Deep Equilibrium Networks
 
 DeepEquilibriumNetworks.jl is a framework built on top of
 [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/) and
-[Lux.jl](https://docs.sciml.ai/Lux/stable/) enabling the efficient training and inference for
+[Lux.jl](https://docs.sciml.ai/Lux/stable/), enabling the efficient training and inference for
 Deep Equilibrium Networks (Infinitely Deep Neural Networks).
 
 ## Installation
+
+To install DeepEquilibriumNetworks.jl, use the Julia package manager:
 
 ```julia
 using Pkg
 Pkg.add("DeepEquilibriumNetworks")
 ```
+```
 
-## Quickstart
+## Quick-start
 
 ```julia
 import DeepEquilibriumNetworks as DEQs
@@ -41,7 +44,7 @@ gs = Zygote.gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)[1]
 
 ## Citation
 
-If you are using this project for research or other academic purposes consider citing our
+If you are using this project for research or other academic purposes, consider citing our
 paper:
 
 ```bibtex
@@ -58,6 +61,22 @@ paper:
 
 For specific algorithms, check the respective documentations and cite the corresponding
 papers.
+
+## Contributing
+
+  - Please refer to the
+    [SciML ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://github.com/SciML/ColPrac/blob/master/README.md)
+    for guidance on PRs, issues, and other matters relating to contributing to SciML.
+
+  - See the [SciML Style Guide](https://github.com/SciML/SciMLStyle) for common coding practices and other style decisions.
+  - There are a few community forums:
+    
+      + The #diffeq-bridged and #sciml-bridged channels in the
+        [Julia Slack](https://julialang.org/slack/)
+      + The #diffeq-bridged and #sciml-bridged channels in the
+        [Julia Zulip](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
+      + On the [Julia Discourse forums](https://discourse.julialang.org)
+      + See also [SciML Community page](https://sciml.ai/community/)
 
 ## Reproducibility
 
