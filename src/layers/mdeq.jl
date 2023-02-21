@@ -30,7 +30,7 @@ Multiscale Deep Equilibrium Network as proposed in [baimultiscale2020](@cite)
     arrays, the other ones only take 1 input.
   - `mapping_layers`: Matrix of Neural Networks. The ``(i, j)^{th}`` network takes the
     output of ``i^{th}`` `main_layer` and passes it to the ``j^{th}`` `main_layer`.
-  - `post_fuse_layer`: Tuple of Neural Networks. Each of the scales are passed through this
+  - `post_fuse_layer`: Tuple of Neural Networks. Each of the scales is passed through this
     layer.
   - `solver`: Solver for the optimization problem (See: [`ContinuousDEQSolver`](@ref) &
     [`DiscreteDEQSolver`](@ref)).
@@ -183,7 +183,7 @@ Skip Deep Equilibrium Network as proposed in [pal2022mixing](@cite).
     arrays, the other ones only take 1 input.
   - `mapping_layers`: Matrix of Neural Networks. The ``(i, j)^{th}`` network takes the
     output of ``i^{th}`` `main_layer` and passes it to the ``j^{th}`` `main_layer`.
-  - `post_fuse_layer`: Tuple of Neural Networks. Each of the scales are passed through
+  - `post_fuse_layer`: Tuple of Neural Networks. Each of the scales is passed through
     this layer.
   - `shortcut_layers`: Shortcut for the network (pass `nothing` for SkipDEQV2).
   - `solver`: Solver for the optimization problem (See: [`ContinuousDEQSolver`](@ref) &

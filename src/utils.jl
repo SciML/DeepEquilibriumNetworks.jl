@@ -20,7 +20,7 @@ Creates DeepEquilibriumAdjoint ([johnson2012notes](@cite)) with sensible default
   - `autojacvec`: Which backend to use for VJP.
   - `linsolve`: Linear Solver from
     [LinearSolve.jl](https://docs.sciml.ai/LinearSolve/stable/).
-  - `mode`: Adjoint mode. Currently only `:vanilla` & `:jfb` are supported.
+  - `mode`: Adjoint mode. Currently, only `:vanilla` & `:jfb` are supported.
 """
 struct DeepEquilibriumAdjoint{CS, AD, FDT, M, VJP, LS} <:
        SciMLSensitivity.AbstractAdjointSensitivityAlgorithm{CS, AD, FDT}
