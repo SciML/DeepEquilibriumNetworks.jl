@@ -1,7 +1,7 @@
 module DeepEquilibriumNetworks
 
-using DiffEqBase, LinearAlgebra, LinearSolve, Lux, OrdinaryDiffEq, Random, SciMLBase,
-      SciMLOperators, SciMLSensitivity, Setfield, SimpleNonlinearSolve, Static,
+using DiffEqBase, LinearAlgebra, LinearSolve, Lux, MLUtils, OrdinaryDiffEq, Random,
+      SciMLBase, SciMLOperators, SciMLSensitivity, Setfield, SimpleNonlinearSolve, Static,
       SteadyStateDiffEq
 
 using DiffEqBase: AbstractSteadyStateProblem
@@ -17,12 +17,13 @@ include("solve.jl")
 include("utils.jl")
 
 include("layers/core.jl")
-# include("layers/jacobian_stabilization.jl")
+include("layers/jacobian_stabilization.jl")
 include("layers/deq.jl")
-# include("layers/mdeq.jl")
-# include("layers/neuralode.jl")
+include("layers/mdeq.jl")
+include("layers/neuralode.jl")
+include("layers/evaluate.jl")
 
-# include("adjoint.jl")
+include("adjoint.jl")
 
 # Useful Shorthand
 export DEQs
@@ -31,10 +32,11 @@ export DEQs
 export ContinuousDEQSolver, DiscreteDEQSolver
 
 # Utils
-export EquilibriumSolution, DeepEquilibriumSolution # , estimate_jacobian_trace
+export EquilibriumSolution, DeepEquilibriumSolution , estimate_jacobian_trace
 
 # Networks
-export DeepEquilibriumNetwork # , SkipDeepEquilibriumNetwork
-# export MultiScaleDeepEquilibriumNetwork, MultiScaleSkipDeepEquilibriumNetwork
+export DeepEquilibriumNetwork , SkipDeepEquilibriumNetwork
+export MultiScaleDeepEquilibriumNetwork, MultiScaleSkipDeepEquilibriumNetwork
+export MultiScaleNeuralODE
 
 end

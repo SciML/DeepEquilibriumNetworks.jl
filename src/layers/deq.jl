@@ -1,4 +1,5 @@
-@generated function _evaluate_unrolled_deq(model, z_star, x, ps, st, ::Val{d}) where {d}
+@generated function _evaluate_unrolled_model(deq, model, z_star, x, ps, st,
+                                             ::Val{d}) where {d}
   calls = [:((z_star, st) = model((z_star, x), ps, st)) for _ in 1:d]
   push!(calls, :(return z_star, st))
   return Expr(:block, calls...)
@@ -125,6 +126,8 @@ function SkipDeepEquilibriumNetwork(model, shortcut, solver; sensealg=SteadyStat
                                                     kwargs)
 end
 
+_jacobian_regularization(::SkipDeepEquilibriumNetwork{J}) where {J} = J
+
 function _get_initial_condition(deq::SkipDeepEquilibriumNetwork{J, M, Nothing}, x, ps,
                                 st) where {J, M}
   z, st_ = deq.model((zero(x), x), ps.model, st.model)
@@ -136,59 +139,4 @@ function _get_initial_condition(deq::SkipDeepEquilibriumNetwork, x, ps, st)
   z, st_ = deq.shortcut(x, ps.shortcut, st.shortcut)
   @set! st.shortcut = st_
   return z, st
-end
-
-# Main Functions
-const SingleScaleDeepEquilibriumNetworks = Union{SkipDeepEquilibriumNetwork,
-                                                 DeepEquilibriumNetwork}
-
-function (deq::SingleScaleDeepEquilibriumNetworks)(x::AbstractArray{T}, ps, st::NamedTuple,
-                                                   ::Val{true}) where {T}
-  # Pretraining without Fixed Point Solving
-  z, st = _get_initial_condition(deq, x, ps, st)
-  depth = _get_unrolled_depth(st)
-
-  z_star, st_ = _evaluate_unrolled_deq(deq.model, z, x, ps.model, st.model, st.fixed_depth)
-
-  residual = CRC.ignore_derivatives(z_star .- deq.model((z_star, x), ps.model, st.model)[1])
-
-  @set! st.model = st_
-  @set! st.solution = DeepEquilibriumSolution(z_star, z, residual, T(0), depth)
-
-  return z_star, st
-end
-
-function (deq::SingleScaleDeepEquilibriumNetworks)(x::AbstractArray{T}, ps, st::NamedTuple,
-                                                   ::Val{false}) where {T}
-  z, st = _get_initial_condition(deq, x, ps, st)
-  st_, nfe = st.model, 0
-
-  function dudt(u, p, t)
-    nfe += 1
-    u_, st_ = deq.model((u, x), p, st_)
-    return u_ .- u
-  end
-
-  prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps.model)
-  sol = solve(prob, deq.solver; deq.sensealg, deq.kwargs...)
-
-  z_star, st_ = deq.model((sol.u, x), ps.model, st_)
-
-  # if _jacobian_regularization(deq)
-  #   rng = Lux.replicate(st.rng)
-  #   jac_loss = estimate_jacobian_trace(Val(:finite_diff), deq.model, ps, st.model, z_star,
-  #                                      x, rng)
-  # else
-  #   rng = st.rng
-  #   jac_loss = T(0)
-  # end
-  jac_loss = T(0)
-
-  residual = CRC.ignore_derivatives(z_star .- deq.model((z_star, x), ps.model, st.model)[1])
-
-  @set! st.model = st_
-  # @set! st.rng = rng
-  @set! st.solution = DeepEquilibriumSolution(z_star, z, residual, jac_loss, nfe)
-
-  return z_star, st
 end
