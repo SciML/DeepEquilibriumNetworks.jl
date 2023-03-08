@@ -1,4 +1,5 @@
 import DeepEquilibriumNetworks as DEQs
+import ComponentArrays as CA
 import Lux
 import OrdinaryDiffEq
 import Test
@@ -301,7 +302,7 @@ function test_multiscale_neural_ode_adjoint()
                                    abstol=0.01f0, reltol=0.01f0)
 
   ps, st = Lux.setup(rng, model)
-  ps = Lux.ComponentArray(ps)
+  ps = CA.ComponentArray(ps)
 
   x = randn(rng, Float32, 4, 1)
 

@@ -13,6 +13,7 @@ To install DeepEquilibriumNetworks.jl, use the Julia package manager:
 using Pkg
 Pkg.add("DeepEquilibriumNetworks")
 ```
+
 ```
 
 ## Quick-start

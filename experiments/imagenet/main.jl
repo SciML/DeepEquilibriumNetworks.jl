@@ -1,6 +1,7 @@
 import Augmentor, CUDA, DEQExperiments, FluxMPI, FLoops, Images, Logging, Lux, MLUtils,
        OneHotArrays, Optimisers, Random, Setfield, SimpleConfig, Statistics, Wandb
 import Lux.Training
+import ComponentArrays as CA
 
 # CUDA.math_mode!(CUDA.FAST_MATH)
 # FluxMPI.Init(; verbose=true)
@@ -149,7 +150,7 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
     Training.TrainState(rng, model, opt; transform_variables=Lux.gpu)
   else
     ps, st = Lux.setup(rng, model)
-    ps = ps |> Lux.ComponentArray |> Lux.gpu
+    ps = ps |> CA.ComponentArray |> Lux.gpu
     st = st |> Lux.gpu
     opt_state = Optimisers.setup(opt, ps)
     Training.TrainState(model, ps, st, opt_state, 0)

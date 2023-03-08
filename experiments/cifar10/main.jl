@@ -1,6 +1,7 @@
 import CUDA, DEQExperiments, FluxMPI, Logging, Lux, OneHotArrays, Optimisers, PyCall,
        Random, Setfield, SimpleConfig, Statistics, Wandb
 import Lux.Training
+import ComponentArrays as CA
 
 # Dataloaders
 function get_dataloaders(; augment, data_root, eval_batchsize, train_batchsize)
@@ -77,7 +78,7 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
     Training.TrainState(rng, model, opt; transform_variables=Lux.gpu)
   else
     ps, st = Lux.setup(rng, model)
-    ps = ps |> Lux.ComponentArray |> Lux.gpu
+    ps = ps |> CA.ComponentArray |> Lux.gpu
     st = st |> Lux.gpu
     opt_state = Optimisers.setup(opt, ps)
     Training.TrainState(model, ps, st, opt_state, 0)
