@@ -7,6 +7,7 @@ version = "0.1.0"
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 Augmentor = "02898b10-1f73-11ea-317c-6393d7073e15"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DeepEquilibriumNetworks = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 FLoops = "cc61a311-1640-44b5-9fba-1b764f453329"
@@ -37,4 +38,5 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]
+ComponentArrays = "0.13.8"
 MLUtils = "0.2.10"
