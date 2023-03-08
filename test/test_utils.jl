@@ -48,5 +48,5 @@ function get_dense_layer(args...; kwargs...)
   function init_weight(rng::Random.AbstractRNG, out_dims, in_dims)
     return randn(rng, Float32, (out_dims, in_dims)) .* 0.001f0
   end
-  return Lux.Dense(args...; init_weight, kwargs...)
+  return Dense(args...; init_weight, kwargs...)
 end

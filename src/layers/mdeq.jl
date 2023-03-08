@@ -185,7 +185,7 @@ Skip Deep Equilibrium Network as proposed in [pal2022mixing](@cite).
     output of ``i^{th}`` `main_layer` and passes it to the ``j^{th}`` `main_layer`.
   - `post_fuse_layer`: Tuple of Neural Networks. Each of the scales is passed through
     this layer.
-  - `shortcut_layers`: Shortcut for the network (pass `nothing` for SkipDEQV2).
+  - `shortcut_layers`: Shortcut for the network (pass `nothing` for SkipRegDEQ).
   - `solver`: Solver for the optimization problem (See: [`ContinuousDEQSolver`](@ref) &
     [`DiscreteDEQSolver`](@ref)).
   - `scales`: Output scales.
@@ -224,7 +224,7 @@ x = rand(rng, Float32, 4, 2)
 
 model(x, ps, st)
 
-# MSkipDEQV2
+# MSkipRegDEQ
 model = DEQs.MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, nothing,
                                                   nothing, solver, ((4,), (3,), (2,), (1,)))
 
