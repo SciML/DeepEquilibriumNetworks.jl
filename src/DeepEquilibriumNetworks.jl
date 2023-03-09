@@ -19,7 +19,6 @@ include("layers/core.jl")
 include("layers/jacobian_stabilization.jl")
 include("layers/deq.jl")
 include("layers/mdeq.jl")
-include("layers/neuralode.jl")
 include("layers/evaluate.jl")
 
 include("adjoint.jl")
@@ -34,9 +33,8 @@ export ContinuousDEQSolver, DiscreteDEQSolver
 export EquilibriumSolution, DeepEquilibriumSolution, estimate_jacobian_trace
 
 # Networks
-export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
-export MultiScaleInputLayer, MultiScaleDeepEquilibriumNetwork,
+export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork, MultiScaleInputLayer,
+       MultiScaleNeuralODE, MultiScaleDeepEquilibriumNetwork,
        MultiScaleSkipDeepEquilibriumNetwork
-export MultiScaleNeuralODE
 
 end

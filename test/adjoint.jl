@@ -337,7 +337,6 @@ function test_multiscale_neural_ode_adjoint()
   return nothing
 end
 
-
 Test.@testset "ZygotePullbackMultiplyOperator" begin test_zygote_pullback_multiply_operator() end
 Test.@testset "DeepEquilibriumNetwork" begin test_deep_equilibrium_network_adjoint() end
 Test.@testset "SkipDeepEquilibriumNetwork" begin test_skip_deep_equilibrium_network_adjoint() end

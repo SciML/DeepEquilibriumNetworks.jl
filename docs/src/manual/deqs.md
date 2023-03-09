@@ -12,4 +12,5 @@ SkipDeepEquilibriumNetwork
 ```@docs
 MultiScaleDeepEquilibriumNetwork
 MultiScaleSkipDeepEquilibriumNetwork
+MultiScaleNeuralODE
 ```

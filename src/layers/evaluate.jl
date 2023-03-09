@@ -10,6 +10,14 @@ function build_solution(deq::AbstractDEQs, z_star, z, x, ps, st, nfe, jac_loss)
   return DeepEquilibriumSolution(z_star, z, residual, jac_loss, nfe)
 end
 
+@inline _postprocess_output(_, z_star) = z_star
+
+@inline function _construct_problem(::AbstractDEQs, dudt, z, ps)
+  return SteadyStateProblem(ODEFunction{false}(dudt), z, ps.model)
+end
+
+@inline _fix_solution_output(_, x) = x
+
 function (deq::AbstractDEQs)(x::AbstractArray{T}, ps, st::NamedTuple, ::Val{true}) where {T}
   # Pretraining without Fixed Point Solving
   z, st = _get_initial_condition(deq, x, ps, st)
@@ -21,7 +29,7 @@ function (deq::AbstractDEQs)(x::AbstractArray{T}, ps, st::NamedTuple, ::Val{true
   @set! st.model = st_
   @set! st.solution = build_solution(deq, z_star, z, x, ps, st, depth, T(0))
 
-  return z_star, st
+  return _postprocess_output(deq, z_star), st
 end
 
 function (deq::AbstractDEQs)(x::AbstractArray{T}, ps, st::NamedTuple,
@@ -35,10 +43,10 @@ function (deq::AbstractDEQs)(x::AbstractArray{T}, ps, st::NamedTuple,
     return u_ .- u
   end
 
-  prob = SteadyStateProblem(ODEFunction{false}(dudt), z, ps.model)
+  prob = _construct_problem(deq, dudt, z, ps)
   sol = solve(prob, deq.solver; deq.sensealg, deq.kwargs...)
 
-  z_star, st_ = deq.model((sol.u, x), ps.model, st_)
+  z_star, st_ = deq.model((_fix_solution_output(deq, sol.u), x), ps.model, st_)
 
   # if _jacobian_regularization(deq)
   #   rng = Lux.replicate(st.rng)
@@ -54,5 +62,5 @@ function (deq::AbstractDEQs)(x::AbstractArray{T}, ps, st::NamedTuple,
   @set! st.solution = build_solution(deq, z_star, z, x, ps, st, nfe, jac_loss)
   # @set! st.rng = rng
 
-  return z_star, st
+  return _postprocess_output(deq, z_star), st
 end

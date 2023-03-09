@@ -59,7 +59,6 @@ Base.@kwdef struct DiscreteDEQSolver{A <: AbstractSimpleNonlinearSolveAlgorithm}
                                                                       reltol=1.0f-6))
 end
 
-
 """
     EquilibriumSolution
 
@@ -82,7 +81,7 @@ function DiffEqBase.__solve(prob::AbstractSteadyStateProblem, alg::AbstractDEQSo
   sol = solve(prob, alg.alg, args...; kwargs...)
 
   # This is not necessarily true and might fail. But makes the code type stable
-  u = sol.u :: typeof(prob.u0)
+  u = sol.u::typeof(prob.u0)
   du, retcode = sol.resid, sol.retcode
   _types = (eltype(u), ndims(u), typeof(u), typeof(prob), typeof(alg), typeof(retcode))
 

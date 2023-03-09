@@ -1,6 +1,5 @@
 # Miscellaneous
 
 ```@docs
-DeepEquilibriumAdjoint
 DeepEquilibriumSolution
 ```
