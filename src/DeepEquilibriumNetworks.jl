@@ -1,8 +1,8 @@
 module DeepEquilibriumNetworks
 
-using DiffEqBase, LinearAlgebra, LinearSolve, Lux, MLUtils, OrdinaryDiffEq, Random,
-      SciMLBase, SciMLSensitivity, Setfield, SimpleNonlinearSolve, Static,
-      SteadyStateDiffEq, ZygoteRules
+using CUDA, DiffEqBase, LinearAlgebra, LinearSolve, Lux, MLUtils, OrdinaryDiffEq, Random,
+      SciMLBase, SciMLSensitivity, Setfield, SimpleNonlinearSolve, Static, Statistics,
+      SteadyStateDiffEq, Zygote, ZygoteRules
 
 using DiffEqBase: AbstractSteadyStateProblem
 using SciMLBase: AbstractNonlinearSolution, AbstractSteadyStateAlgorithm

@@ -48,19 +48,18 @@ function (deq::AbstractDEQs)(x::AbstractArray, ps, st::NamedTuple, ::Val{false})
 
   z_star, st_ = deq.model((_fix_solution_output(deq, sol.u), x), ps.model, st_)
 
-  # if _jacobian_regularization(deq)
-  #   rng = Lux.replicate(st.rng)
-  #   jac_loss = estimate_jacobian_trace(Val(:finite_diff), deq.model, ps, st.model, z_star,
-  #                                      x, rng)
-  # else
-  #   rng = st.rng
-  #   jac_loss = T(0)
-  # end
-  jac_loss = T(0)
+  if _jacobian_regularization(deq)
+    rng = Lux.replicate(st.rng)
+    jac_loss = estimate_jacobian_trace(Val(:finite_diff), deq.model, ps.model, st.model,
+                                       z_star, x, rng)
+  else
+    rng = st.rng
+    jac_loss = T(0)
+  end
 
   @set! st.model = st_
   @set! st.solution = build_solution(deq, z_star, z, x, ps, st, nfe, jac_loss)
-  # @set! st.rng = rng
+  @set! st.rng = rng
 
   return _postprocess_output(deq, z_star), st
 end

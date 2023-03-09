@@ -13,11 +13,11 @@ end
 
 function get_prng(seed::Int)
   @static if VERSION >= v"1.7"
-    rng = Random.Xoshiro()
+    rng = Xoshiro()
     Random.seed!(rng, seed)
     return rng
   else
-    rng = Random.MersenneTwister()
+    rng = MersenneTwister()
     Random.seed!(rng, seed)
     return rng
   end

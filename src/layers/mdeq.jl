@@ -83,8 +83,10 @@ end
 @truncate_stacktrace MultiScaleDeepEquilibriumNetwork 1 3
 
 function Lux.initialstates(rng::AbstractRNG, deq::MultiScaleDeepEquilibriumNetwork)
-  return (model=Lux.initialstates(rng, deq.model), fixed_depth=Val(0),
-          initial_condition=zeros(Float32, 1, 1), solution=nothing)
+  rng = Lux.replicate(rng)
+  randn(rng, 1)
+  return (; model=Lux.initialstates(rng, deq.model), fixed_depth=Val(0),
+          initial_condition=zeros(Float32, 1, 1), solution=nothing, rng)
 end
 
 function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
@@ -199,9 +201,11 @@ end
 @truncate_stacktrace MultiScaleSkipDeepEquilibriumNetwork 1 3 4
 
 function Lux.initialstates(rng::AbstractRNG, deq::MultiScaleSkipDeepEquilibriumNetwork)
-  return (model=Lux.initialstates(rng, deq.model),
+  rng = Lux.replicate(rng)
+  randn(rng, 1)
+  return (; model=Lux.initialstates(rng, deq.model),
           shortcut=Lux.initialstates(rng, deq.shortcut), fixed_depth=Val(0),
-          initial_condition=zeros(Float32, 1, 1), solution=nothing)
+          initial_condition=zeros(Float32, 1, 1), solution=nothing, rng)
 end
 
 function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
@@ -259,8 +263,10 @@ end
 @truncate_stacktrace MultiScaleNeuralODE 1 3
 
 function Lux.initialstates(rng::Random.AbstractRNG, node::MultiScaleNeuralODE)
-  return (model=Lux.initialstates(rng, node.model), fixed_depth=Val(0),
-          initial_condition=zeros(Float32, 1, 1), solution=nothing)
+  rng = Lux.replicate(rng)
+  randn(rng, 1)
+  return (; model=Lux.initialstates(rng, node.model), fixed_depth=Val(0),
+          initial_condition=zeros(Float32, 1, 1), solution=nothing, rng)
 end
 
 """
