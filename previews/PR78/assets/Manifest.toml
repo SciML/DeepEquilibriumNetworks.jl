@@ -271,7 +271,7 @@ deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
 [[deps.DeepEquilibriumNetworks]]
-deps = ["CUDA", "ChainRulesCore", "DiffEqBase", "Functors", "LinearAlgebra", "LinearSolve", "Lux", "MLUtils", "OrdinaryDiffEq", "Random", "SciMLBase", "SciMLOperators", "SciMLSensitivity", "Setfield", "SimpleNonlinearSolve", "Static", "Statistics", "SteadyStateDiffEq", "TruncatedStacktraces", "UnPack", "Zygote"]
+deps = ["CUDA", "ChainRulesCore", "DiffEqBase", "Functors", "LinearAlgebra", "LinearSolve", "Lux", "MLUtils", "OrdinaryDiffEq", "Random", "SciMLBase", "SciMLOperators", "SciMLSensitivity", "Setfield", "SimpleNonlinearSolve", "Static", "Statistics", "SteadyStateDiffEq", "TruncatedStacktraces", "UnPack", "Zygote", "ZygoteRules"]
 path = "/home/runner/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl"
 uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 version = "0.3.0"
