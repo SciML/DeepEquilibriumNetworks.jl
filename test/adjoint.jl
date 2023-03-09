@@ -224,8 +224,8 @@ function test_multiscale_skip_reg_deep_equilibrium_network_adjoint()
     sensealg = SteadyStateAdjoint()
     scales = ((4,), (3,), (2,), (1,))
     model = MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, nothing,
-                                                 solver, scales; sensealg, verbose=false,
-                                                 save_everystep=true)
+                                                 nothing, solver, scales; sensealg,
+                                                 verbose=false, save_everystep=true)
 
     ps, st = Lux.setup(rng, model)
     ps = ComponentArray(ps)

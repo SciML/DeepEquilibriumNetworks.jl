@@ -1,9 +1,5 @@
-import DeepEquilibriumNetworks as DEQs
-import Lux
-import NNlib
-import Random
-import Test
-import Zygote
+using DeepEquilibriumNetworks, Lux, NNlib, Random, Zygote
+using Test
 
 include("../test_utils.jl")
 

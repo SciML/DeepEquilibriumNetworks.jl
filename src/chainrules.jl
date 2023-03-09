@@ -37,6 +37,7 @@ function CRC.rrule(::typeof(Setfield.set), obj, l::Setfield.PropertyLens{field},
   return res, setfield_pullback
 end
 
-# Honestly no clue why this is needed!
-ZygoteRules.gradtuple1(x::NamedTuple{()}) = (nothing, nothing, x)
+# Honestly no clue why this is needed! -- probably a whacky fix which shouldn't be ever
+# needed.
+ZygoteRules.gradtuple1(::NamedTuple{()}) = (nothing, nothing, nothing, nothing, nothing)
 ZygoteRules.gradtuple1(x::NamedTuple) = collect(values(x))

@@ -32,8 +32,8 @@ function (deq::AbstractDEQs)(x::AbstractArray{T}, ps, st::NamedTuple, ::Val{true
   return _postprocess_output(deq, z_star), st
 end
 
-function (deq::AbstractDEQs)(x::AbstractArray{T}, ps, st::NamedTuple,
-                             ::Val{false}) where {T}
+function (deq::AbstractDEQs)(x::AbstractArray, ps, st::NamedTuple, ::Val{false})
+  T = eltype(x)
   z, st = _get_initial_condition(deq, x, ps, st)
   st_, nfe = st.model, 0
 
