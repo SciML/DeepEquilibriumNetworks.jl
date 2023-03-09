@@ -8,7 +8,7 @@ try
   global test_call(args...; kwargs...) = JET.test_call(args...; kwargs...)
   global test_opt(args...; kwargs...) = JET.test_opt(args...; kwargs...)
 catch
-  @warn "JET not not precompiling. All JET tests will be skipped." maxlog=1
+  @warn "JET not precompiling. All JET tests will be skipped." maxlog=1
 end
 
 function get_prng(seed::Int)

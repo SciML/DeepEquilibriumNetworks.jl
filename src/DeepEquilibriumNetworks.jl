@@ -1,7 +1,8 @@
 module DeepEquilibriumNetworks
 
 using DiffEqBase, LinearAlgebra, LinearSolve, Lux, MLUtils, OrdinaryDiffEq, Random,
-      SciMLBase, SciMLSensitivity, Setfield, SimpleNonlinearSolve, Static, SteadyStateDiffEq
+      SciMLBase, SciMLSensitivity, Setfield, SimpleNonlinearSolve, Static, SteadyStateDiffEq,
+      ZygoteRules
 
 using DiffEqBase: AbstractSteadyStateProblem
 using SciMLBase: AbstractNonlinearSolution, AbstractSteadyStateAlgorithm
@@ -21,6 +22,7 @@ include("layers/deq.jl")
 include("layers/mdeq.jl")
 include("layers/evaluate.jl")
 
+include("chainrules.jl")
 include("adjoint.jl")
 
 # Useful Shorthand

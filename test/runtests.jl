@@ -12,9 +12,9 @@ if GROUP == "ALL" || GROUP == "LAYERS"
   #   @safetestset "Jacobian Regularization" begin include("layers/jacobian_stabilization.jl") end
   @safetestset "DEQ" begin include("layers/deq.jl") end
   @safetestset "Multiscale DEQ" begin include("layers/mdeq.jl") end
-  #   @safetestset "Multiscale Neural ODE" begin include("layers/neuralode.jl") end
+    @safetestset "Multiscale Neural ODE" begin include("layers/neuralode.jl") end
 end
 
-# if GROUP == "ALL" || GROUP == "ADJOINT"
-#   @safetestset "Adjoint" begin include("adjoint.jl") end
-# end
+if GROUP == "ALL" || GROUP == "ADJOINT"
+  @safetestset "Adjoint" begin include("adjoint.jl") end
+end
