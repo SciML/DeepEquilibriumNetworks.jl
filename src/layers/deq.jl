@@ -1,10 +1,3 @@
-@generated function _evaluate_unrolled_model(deq, model, z_star, x, ps, st,
-                                             ::Val{d}) where {d}
-  calls = [:((z_star, st) = model((z_star, x), ps, st)) for _ in 1:d]
-  push!(calls, :(return z_star, st))
-  return Expr(:block, calls...)
-end
-
 """
     DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=false,
                            sensealg=SteadyStateAdjoint(), kwargs...)

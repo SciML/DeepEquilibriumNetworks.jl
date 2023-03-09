@@ -1,8 +1,16 @@
-const SingleScaleDeepEquilibriumNetworks = Union{DeepEquilibriumNetwork,
-                                                 SkipDeepEquilibriumNetwork}
+@generated function _evaluate_unrolled_model(::AbstractDEQs, model, z_star, x, ps, st,
+                                             ::Val{d}) where {d}
+  calls = [:((z_star, st) = model((z_star, x), ps, st)) for _ in 1:d]
+  push!(calls, :(return z_star, st))
+  return Expr(:block, calls...)
+end
 
-function (deq::SingleScaleDeepEquilibriumNetworks)(x::AbstractArray{T}, ps, st::NamedTuple,
-                                                   ::Val{true}) where {T}
+function build_solution(deq::AbstractDEQs, z_star, z, x, ps, st, nfe, jac_loss)
+  residual = CRC.ignore_derivatives(z_star .- deq.model((z_star, x), ps.model, st.model)[1])
+  return DeepEquilibriumSolution(z_star, z, residual, jac_loss, nfe)
+end
+
+function (deq::AbstractDEQs)(x::AbstractArray{T}, ps, st::NamedTuple, ::Val{true}) where {T}
   # Pretraining without Fixed Point Solving
   z, st = _get_initial_condition(deq, x, ps, st)
   depth = _get_unrolled_depth(st)
@@ -10,16 +18,14 @@ function (deq::SingleScaleDeepEquilibriumNetworks)(x::AbstractArray{T}, ps, st::
   z_star, st_ = _evaluate_unrolled_model(deq, deq.model, z, x, ps.model, st.model,
                                          st.fixed_depth)
 
-  residual = CRC.ignore_derivatives(z_star .- deq.model((z_star, x), ps.model, st.model)[1])
-
   @set! st.model = st_
-  @set! st.solution = DeepEquilibriumSolution(z_star, z, residual, T(0), depth)
+  @set! st.solution = build_solution(deq, z_star, z, x, ps, st, depth, T(0))
 
   return z_star, st
 end
 
-function (deq::SingleScaleDeepEquilibriumNetworks)(x::AbstractArray{T}, ps, st::NamedTuple,
-                                                   ::Val{false}) where {T}
+function (deq::AbstractDEQs)(x::AbstractArray{T}, ps, st::NamedTuple,
+                             ::Val{false}) where {T}
   z, st = _get_initial_condition(deq, x, ps, st)
   st_, nfe = st.model, 0
 
@@ -44,11 +50,9 @@ function (deq::SingleScaleDeepEquilibriumNetworks)(x::AbstractArray{T}, ps, st::
   # end
   jac_loss = T(0)
 
-  residual = CRC.ignore_derivatives(z_star .- deq.model((z_star, x), ps.model, st.model)[1])
-
   @set! st.model = st_
+  @set! st.solution = build_solution(deq, z_star, z, x, ps, st, nfe, jac_loss)
   # @set! st.rng = rng
-  @set! st.solution = DeepEquilibriumSolution(z_star, z, residual, jac_loss, nfe)
 
   return z_star, st
 end
