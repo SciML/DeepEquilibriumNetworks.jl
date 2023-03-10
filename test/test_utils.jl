@@ -1,5 +1,4 @@
-import DeepEquilibriumNetworks as DEQs
-import Functors
+using DeepEquilibriumNetworks, Functors, Lux, Random
 
 global test_call(args...; kwargs...) = nothing
 global test_opt(args...; kwargs...) = nothing
@@ -9,19 +8,16 @@ try
   global test_call(args...; kwargs...) = JET.test_call(args...; kwargs...)
   global test_opt(args...; kwargs...) = JET.test_opt(args...; kwargs...)
 catch
-  @warn "JET not not precompiling. All JET tests will be skipped." maxlog=1
+  @warn "JET not precompiling. All JET tests will be skipped." maxlog=1
 end
-
-import Lux
-import Random
 
 function get_prng(seed::Int)
   @static if VERSION >= v"1.7"
-    rng = Random.Xoshiro()
+    rng = Xoshiro()
     Random.seed!(rng, seed)
     return rng
   else
-    rng = Random.MersenneTwister()
+    rng = MersenneTwister()
     Random.seed!(rng, seed)
     return rng
   end
@@ -52,5 +48,5 @@ function get_dense_layer(args...; kwargs...)
   function init_weight(rng::Random.AbstractRNG, out_dims, in_dims)
     return randn(rng, Float32, (out_dims, in_dims)) .* 0.001f0
   end
-  return Lux.Dense(args...; init_weight, kwargs...)
+  return Dense(args...; init_weight, kwargs...)
 end

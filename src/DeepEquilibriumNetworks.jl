@@ -1,11 +1,17 @@
 module DeepEquilibriumNetworks
 
-include("operator.jl")
+using CUDA, DiffEqBase, LinearAlgebra, LinearSolve, Lux, MLUtils, OrdinaryDiffEq, Random,
+      SciMLBase, SciMLSensitivity, Setfield, SimpleNonlinearSolve, Static, Statistics,
+      SteadyStateDiffEq, Zygote, ZygoteRules
 
-include("solvers/solvers.jl")
-include("solvers/discrete/broyden.jl")
-include("solvers/discrete/limited_memory_broyden.jl")
-include("solvers/termination.jl")
+using DiffEqBase: AbstractSteadyStateProblem
+using SciMLBase: AbstractNonlinearSolution, AbstractSteadyStateAlgorithm
+using SimpleNonlinearSolve: AbstractSimpleNonlinearSolveAlgorithm
+using TruncatedStacktraces: @truncate_stacktrace
+
+import ChainRulesCore as CRC
+
+const DEQs = DeepEquilibriumNetworks
 
 include("solve.jl")
 include("utils.jl")
@@ -14,18 +20,22 @@ include("layers/core.jl")
 include("layers/jacobian_stabilization.jl")
 include("layers/deq.jl")
 include("layers/mdeq.jl")
-include("layers/neuralode.jl")
+include("layers/evaluate.jl")
 
-include("adjoint.jl")
+include("chainrules.jl")
+
+# Useful Shorthand
+export DEQs
 
 # DEQ Solvers
-export ContinuousDEQSolver, DiscreteDEQSolver, BroydenSolver, LimitedMemoryBroydenSolver
+export ContinuousDEQSolver, DiscreteDEQSolver
 
 # Utils
-export DeepEquilibriumAdjoint, DeepEquilibriumSolution, estimate_jacobian_trace
+export EquilibriumSolution, DeepEquilibriumSolution, estimate_jacobian_trace
 
 # Networks
-export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork
-export MultiScaleDeepEquilibriumNetwork, MultiScaleSkipDeepEquilibriumNetwork
+export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork, MultiScaleInputLayer,
+       MultiScaleNeuralODE, MultiScaleDeepEquilibriumNetwork,
+       MultiScaleSkipDeepEquilibriumNetwork
 
 end

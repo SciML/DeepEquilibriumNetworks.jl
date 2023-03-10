@@ -1,13 +1,5 @@
-import CUDA
-import ChainRulesCore as CRC
-import Lux
-import Random
-import Statistics
-
-gaussian_like(rng::Random.AbstractRNG, x::AbstractArray) = randn(rng, eltype(x), size(x))
-function gaussian_like(rng::Random.AbstractRNG, x::CUDA.CuArray)
-  return CUDA.randn(rng, eltype(x), size(x))
-end
+_gaussian_like(rng::AbstractRNG, x::AbstractArray) = randn(rng, eltype(x), size(x))
+_gaussian_like(rng::AbstractRNG, x::CuArray) = CUDA.randn(rng, eltype(x), size(x))
 
 """
     estimate_jacobian_trace(::Val{mode}, model::Lux.AbstractExplicitLayer, ps,
@@ -18,9 +10,7 @@ Estimates the trace of the jacobian matrix wrt `z`.
 
 ## Arguments
 
-  - `mode`: Should be either `:reverse_mode` or `:finite_diff`. `:reverse_mode` uses
-    `Zygote.jl` while `:finite_diff` uses Finite Differencing. If using inside a gradient
-    call, `:reverse_mode` might not work, and `:finite_diff` is the recommended approach.
+  - `mode`: Options: `reverse` and `finite_diff`
   - `model`: A `Lux` Neural Network mapping 2 equal sized arrays to a same sized array. This
     convention is not checked, and if violated will lead to errors.
   - `ps`: Parameters of `model`.
@@ -33,23 +23,23 @@ Estimates the trace of the jacobian matrix wrt `z`.
 
 Stochastic Estimate of the trace of the Jacobian.
 """
-function estimate_jacobian_trace(::Val{:reverse_mode}, model::Lux.AbstractExplicitLayer, ps,
+function estimate_jacobian_trace(::Val{:reverse}, model::Lux.AbstractExplicitLayer, ps,
                                  st::NamedTuple, z::AbstractArray, x::AbstractArray,
-                                 rng::Random.AbstractRNG)
+                                 rng::AbstractRNG)
   _, back = Zygote.pullback(u -> model((u, x), ps, st)[1], z)
-  vjp_z = back(gaussian_like(rng, x))[1]
-  return Statistics.mean(abs2, vjp_z)
+  vjp_z = back(_gaussian_like(rng, x))[1]
+  return mean(abs2, vjp_z)
 end
 
 function estimate_jacobian_trace(::Val{:finite_diff}, model::Lux.AbstractExplicitLayer, ps,
                                  st::NamedTuple, z::AbstractArray, x::AbstractArray,
-                                 rng::Random.AbstractRNG)
+                                 rng::AbstractRNG)
   f = u -> model((u, x), ps, st)[1]
   res = convert(eltype(z), 0)
   epsilon = cbrt(eps(typeof(res)))
   _epsilon = inv(epsilon)
   f0 = f(z)
-  v = gaussian_like(rng, x)
+  v = _gaussian_like(rng, x)
 
   for idx in eachindex(z)
     _z = z[idx]

@@ -22,9 +22,9 @@ jobs:
           - LAYERS
           - ADJOINT
         version:
-          - 1.6
-          - 1.7
-          - 1.8  # Only version where JET.jl reliably works
+          - '1'
+          - '1.6'
+          - '~1.9.0-0'
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1

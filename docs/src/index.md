@@ -14,8 +14,6 @@ using Pkg
 Pkg.add("DeepEquilibriumNetworks")
 ```
 
-```
-
 ## Quick-start
 
 ```julia
