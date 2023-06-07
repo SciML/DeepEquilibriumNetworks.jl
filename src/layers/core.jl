@@ -4,8 +4,11 @@ abstract type AbstractDeepEquilibriumNetwork <:
 function Lux.initialstates(rng::AbstractRNG, deq::AbstractDeepEquilibriumNetwork)
   rng = Lux.replicate(rng)
   randn(rng, 1)
-  return (; model=Lux.initialstates(rng, deq.model), fixed_depth=Val(0), solution=nothing,
-          rng)
+  return (;
+    model=Lux.initialstates(rng, deq.model),
+    fixed_depth=Val(0),
+    solution=nothing,
+    rng)
 end
 
 function Lux.initialparameters(rng::AbstractRNG, deq::AbstractDeepEquilibriumNetwork)
@@ -19,13 +22,18 @@ abstract type AbstractSkipDeepEquilibriumNetwork <:
 function Lux.initialstates(rng::AbstractRNG, deq::AbstractSkipDeepEquilibriumNetwork)
   rng = Lux.replicate(rng)
   randn(rng, 1)
-  return (; model=Lux.initialstates(rng, deq.model),
-          shortcut=Lux.initialstates(rng, deq.shortcut), fixed_depth=Val(0),
-          solution=nothing, rng)
+  return (;
+    model=Lux.initialstates(rng, deq.model),
+    shortcut=Lux.initialstates(rng, deq.shortcut),
+    fixed_depth=Val(0),
+    solution=nothing,
+    rng)
 end
 
-const AbstractDEQs = Union{AbstractDeepEquilibriumNetwork,
-                           AbstractSkipDeepEquilibriumNetwork}
+const AbstractDEQs = Union{
+  AbstractDeepEquilibriumNetwork,
+  AbstractSkipDeepEquilibriumNetwork,
+}
 
 function (deq::AbstractDEQs)(x::AbstractArray, ps, st::NamedTuple)
   return deq(x, ps, st, _check_unrolled_mode(st))

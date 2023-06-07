@@ -25,5 +25,9 @@ function test_discrete_deq_solver()
   return nothing
 end
 
-Test.@testset "Continuous Steady State Solve" begin test_continuous_deq_solver() end
-Test.@testset "Discrete Steady State Solve" begin test_discrete_deq_solver() end
+Test.@testset "Continuous Steady State Solve" begin
+  test_continuous_deq_solver()
+end
+Test.@testset "Discrete Steady State Solve" begin
+  test_discrete_deq_solver()
+end

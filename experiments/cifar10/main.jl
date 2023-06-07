@@ -1,5 +1,16 @@
-import CUDA, DEQExperiments, FluxMPI, Logging, Lux, OneHotArrays, Optimisers, PyCall,
-       Random, Setfield, SimpleConfig, Statistics, Wandb
+import CUDA,
+  DEQExperiments,
+  FluxMPI,
+  Logging,
+  Lux,
+  OneHotArrays,
+  Optimisers,
+  PyCall,
+  Random,
+  Setfield,
+  SimpleConfig,
+  Statistics,
+  Wandb
 import Lux.Training
 import ComponentArrays as CA
 
@@ -10,8 +21,10 @@ function get_dataloaders(; augment, data_root, eval_batchsize, train_batchsize)
 
   tf.config.set_visible_devices([], "GPU")
 
-  ds_train, ds_test = tfds.load("cifar10"; split=["train", "test"], as_supervised=true,
-                                data_dir=data_root)
+  ds_train, ds_test = tfds.load("cifar10";
+    split=["train", "test"],
+    as_supervised=true,
+    data_dir=data_root)
 
   image_mean = tf.constant([[[0.4914f0, 0.4822f0, 0.4465f0]]])
   image_std = tf.constant([[[0.2023f0, 0.1994f0, 0.2010f0]]])
@@ -50,12 +63,12 @@ function get_dataloaders(; augment, data_root, eval_batchsize, train_batchsize)
   ds_test = ds_test.prefetch(tf.data.AUTOTUNE).repeat(1)
 
   return (tfds.as_numpy(ds_train.batch(train_batchsize)),
-          tfds.as_numpy(ds_test.batch(eval_batchsize)))
+    tfds.as_numpy(ds_test.batch(eval_batchsize)))
 end
 
 function _data_postprocess(image, label)
   return (Lux.gpu(permutedims(image, (3, 2, 4, 1))),
-          Lux.gpu(OneHotArrays.onehotbatch(label, 0:9)))
+    Lux.gpu(OneHotArrays.onehotbatch(label, 0:9)))
 end
 
 function main(filename, args)
@@ -85,12 +98,18 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
   end
   vjp_rule = Training.ZygoteVJP()
 
-  DEQExperiments.warmup_model(loss_function, model, tstate.parameters, tstate.states, cfg;
-                              transform_input=Lux.gpu)
+  DEQExperiments.warmup_model(loss_function,
+    model,
+    tstate.parameters,
+    tstate.states,
+    cfg;
+    transform_input=Lux.gpu)
 
-  ds_train, ds_test = get_dataloaders(; cfg.dataset.augment, cfg.dataset.data_root,
-                                      cfg.dataset.eval_batchsize,
-                                      cfg.dataset.train_batchsize)
+  ds_train, ds_test = get_dataloaders(;
+    cfg.dataset.augment,
+    cfg.dataset.data_root,
+    cfg.dataset.eval_batchsize,
+    cfg.dataset.train_batchsize)
   _, ds_train_iter = iterate(ds_train)
 
   # Setup
@@ -123,9 +142,11 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
   end
 
   # Setup Logging
-  loggers = DEQExperiments.create_logger(log_dir, cfg.train.total_steps - initial_step,
-                                         cfg.train.total_steps - initial_step, expt_name,
-                                         SimpleConfig.flatten_configuration(cfg))
+  loggers = DEQExperiments.create_logger(log_dir,
+    cfg.train.total_steps - initial_step,
+    cfg.train.total_steps - initial_step,
+    expt_name,
+    SimpleConfig.flatten_configuration(cfg))
 
   best_test_accuracy = 0
 
@@ -145,7 +166,7 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
     # LR Update
     lr_new = sched(step + 1)
     Setfield.@set! tstate.optimizer_state = Optimisers.adjust(tstate.optimizer_state,
-                                                              lr_new)
+      lr_new)
 
     accuracy = DEQExperiments.accuracy(Lux.cpu(stats.y_pred), Lux.cpu(y))
     residual = abs(Statistics.mean(stats.residual))
@@ -154,7 +175,8 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
     loggers.progress_loggers.train.avg_meters.batch_time(data_time +
                                                          step_stats.fwd_time +
                                                          step_stats.bwd_time +
-                                                         step_stats.opt_time, bsize)
+                                                         step_stats.opt_time,
+      bsize)
     loggers.progress_loggers.train.avg_meters.data_time(data_time, bsize)
     loggers.progress_loggers.train.avg_meters.fwd_time(step_stats.fwd_time, bsize)
     loggers.progress_loggers.train.avg_meters.bwd_time(step_stats.bwd_time, bsize)
@@ -208,7 +230,7 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
         loggers.progress_loggers.eval.avg_meters.ce_loss(stats.ce_loss, bsize)
         loggers.progress_loggers.eval.avg_meters.skip_loss(stats.skip_loss, bsize)
         loggers.progress_loggers.eval.avg_meters.residual(abs(Statistics.mean(stats.residual)),
-                                                          bsize)
+          bsize)
         loggers.progress_loggers.eval.avg_meters.top1(acc, bsize)
         loggers.progress_loggers.eval.avg_meters.top5(-1, bsize)
         loggers.progress_loggers.eval.avg_meters.nfe(stats.nfe, bsize)
@@ -233,8 +255,9 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
       end
 
       ckpt = (tstate=tstate, step=initial_step)
-      DEQExperiments.save_checkpoint(ckpt; is_best,
-                                     filename=joinpath(ckpt_dir, "model_$(step).jlso"))
+      DEQExperiments.save_checkpoint(ckpt;
+        is_best,
+        filename=joinpath(ckpt_dir, "model_$(step).jlso"))
     end
   end
 

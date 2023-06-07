@@ -98,8 +98,11 @@ function Base.close(csv::CSVLogger)
   end
 end
 
-function create_logger(base_dir::String, train_length::Int, eval_length::Int,
-                       expt_name::String, config::Dict)
+function create_logger(base_dir::String,
+  train_length::Int,
+  eval_length::Int,
+  expt_name::String,
+  config::Dict)
   if !isdir(base_dir)
     @warn "$(base_dir) doesn't exist. Creating a directory."
     mkpath(base_dir)
@@ -162,12 +165,34 @@ function create_logger(base_dir::String, train_length::Int, eval_length::Int,
   nfe = AverageMeter("NFE", "3.2f")
 
   progress = ProgressMeter(train_length,
-                           (batch_time, data_time, fwd_time, bwd_time, opt_time, ce_loss,
-                            skip_loss, loss, nfe, top1, top5, residual), "Train:")
+    (batch_time,
+      data_time,
+      fwd_time,
+      bwd_time,
+      opt_time,
+      ce_loss,
+      skip_loss,
+      loss,
+      nfe,
+      top1,
+      top5,
+      residual),
+    "Train:")
 
   train_logger = (progress=progress,
-                  avg_meters=(; batch_time, data_time, loss, ce_loss, skip_loss, residual,
-                              top1, top5, nfe, fwd_time, bwd_time, opt_time))
+    avg_meters=(;
+      batch_time,
+      data_time,
+      loss,
+      ce_loss,
+      skip_loss,
+      residual,
+      top1,
+      top5,
+      nfe,
+      fwd_time,
+      bwd_time,
+      opt_time))
 
   # Eval Logger
   batch_time = AverageMeter("Batch Time", "6.3f")
@@ -182,15 +207,24 @@ function create_logger(base_dir::String, train_length::Int, eval_length::Int,
   nfe = AverageMeter("NFE", "3.2f")
 
   progress = ProgressMeter(eval_length,
-                           (batch_time, data_time, fwd_time, ce_loss, skip_loss, loss, nfe,
-                            top1, top5, residual), "Test:")
+    (batch_time, data_time, fwd_time, ce_loss, skip_loss, loss, nfe, top1, top5, residual),
+    "Test:")
 
   eval_logger = (progress=progress,
-                 avg_meters=(; batch_time, data_time, fwd_time, loss, ce_loss, skip_loss,
-                             residual, top1, top5, nfe))
+    avg_meters=(;
+      batch_time,
+      data_time,
+      fwd_time,
+      loss,
+      ce_loss,
+      skip_loss,
+      residual,
+      top1,
+      top5,
+      nfe))
 
   return (csv_loggers=(; train=csv_logger_train, eval=csv_logger_eval),
-          wandb_logger=wandb_logger,
-          progress_loggers=(; train=train_logger, eval=eval_logger),
-          log_functions=(; train=train_loggable_dict, eval=eval_loggable_dict))
+    wandb_logger=wandb_logger,
+    progress_loggers=(; train=train_logger, eval=eval_logger),
+    log_functions=(; train=train_loggable_dict, eval=eval_loggable_dict))
 end

@@ -31,5 +31,9 @@ function test_init_identity_matrix()
   return nothing
 end
 
-@testset "split_and_reshape" begin test_split_and_reshape() end
-@testset "init identity matrix" begin test_init_identity_matrix() end
+@testset "split_and_reshape" begin
+  test_split_and_reshape()
+end
+@testset "init identity matrix" begin
+  test_init_identity_matrix()
+end

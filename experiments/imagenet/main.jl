@@ -1,5 +1,19 @@
-import Augmentor, CUDA, DEQExperiments, FluxMPI, FLoops, Images, Logging, Lux, MLUtils,
-       OneHotArrays, Optimisers, Random, Setfield, SimpleConfig, Statistics, Wandb
+import Augmentor,
+  CUDA,
+  DEQExperiments,
+  FluxMPI,
+  FLoops,
+  Images,
+  Logging,
+  Lux,
+  MLUtils,
+  OneHotArrays,
+  Optimisers,
+  Random,
+  Setfield,
+  SimpleConfig,
+  Statistics,
+  Wandb
 import Lux.Training
 import ComponentArrays as CA
 
@@ -26,8 +40,9 @@ function ImageDataset(folder::String, augmentation_pipeline, normalization_param
   istrain = endswith(folder, r"train|train/")
 
   if istrain
-    image_files = vcat(map((x, y) -> joinpath.((x,), y), label_dirs,
-                           readdir.(label_dirs))...)
+    image_files = vcat(map((x, y) -> joinpath.((x,), y),
+      label_dirs,
+      readdir.(label_dirs))...)
 
     remove_files = [
       "n01739381_1309.JPEG",
@@ -55,8 +70,7 @@ function ImageDataset(folder::String, augmentation_pipeline, normalization_param
       "n02105855_2933.JPEG",
     ]
     remove_files = joinpath.((folder,),
-                             joinpath.(first.(rsplit.(remove_files, "_", limit=2)),
-                                       remove_files))
+      joinpath.(first.(rsplit.(remove_files, "_", limit=2)), remove_files))
 
     image_files = [setdiff(Set(image_files), Set(remove_files))...]
 
@@ -71,8 +85,11 @@ function ImageDataset(folder::String, augmentation_pipeline, normalization_param
     labels = labels[idxs]
   end
 
-  return ImageDataset(image_files, labels, mapping, augmentation_pipeline,
-                      normalization_parameters)
+  return ImageDataset(image_files,
+    labels,
+    mapping,
+    augmentation_pipeline,
+    normalization_parameters)
 end
 
 function Base.getindex(data::ImageDataset, i::Int)
@@ -92,35 +109,41 @@ Base.length(data::ImageDataset) = length(data.image_files)
 
 function get_dataloaders(; augment, data_root, eval_batchsize, train_batchsize)
   normalization_parameters = (mean=reshape([0.485f0, 0.456f0, 0.406f0], 1, 1, 3),
-                              std=reshape([0.229f0, 0.224f0, 0.225f0], 1, 1, 3))
+    std=reshape([0.229f0, 0.224f0, 0.225f0], 1, 1, 3))
   train_data_augmentation = Augmentor.Resize(256, 256) |>
                             Augmentor.FlipX(0.5) |>
                             Augmentor.RCropSize(224, 224)
   val_data_augmentation = Augmentor.Resize(224, 224)
-  train_dataset = ImageDataset(joinpath(data_root, "train"), train_data_augmentation,
-                               normalization_parameters)
-  val_dataset = ImageDataset(joinpath(data_root, "val"), val_data_augmentation,
-                             normalization_parameters)
+  train_dataset = ImageDataset(joinpath(data_root, "train"),
+    train_data_augmentation,
+    normalization_parameters)
+  val_dataset = ImageDataset(joinpath(data_root, "val"),
+    val_data_augmentation,
+    normalization_parameters)
   if DEQExperiments.is_distributed()
     train_dataset = FluxMPI.DistributedDataContainer(train_dataset)
     val_dataset = FluxMPI.DistributedDataContainer(val_dataset)
   end
 
   train_data = MLUtils.BatchView(MLUtils.shuffleobs(train_dataset);
-                                 batchsize=train_batchsize, partial=false, collate=true)
+    batchsize=train_batchsize,
+    partial=false,
+    collate=true)
 
-  val_data = MLUtils.BatchView(val_dataset; batchsize=eval_batchsize, partial=true,
-                               collate=true)
+  val_data = MLUtils.BatchView(val_dataset;
+    batchsize=eval_batchsize,
+    partial=true,
+    collate=true)
 
   train_iter = Iterators.cycle(MLUtils.eachobsparallel(train_data;
-                                                       executor=FLoops.ThreadedEx(),
-                                                       buffer=true,
-                                                       channelsize=max(1,
-                                                                       Threads.nthreads() //
-                                                                       2)))
+    executor=FLoops.ThreadedEx(),
+    buffer=true,
+    channelsize=max(1, Threads.nthreads() // 2)))
 
-  val_iter = MLUtils.eachobsparallel(val_data; executor=FLoops.ThreadedEx(), buffer=true,
-                                     channelsize=max(1, Threads.nthreads() // 2))
+  val_iter = MLUtils.eachobsparallel(val_data;
+    executor=FLoops.ThreadedEx(),
+    buffer=true,
+    channelsize=max(1, Threads.nthreads() // 2))
 
   return train_iter, val_iter
 end
@@ -141,9 +164,11 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
 
   opt, sched = DEQExperiments.construct(cfg.optimizer)
 
-  ds_train, ds_val = get_dataloaders(; cfg.dataset.augment, cfg.dataset.data_root,
-                                     cfg.dataset.eval_batchsize,
-                                     cfg.dataset.train_batchsize)
+  ds_train, ds_val = get_dataloaders(;
+    cfg.dataset.augment,
+    cfg.dataset.data_root,
+    cfg.dataset.eval_batchsize,
+    cfg.dataset.train_batchsize)
   _, ds_train_iter = iterate(ds_train)
 
   tstate = if cfg.model.model_type != "neural_ode"
@@ -159,8 +184,12 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
            tstate
   vjp_rule = Training.ZygoteVJP()
 
-  DEQExperiments.warmup_model(loss_function, model, tstate.parameters, tstate.states, cfg;
-                              transform_input=Lux.gpu)
+  DEQExperiments.warmup_model(loss_function,
+    model,
+    tstate.parameters,
+    tstate.states,
+    cfg;
+    transform_input=Lux.gpu)
 
   # Setup
   expt_name = ("config-$(config_name)_continuous-$(cfg.model.solver.continuous)" *
@@ -192,9 +221,11 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
   end
 
   # Setup Logging
-  loggers = DEQExperiments.create_logger(log_dir, cfg.train.total_steps - initial_step,
-                                         cfg.train.total_steps - initial_step, expt_name,
-                                         SimpleConfig.flatten_configuration(cfg))
+  loggers = DEQExperiments.create_logger(log_dir,
+    cfg.train.total_steps - initial_step,
+    cfg.train.total_steps - initial_step,
+    expt_name,
+    SimpleConfig.flatten_configuration(cfg))
 
   best_val_accuracy = 0
 
@@ -215,7 +246,7 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
     # LR Update
     lr_new = sched(step + 1)
     Setfield.@set! tstate.optimizer_state = Optimisers.adjust(tstate.optimizer_state,
-                                                              lr_new)
+      lr_new)
 
     acc1, acc5 = DEQExperiments.accuracy(Lux.cpu(stats.y_pred), Lux.cpu(y), (1, 5))
     residual = abs(Statistics.mean(stats.residual))
@@ -224,7 +255,8 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
     loggers.progress_loggers.train.avg_meters.batch_time(data_time +
                                                          step_stats.fwd_time +
                                                          step_stats.bwd_time +
-                                                         step_stats.opt_time, bsize)
+                                                         step_stats.opt_time,
+      bsize)
     loggers.progress_loggers.train.avg_meters.data_time(data_time, bsize)
     loggers.progress_loggers.train.avg_meters.fwd_time(step_stats.fwd_time, bsize)
     loggers.progress_loggers.train.avg_meters.bwd_time(step_stats.bwd_time, bsize)
@@ -278,7 +310,7 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
         loggers.progress_loggers.eval.avg_meters.ce_loss(stats.ce_loss, bsize)
         loggers.progress_loggers.eval.avg_meters.skip_loss(stats.skip_loss, bsize)
         loggers.progress_loggers.eval.avg_meters.residual(abs(Statistics.mean(stats.residual)),
-                                                          bsize)
+          bsize)
         loggers.progress_loggers.eval.avg_meters.top1(acc1, bsize)
         loggers.progress_loggers.eval.avg_meters.top5(acc5, bsize)
         loggers.progress_loggers.eval.avg_meters.nfe(stats.nfe, bsize)
@@ -303,8 +335,9 @@ function main(config_name::String, cfg::DEQExperiments.ExperimentConfig)
 
       ckpt = (tstate=tstate, step=initial_step)
       if DEQExperiments.should_log()
-        DEQExperiments.save_checkpoint(ckpt; is_best,
-                                       filename=joinpath(ckpt_dir, "model_$(step).jlso"))
+        DEQExperiments.save_checkpoint(ckpt;
+          is_best,
+          filename=joinpath(ckpt_dir, "model_$(step).jlso"))
       end
     end
   end

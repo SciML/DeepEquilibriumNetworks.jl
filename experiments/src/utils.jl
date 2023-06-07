@@ -56,8 +56,9 @@ function accuracy(y_pred::AbstractMatrix, y::AbstractMatrix)
   return sum(argmax.(eachcol(y_pred)) .== OneHotArrays.onecold(y)) * 100 / size(y, 2)
 end
 
-function accuracy(y_pred::AbstractMatrix, y::AbstractMatrix,
-                  topk::NTuple{N, <:Int}) where {N}
+function accuracy(y_pred::AbstractMatrix,
+  y::AbstractMatrix,
+  topk::NTuple{N, <:Int}) where {N}
   maxk = maximum(topk)
 
   pred_labels = partialsortperm.(eachcol(y_pred), (1:maxk,), rev=true)
@@ -89,8 +90,11 @@ struct CosineAnnealSchedule{restart, T, S <: Integer}
   dampen::T
   period::S
 
-  function CosineAnnealSchedule(lambda_0, lambda_1, period; restart::Bool=true,
-                                dampen=1.0f0)
+  function CosineAnnealSchedule(lambda_0,
+    lambda_1,
+    period;
+    restart::Bool=true,
+    dampen=1.0f0)
     range = abs(lambda_0 - lambda_1)
     offset = min(lambda_0, lambda_1)
     return new{restart, typeof(range), typeof(period)}(range, offset, dampen, period)
@@ -185,12 +189,16 @@ function load_checkpoint(fname::String)
   end
 end
 
-function run_training_step(::Training.ZygoteVJP, objective_function, data,
-                           ts::Training.TrainState)
+function run_training_step(::Training.ZygoteVJP,
+  objective_function,
+  data,
+  ts::Training.TrainState)
   t = time()
-  (loss, st, stats), back = Zygote.pullback(ps -> objective_function(ts.model, ps,
-                                                                     ts.states, data),
-                                            ts.parameters)
+  (loss, st, stats), back = Zygote.pullback(ps -> objective_function(ts.model,
+      ps,
+      ts.states,
+      data),
+    ts.parameters)
   fwd_time = time() - t
 
   t = time()
@@ -212,6 +220,6 @@ function FluxMPI.synchronize!(tstate::Training.TrainState; root_rank::Int=0)
   Setfield.@set! tstate.parameters = FluxMPI.synchronize!(tstate.parameters; root_rank)
   Setfield.@set! tstate.states = FluxMPI.synchronize!(tstate.states; root_rank)
   Setfield.@set! tstate.optimizer_state = FluxMPI.synchronize!(tstate.optimizer_state;
-                                                               root_rank)
+    root_rank)
   return tstate
 end

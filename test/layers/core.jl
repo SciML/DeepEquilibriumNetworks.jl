@@ -23,6 +23,12 @@ function test_deep_equilibrium_solution()
   return nothing
 end
 
-@testset "check unrolled mode" begin test_check_unrolled_mode() end
-@testset "get unrolled depth" begin test_get_unrolled_depth() end
-@testset "deep equilibrium solution" begin test_deep_equilibrium_solution() end
+@testset "check unrolled mode" begin
+  test_check_unrolled_mode()
+end
+@testset "get unrolled depth" begin
+  test_get_unrolled_depth()
+end
+@testset "deep equilibrium solution" begin
+  test_deep_equilibrium_solution()
+end
