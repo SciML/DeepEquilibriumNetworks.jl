@@ -2,41 +2,40 @@ abstract type AbstractDeepEquilibriumNetwork <:
               Lux.AbstractExplicitContainerLayer{(:model,)} end
 
 function Lux.initialstates(rng::AbstractRNG, deq::AbstractDeepEquilibriumNetwork)
-  rng = Lux.replicate(rng)
-  randn(rng, 1)
-  return (;
-    model=Lux.initialstates(rng, deq.model),
-    fixed_depth=Val(0),
-    solution=nothing,
-    rng)
+    rng = Lux.replicate(rng)
+    randn(rng, 1)
+    return (;
+        model=Lux.initialstates(rng, deq.model),
+        fixed_depth=Val(0),
+        solution=nothing,
+        rng)
 end
 
 function Lux.initialparameters(rng::AbstractRNG, deq::AbstractDeepEquilibriumNetwork)
-  # TODO: An unfortunate mistake that can be removed once Lux 0.5 is released.
-  return (; model=Lux.initialparameters(rng, deq.model))
+    return (; model=Lux.initialparameters(rng, deq.model))
 end
 
 abstract type AbstractSkipDeepEquilibriumNetwork <:
               Lux.AbstractExplicitContainerLayer{(:model, :shortcut)} end
 
 function Lux.initialstates(rng::AbstractRNG, deq::AbstractSkipDeepEquilibriumNetwork)
-  rng = Lux.replicate(rng)
-  randn(rng, 1)
-  return (;
-    model=Lux.initialstates(rng, deq.model),
-    shortcut=Lux.initialstates(rng, deq.shortcut),
-    fixed_depth=Val(0),
-    solution=nothing,
-    rng)
+    rng = Lux.replicate(rng)
+    randn(rng, 1)
+    return (;
+        model=Lux.initialstates(rng, deq.model),
+        shortcut=Lux.initialstates(rng, deq.shortcut),
+        fixed_depth=Val(0),
+        solution=nothing,
+        rng)
 end
 
 const AbstractDEQs = Union{
-  AbstractDeepEquilibriumNetwork,
-  AbstractSkipDeepEquilibriumNetwork,
+    AbstractDeepEquilibriumNetwork,
+    AbstractSkipDeepEquilibriumNetwork,
 }
 
 function (deq::AbstractDEQs)(x::AbstractArray, ps, st::NamedTuple)
-  return deq(x, ps, st, _check_unrolled_mode(st))
+    return deq(x, ps, st, _check_unrolled_mode(st))
 end
 
 # Utilities
@@ -64,9 +63,9 @@ Stores the solution of a DeepEquilibriumNetwork and its variants.
   - `nfe`: Number of Function Evaluations
 """
 struct DeepEquilibriumSolution{T, R <: AbstractFloat, TRes}
-  z_star::T
-  u0::T
-  residual::TRes
-  jacobian_loss::R
-  nfe::Int
+    z_star::T
+    u0::T
+    residual::TRes
+    jacobian_loss::R
+    nfe::Int
 end

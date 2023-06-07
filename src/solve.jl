@@ -26,22 +26,22 @@ Solver for Continuous DEQ Problem ([pal2022mixing](@cite)). Effectively a wrappe
 See also: [`DiscreteDEQSolver`](@ref)
 """
 struct ContinuousDEQSolver{A <: DynamicSS} <: AbstractDEQSolver
-  alg::A
+    alg::A
 end
 
 function ContinuousDEQSolver(alg=VCAB3();
-  mode=NLSolveTerminationMode.RelSafeBest,
-  abstol=1.0f-8,
-  reltol=1.0f-6,
-  abstol_termination=abstol,
-  reltol_termination=reltol,
-  tspan=Inf32,
-  kwargs...)
-  termination_condition = NLSolveTerminationCondition(mode;
-    abstol=abstol_termination,
-    reltol=reltol_termination,
+    mode=NLSolveTerminationMode.RelSafeBest,
+    abstol=1.0f-8,
+    reltol=1.0f-6,
+    abstol_termination=abstol,
+    reltol_termination=reltol,
+    tspan=Inf32,
     kwargs...)
-  return ContinuousDEQSolver(DynamicSS(alg; abstol, reltol, tspan, termination_condition))
+    termination_condition = NLSolveTerminationCondition(mode;
+        abstol=abstol_termination,
+        reltol=reltol_termination,
+        kwargs...)
+    return ContinuousDEQSolver(DynamicSS(alg; abstol, reltol, tspan, termination_condition))
 end
 
 """
@@ -60,11 +60,11 @@ See also: [`ContinuousDEQSolver`](@ref)
 """
 Base.@kwdef struct DiscreteDEQSolver{A <: AbstractSimpleNonlinearSolveAlgorithm} <:
                    AbstractDEQSolver
-  alg::A = LBroyden(;
-    batched=true,
-    termination_condition=NLSolveTerminationCondition(NLSolveTerminationMode.RelSafe;
-      abstol=1.0f-8,
-      reltol=1.0f-6))
+    alg::A = LBroyden(;
+        batched=true,
+        termination_condition=NLSolveTerminationCondition(NLSolveTerminationMode.RelSafe;
+            abstol=1.0f-8,
+            reltol=1.0f-6))
 end
 
 """
@@ -75,25 +75,25 @@ DiscreteDEQSolver. This is mostly an internal implementation detail, which allow
 dispatch during adjoint computation without type piracy.
 """
 struct EquilibriumSolution{T, N, uType, P, A, R} <: AbstractNonlinearSolution{T, N}
-  u::uType
-  resid::uType
-  prob::P
-  alg::A
-  retcode::R
+    u::uType
+    resid::uType
+    prob::P
+    alg::A
+    retcode::R
 end
 
 @truncate_stacktrace EquilibriumSolution 1 2
 
 function DiffEqBase.__solve(prob::AbstractSteadyStateProblem,
-  alg::AbstractDEQSolver,
-  args...;
-  kwargs...)
-  sol = solve(prob, alg.alg, args...; kwargs...)
+    alg::AbstractDEQSolver,
+    args...;
+    kwargs...)
+    sol = solve(prob, alg.alg, args...; kwargs...)
 
-  # This is not necessarily true and might fail. But makes the code type stable
-  u = sol.u::typeof(prob.u0)
-  du, retcode = sol.resid, sol.retcode
-  _types = (eltype(u), ndims(u), typeof(u), typeof(prob), typeof(alg), typeof(retcode))
+    # This is not necessarily true and might fail. But makes the code type stable
+    u = sol.u::typeof(prob.u0)
+    du, retcode = sol.resid, sol.retcode
+    _types = (eltype(u), ndims(u), typeof(u), typeof(prob), typeof(alg), typeof(retcode))
 
-  return EquilibriumSolution{_types...}(u, du, prob, alg, retcode)
+    return EquilibriumSolution{_types...}(u, du, prob, alg, retcode)
 end

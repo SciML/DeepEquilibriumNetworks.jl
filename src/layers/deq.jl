@@ -20,10 +20,10 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite).
 using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq
 
 model = DeepEquilibriumNetwork(Parallel(+,
-    Dense(2, 2; use_bias=false),
-    Dense(2, 2; use_bias=false)),
-  ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0);
-  save_everystep=true)
+        Dense(2, 2; use_bias=false),
+        Dense(2, 2; use_bias=false)),
+    ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0);
+    save_everystep=true)
 
 rng = Random.default_rng()
 ps, st = Lux.setup(rng, model)
@@ -35,29 +35,29 @@ See also: [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwo
 [`MultiScaleSkipDeepEquilibriumNetwork`](@ref).
 """
 struct DeepEquilibriumNetwork{J, M, A, S, K} <: AbstractDeepEquilibriumNetwork
-  model::M
-  solver::A
-  sensealg::S
-  kwargs::K
+    model::M
+    solver::A
+    sensealg::S
+    kwargs::K
 end
 
 @truncate_stacktrace DeepEquilibriumNetwork 1 2
 
 function DeepEquilibriumNetwork(model,
-  solver;
-  jacobian_regularization::Bool=false,
-  sensealg=SteadyStateAdjoint(),
-  kwargs...)
-  return DeepEquilibriumNetwork{
-    jacobian_regularization,
-    typeof(model),
-    typeof(solver),
-    typeof(sensealg),
-    typeof(kwargs),
-  }(model,
-    solver,
-    sensealg,
-    kwargs)
+    solver;
+    jacobian_regularization::Bool=false,
+    sensealg=SteadyStateAdjoint(),
+    kwargs...)
+    return DeepEquilibriumNetwork{
+        jacobian_regularization,
+        typeof(model),
+        typeof(solver),
+        typeof(sensealg),
+        typeof(kwargs),
+    }(model,
+        solver,
+        sensealg,
+        kwargs)
 end
 
 _jacobian_regularization(::DeepEquilibriumNetwork{J}) where {J} = J
@@ -88,11 +88,11 @@ using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq
 
 ## SkipDEQ
 model = SkipDeepEquilibriumNetwork(Parallel(+,
-    Dense(2, 2; use_bias=false),
-    Dense(2, 2; use_bias=false)),
-  Dense(2, 2),
-  ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0);
-  save_everystep=true)
+        Dense(2, 2; use_bias=false),
+        Dense(2, 2; use_bias=false)),
+    Dense(2, 2),
+    ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0);
+    save_everystep=true)
 
 rng = Random.default_rng()
 ps, st = Lux.setup(rng, model)
@@ -101,11 +101,11 @@ model(rand(rng, Float32, 2, 1), ps, st)
 
 ## SkipRegDEQ
 model = SkipDeepEquilibriumNetwork(Parallel(+,
-    Dense(2, 2; use_bias=false),
-    Dense(2, 2; use_bias=false)),
-  nothing,
-  ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0);
-  save_everystep=true)
+        Dense(2, 2; use_bias=false),
+        Dense(2, 2; use_bias=false)),
+    nothing,
+    ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0);
+    save_everystep=true)
 
 rng = Random.default_rng()
 ps, st = Lux.setup(rng, model)
@@ -117,48 +117,48 @@ See also: [`DeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`]
 [`MultiScaleSkipDeepEquilibriumNetwork`](@ref)
 """
 struct SkipDeepEquilibriumNetwork{J, M, Sh, A, S, K} <: AbstractSkipDeepEquilibriumNetwork
-  model::M
-  shortcut::Sh
-  solver::A
-  sensealg::S
-  kwargs::K
+    model::M
+    shortcut::Sh
+    solver::A
+    sensealg::S
+    kwargs::K
 end
 
 @truncate_stacktrace SkipDeepEquilibriumNetwork 1 2 3
 
 function SkipDeepEquilibriumNetwork(model,
-  shortcut,
-  solver;
-  sensealg=SteadyStateAdjoint(),
-  jacobian_regularization::Bool=false,
-  kwargs...)
-  return SkipDeepEquilibriumNetwork{
-    jacobian_regularization,
-    typeof(model),
-    typeof(shortcut),
-    typeof(solver),
-    typeof(sensealg),
-    typeof(kwargs),
-  }(model,
     shortcut,
-    solver,
-    sensealg,
-    kwargs)
+    solver;
+    sensealg=SteadyStateAdjoint(),
+    jacobian_regularization::Bool=false,
+    kwargs...)
+    return SkipDeepEquilibriumNetwork{
+        jacobian_regularization,
+        typeof(model),
+        typeof(shortcut),
+        typeof(solver),
+        typeof(sensealg),
+        typeof(kwargs),
+    }(model,
+        shortcut,
+        solver,
+        sensealg,
+        kwargs)
 end
 
 _jacobian_regularization(::SkipDeepEquilibriumNetwork{J}) where {J} = J
 
 function _get_initial_condition(deq::SkipDeepEquilibriumNetwork{J, M, Nothing},
-  x,
-  ps,
-  st) where {J, M}
-  z, st_ = deq.model((zero(x), x), ps.model, st.model)
-  @set! st.model = st_
-  return z, st
+    x,
+    ps,
+    st) where {J, M}
+    z, st_ = deq.model((zero(x), x), ps.model, st.model)
+    @set! st.model = st_
+    return z, st
 end
 
 function _get_initial_condition(deq::SkipDeepEquilibriumNetwork, x, ps, st)
-  z, st_ = deq.shortcut(x, ps.shortcut, st.shortcut)
-  @set! st.shortcut = st_
-  return z, st
+    z, st_ = deq.shortcut(x, ps.shortcut, st.shortcut)
+    @set! st.shortcut = st_
+    return z, st
 end
