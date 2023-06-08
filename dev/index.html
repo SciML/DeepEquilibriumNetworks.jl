@@ -10,12 +10,14 @@ rng = Random.default_rng()
 Random.seed!(rng, seed)
 
 model = Lux.Chain(Lux.Dense(2, 2),
-                  DEQs.DeepEquilibriumNetwork(Lux.Parallel(+, Lux.Dense(2, 2; bias=false),
-                                                           Lux.Dense(2, 2; bias=false)),
-                                              DEQs.ContinuousDEQSolver(; abstol=0.1f0,
-                                                                       reltol=0.1f0,
-                                                                       abstol_termination=0.1f0,
-                                                                       reltol_termination=0.1f0)))
+    DEQs.DeepEquilibriumNetwork(Lux.Parallel(+,
+            Lux.Dense(2, 2; bias=false),
+            Lux.Dense(2, 2; bias=false)),
+        DEQs.ContinuousDEQSolver(;
+            abstol=0.1f0,
+            reltol=0.1f0,
+            abstol_termination=0.1f0,
+            reltol_termination=0.1f0)))
 
 ps, st = gpu.(Lux.setup(rng, model))
 x = gpu(rand(rng, Float32, 2, 1))
@@ -32,14 +34,14 @@ gs = Zygote.gradient(p -&gt; sum(abs2, model(x, p, st)[1][1] .- y), ps)[1]</code
 }</code></pre><p>For specific algorithms, check the respective documentations and cite the corresponding papers.</p><h2 id="Contributing"><a class="docs-heading-anchor" href="#Contributing">Contributing</a><a id="Contributing-1"></a><a class="docs-heading-anchor-permalink" href="#Contributing" title="Permalink"></a></h2><ul><li><p>Please refer to the <a href="https://github.com/SciML/ColPrac/blob/master/README.md">SciML ColPrac: Contributor&#39;s Guide on Collaborative Practices for Community Packages</a> for guidance on PRs, issues, and other matters relating to contributing to SciML.</p></li><li><p>See the <a href="https://github.com/SciML/SciMLStyle">SciML Style Guide</a> for common coding practices and other style decisions.</p></li><li><p>There are a few community forums:</p><ul><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.org/slack/">Julia Slack</a></li><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged">Julia Zulip</a></li><li>On the <a href="https://discourse.julialang.org">Julia Discourse forums</a></li><li>See also <a href="https://sciml.ai/community/">SciML Community page</a></li></ul></li></ul><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><details><summary>The documentation of this SciML package was built using these direct dependencies,</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl/docs/Project.toml`
   [6748aba7] DeepEquilibriumNetworks v1.1.0 `~/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl`
   [e30172f5] Documenter v0.27.24
-  [daee34ce] DocumenterCitations v0.2.12</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.9.0
-Commit 8e630552924 (2023-05-07 11:25 UTC)
+  [daee34ce] DocumenterCitations v0.2.12</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.9.1
+Commit 147bdf428cd (2023-06-07 08:27 UTC)
 Platform Info:
   OS: Linux (x86_64-linux-gnu)
-  CPU: 2 × Intel(R) Xeon(R) Platinum 8272CL CPU @ 2.60GHz
+  CPU: 2 × Intel(R) Xeon(R) CPU E5-2673 v3 @ 2.40GHz
   WORD_SIZE: 64
   LIBM: libopenlibm
-  LLVM: libLLVM-14.0.6 (ORCJIT, skylake-avx512)
+  LLVM: libLLVM-14.0.6 (ORCJIT, haswell)
   Threads: 1 on 2 virtual cores
 Environment:
   JULIA_DEBUG = Documenter</code></pre></details><details><summary>A more complete overview of all dependencies and their versions is also provided.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl/docs/Manifest.toml`
@@ -54,7 +56,7 @@ Environment:
   [30b0a656] ArrayInterfaceCore v0.1.29
   [a9b6321e] Atomix v0.1.0
   [ab4f0b2a] BFloat16s v0.4.2
-  [198e06fe] BangBang v0.3.38
+  [198e06fe] BangBang v0.3.39
   [9718e550] Baselet v0.1.1
   [2027ae74] BibInternal v0.3.4
   [13533e5b] BibParser v0.2.1
@@ -67,11 +69,11 @@ Environment:
   [1af6417a] CUDA_Runtime_Discovery v0.2.2
   [49dc2e85] Calculus v0.5.1
   [7057c7e9] Cassette v0.3.11
-  [082447d4] ChainRules v1.49.0
+  [082447d4] ChainRules v1.50.0
   [d360d2e6] ChainRulesCore v1.16.0
   [fb6a15b2] CloseOpenIntervals v0.1.12
   [944b1d66] CodecZlib v0.7.1
-  [38540f10] CommonSolve v0.2.3
+  [38540f10] CommonSolve v0.2.4
   [bbf7d656] CommonSubexpressions v0.3.0
   [34da2185] Compat v4.6.1
   [a33af91c] CompositionsBase v0.1.2
@@ -87,9 +89,9 @@ Environment:
   [8bb1440f] DelimitedFiles v1.9.1
   [2b5f629d] DiffEqBase v6.125.0
   [459566f4] DiffEqCallbacks v2.26.1
-  [77a26b50] DiffEqNoiseProcess v5.16.0
+  [77a26b50] DiffEqNoiseProcess v5.17.1
   [163ba53b] DiffResults v1.1.0
-  [b552c78f] DiffRules v1.13.0
+  [b552c78f] DiffRules v1.15.1
   [b4f34e82] Distances v0.10.8
   [31c24e10] Distributions v0.25.95
   [ffbed154] DocStringExtensions v0.9.3
@@ -108,14 +110,14 @@ Environment:
   [9aa1b823] FastClosures v0.3.2
   [29a986be] FastLapackInterface v1.2.9
   [5789e2e9] FileIO v1.16.1
-  [1a297f60] FillArrays v1.1.0
+  [1a297f60] FillArrays v1.1.1
   [6a86dc24] FiniteDiff v2.21.1
   [9c68100b] FoldsThreads v0.1.1
   [f6369f11] ForwardDiff v0.10.35
   [069b7b12] FunctionWrappers v1.1.3
   [77dc65aa] FunctionWrappersWrappers v0.1.3
   [d9f16b24] Functors v0.4.4
-  [0c68f7d7] GPUArrays v8.7.0
+  [0c68f7d7] GPUArrays v8.7.1
   [46192b85] GPUArraysCore v0.1.5
 ⌅ [61eb1bfa] GPUCompiler v0.19.4
   [c145ed77] GenericSchur v0.5.3
@@ -130,7 +132,6 @@ Environment:
   [22cec73e] InitialValues v0.3.1
   [3587e190] InverseFunctions v0.1.9
   [92d709cd] IrrationalConstants v0.2.2
-  [42fd0dbc] IterativeSolvers v0.9.2
   [82899510] IteratorInterfaceExtensions v1.0.0
   [692b3bcd] JLLWrappers v1.4.1
   [682c06a0] JSON v0.21.4
@@ -140,20 +141,19 @@ Environment:
   [ef3ab10e] KLU v0.4.0
   [63c18a36] KernelAbstractions v0.9.4
   [ba0b0d4f] Krylov v0.9.1
-  [0b1a1467] KrylovKit v0.6.0
   [929cbde3] LLVM v5.1.0
   [10f19ff3] LayoutPointers v0.1.14
   [50d2b5c4] Lazy v0.15.1
   [2d8b4e74] LevyArea v1.0.0
   [d3d80556] LineSearches v7.2.0
-  [7ed4a6bd] LinearSolve v1.42.0
-  [2ab3a3ac] LogExpFunctions v0.3.23
+  [7ed4a6bd] LinearSolve v2.1.12
+  [2ab3a3ac] LogExpFunctions v0.3.24
   [e6f89c97] LoggingExtras v1.0.0
   [bdcacae8] LoopVectorization v0.12.159
-  [b2108857] Lux v0.4.53
+  [b2108857] Lux v0.4.54
   [d0bbae9a] LuxCUDA v0.1.2
-  [bb33d45b] LuxCore v0.1.3
-  [82251201] LuxLib v0.2.1
+  [bb33d45b] LuxCore v0.1.4
+  [82251201] LuxLib v0.2.3
   [d8e11817] MLStyle v0.4.17
   [f1d291b0] MLUtils v0.4.2
   [1914dd2f] MacroTools v0.5.10
@@ -168,14 +168,14 @@ Environment:
   [a00861dc] NNlibCUDA v0.2.7
   [77ba4419] NaNMath v1.0.2
   [71a1bf82] NameResolution v0.1.5
-  [8913a72c] NonlinearSolve v1.6.0
+  [8913a72c] NonlinearSolve v1.8.0
 ⌅ [d8793406] ObjectFile v0.3.7
   [6fe1bfb0] OffsetArrays v1.12.9
   [4d8831e6] OpenSSL v1.4.1
-  [429524aa] Optim v1.7.5
+  [429524aa] Optim v1.7.6
   [3bd65402] Optimisers v0.2.18
   [bac558e1] OrderedCollections v1.6.0
-  [1dea7af3] OrdinaryDiffEq v6.52.0
+  [1dea7af3] OrdinaryDiffEq v6.53.0
   [90014a1f] PDMats v0.11.17
   [d96e819e] Parameters v0.12.3
   [69de0a69] Parsers v2.5.10
@@ -184,7 +184,7 @@ Environment:
   [1d0040c9] PolyesterWeave v0.2.1
   [85a6dd25] PositiveFactorizations v0.2.4
   [d236fae5] PreallocationTools v0.4.12
-  [aea7be01] PrecompileTools v1.1.1
+  [aea7be01] PrecompileTools v1.1.2
   [21216c6a] Preferences v1.4.0
   [8162dcfd] PrettyPrint v0.2.0
   [1fd47b50] QuadGK v2.8.2
@@ -199,13 +199,13 @@ Environment:
   [ae5879a3] ResettableStacks v1.1.1
   [37e2e3b7] ReverseDiff v1.14.6
   [79098fc4] Rmath v0.7.1
-  [7e49a35a] RuntimeGeneratedFunctions v0.5.10
+  [7e49a35a] RuntimeGeneratedFunctions v0.5.11
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.39
-  [0bca4576] SciMLBase v1.92.2
-  [e9a6253c] SciMLNLSolve v0.1.6
+  [0bca4576] SciMLBase v1.92.4
+  [e9a6253c] SciMLNLSolve v0.1.7
   [c0aeaf25] SciMLOperators v0.2.11
-  [1ed8b502] SciMLSensitivity v7.32.0
+  [1ed8b502] SciMLSensitivity v7.33.0
   [6c6a2e73] Scratch v1.2.0
   [efcf1570] Setfield v1.1.1
   [605ecd9f] ShowCases v0.1.0
@@ -215,7 +215,7 @@ Environment:
   [ce78b400] SimpleUnPack v1.1.0
   [66db9d55] SnoopPrecompile v1.0.3
   [a2af1166] SortingAlgorithms v1.1.0
-  [47a9eef4] SparseDiffTools v2.3.0
+  [47a9eef4] SparseDiffTools v2.4.0
   [e56a9233] Sparspak v0.3.9
   [276daf66] SpecialFunctions v2.2.0
   [171d559e] SplittablesBase v0.1.15
@@ -224,7 +224,7 @@ Environment:
   [90137ffa] StaticArrays v1.5.25
   [1e83bf80] StaticArraysCore v1.4.0
   [82ae8749] StatsAPI v1.6.0
-⌅ [2913bbd2] StatsBase v0.33.21
+  [2913bbd2] StatsBase v0.34.0
   [4c63d2b9] StatsFuns v1.3.0
   [9672c7b4] SteadyStateDiffEq v1.15.0
   [789caeaf] StochasticDiffEq v6.61.0
@@ -250,7 +250,7 @@ Environment:
   [d80eeb9a] UnsafeAtomicsLLVM v0.1.2
   [3d5dd08c] VectorizationBase v0.21.64
   [19fa3120] VertexSafeGraphs v0.2.0
-  [ddb6d928] YAML v0.4.8
+  [ddb6d928] YAML v0.4.9
   [e88e6eb3] Zygote v0.6.62
   [700de1a5] ZygoteRules v0.2.3
 ⌃ [02a925ec] cuDNN v1.0.3
@@ -306,9 +306,9 @@ Environment:
   [05823500] OpenLibm_jll v0.8.1+0
   [bea87d4a] SuiteSparse_jll v5.10.1+6
   [83775a58] Zlib_jll v1.2.13+0
-  [8e850b90] libblastrampoline_jll v5.7.0+0
+  [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.48.0+0
   [3f19e933] p7zip_jll v17.4.0+0
 Info Packages marked with ⌃ and ⌅ have new versions available, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`</code></pre></details>You can also download the 
 <a href="https://github.com/SciML/DeepEquilibriumNetworks.jl/tree/gh-pages/v1.1.0/assets/Manifest.toml">manifest</a> file and the
-<a href="https://github.com/SciML/DeepEquilibriumNetworks.jl/tree/gh-pages/v1.1.0/assets/Project.toml">project</a> file.</article><nav class="docs-footer"><a class="docs-footer-nextpage" href="manual/solvers/">Dynamical Systems »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Thursday 1 June 2023 18:40">Thursday 1 June 2023</span>. Using Julia version 1.9.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+<a href="https://github.com/SciML/DeepEquilibriumNetworks.jl/tree/gh-pages/v1.1.0/assets/Project.toml">project</a> file.</article><nav class="docs-footer"><a class="docs-footer-nextpage" href="manual/solvers/">Dynamical Systems »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Thursday 8 June 2023 03:50">Thursday 8 June 2023</span>. Using Julia version 1.9.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
