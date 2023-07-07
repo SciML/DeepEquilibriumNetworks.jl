@@ -317,7 +317,7 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 deps = ["CUDA", "ChainRulesCore", "DiffEqBase", "LinearAlgebra", "LinearSolve", "Lux", "MLUtils", "OrdinaryDiffEq", "Random", "SciMLBase", "SciMLSensitivity", "Setfield", "SimpleNonlinearSolve", "Static", "Statistics", "SteadyStateDiffEq", "TruncatedStacktraces", "Zygote", "ZygoteRules"]
 path = "/home/runner/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl"
 uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
-version = "1.1.0"
+version = "1.2.0"
 
 [[deps.DefineSingletons]]
 git-tree-sha1 = "0fba8b706d0178b4dc7fd44a96a92382c9065c2c"
