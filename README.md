@@ -35,8 +35,8 @@ Random.seed!(rng, seed)
 
 model = Lux.Chain(Lux.Dense(2, 2),
     DEQs.DeepEquilibriumNetwork(Lux.Parallel(+,
-            Lux.Dense(2, 2; bias=false),
-            Lux.Dense(2, 2; bias=false)),
+            Lux.Dense(2, 2; use_bias=false),
+            Lux.Dense(2, 2; use_bias=false)),
         DEQs.ContinuousDEQSolver(;
             abstol=0.1f0,
             reltol=0.1f0,
