@@ -40,4 +40,5 @@ ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 [compat]
 ComponentArrays = "0.13.8"
 DeepEquilibriumNetworks = "0.2"
+Lux = "0.4"
 MLUtils = "0.2.10"
