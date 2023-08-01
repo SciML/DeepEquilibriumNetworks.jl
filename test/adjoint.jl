@@ -52,8 +52,8 @@ function test_deep_equilibrium_network_adjoint()
     for solver in DEFAULT_DEQ_SOLVERS(), jacobian_regularization in (true, false)
         sensealg = SteadyStateAdjoint()
         model = DeepEquilibriumNetwork(Parallel(+,
-                get_dense_layer(2, 2; bias=false),
-                get_dense_layer(2, 2; bias=false)),
+                get_dense_layer(2, 2; use_bias=false),
+                get_dense_layer(2, 2; use_bias=false)),
             solver;
             sensealg,
             jacobian_regularization,
@@ -86,8 +86,8 @@ function test_skip_deep_equilibrium_network_adjoint()
     for solver in DEFAULT_DEQ_SOLVERS(), jacobian_regularization in (true, false)
         sensealg = SteadyStateAdjoint()
         model = SkipDeepEquilibriumNetwork(Parallel(+,
-                get_dense_layer(2, 2; bias=false),
-                get_dense_layer(2, 2; bias=false)),
+                get_dense_layer(2, 2; use_bias=false),
+                get_dense_layer(2, 2; use_bias=false)),
             get_dense_layer(2, 2),
             solver;
             sensealg,
@@ -121,8 +121,8 @@ function test_skip_reg_deep_equilibrium_network_adjoint()
     for solver in DEFAULT_DEQ_SOLVERS(), jacobian_regularization in (true, false)
         sensealg = SteadyStateAdjoint()
         model = SkipDeepEquilibriumNetwork(Parallel(+,
-                get_dense_layer(2, 2; bias=false),
-                get_dense_layer(2, 2; bias=false)),
+                get_dense_layer(2, 2; use_bias=false),
+                get_dense_layer(2, 2; use_bias=false)),
             nothing,
             solver;
             sensealg,
