@@ -5,7 +5,7 @@ abstract type AbstractDEQSolver <: AbstractSteadyStateAlgorithm end
                         abstol=1.0f-8, reltol=1.0f-6, abstol_termination=abstol,
                         reltol_termination=reltol, tspan=Inf32, kwargs...)
 
-Solver for Continuous DEQ Problem ([pal2022mixing](@cite)). Effectively a wrapper around
+Solver for Continuous DEQ Problem [pal2022mixing](@cite). Effectively a wrapper around
 `DynamicSS` with more sensible defaults for DEQs.
 
 ## Arguments
@@ -49,12 +49,12 @@ end
                                      termination_condition=NLSolveTerminationCondition(NLSolveTerminationMode.RelSafe;
                                                                                        abstol=1.0f-8, reltol=1.0f-6))
 
-Solver for Discrete DEQ Problem ([baideep2019](@cite)). Similar to `SSrootfind` but provides
+Solver for Discrete DEQ Problem [baideep2019](@cite). Similar to `SSrootfind` but provides
 more flexibility needed for solving DEQ problems.
 
 ## Arguments
 
-  - `alg`: Algorithm to solve the Nonlinear Problem. (Default: [`LBroyden`](@ref))
+  - `alg`: Algorithm to solve the Nonlinear Problem. (Default: `LBroyden`)
 
 See also: [`ContinuousDEQSolver`](@ref)
 """
