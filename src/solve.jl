@@ -1,9 +1,9 @@
 abstract type AbstractDEQSolver <: AbstractSteadyStateAlgorithm end
 
 """
-    ContinuousDEQSolver(alg=VCABM3(); mode=SteadyStateTerminationMode.RelSafeBest,
-                        abstol=1.0f-8, reltol=1.0f-6, abstol_termination=abstol,
-                        reltol_termination=reltol, tspan=Inf32, kwargs...)
+    ContinuousDEQSolver(alg=VCAB3(); mode=NLSolveTerminationMode.RelSafeBest,
+        abstol=1.0f-8, reltol=1.0f-6, abstol_termination=abstol, reltol_termination=reltol,
+        tspan=Inf32, kwargs...)
 
 Solver for Continuous DEQ Problem [pal2022mixing](@cite). Effectively a wrapper around
 `DynamicSS` with more sensible defaults for DEQs.
@@ -29,25 +29,18 @@ struct ContinuousDEQSolver{A <: DynamicSS} <: AbstractDEQSolver
     alg::A
 end
 
-function ContinuousDEQSolver(alg=VCAB3();
-    mode=NLSolveTerminationMode.RelSafeBest,
-    abstol=1.0f-8,
-    reltol=1.0f-6,
-    abstol_termination=abstol,
-    reltol_termination=reltol,
-    tspan=Inf32,
-    kwargs...)
-    termination_condition = NLSolveTerminationCondition(mode;
-        abstol=abstol_termination,
-        reltol=reltol_termination,
-        kwargs...)
+function ContinuousDEQSolver(alg=VCAB3(); mode=NLSolveTerminationMode.RelSafeBest,
+    abstol=1.0f-8, reltol=1.0f-6, abstol_termination=abstol, reltol_termination=reltol,
+    tspan=Inf32, kwargs...)
+    termination_condition = NLSolveTerminationCondition(mode; abstol=abstol_termination,
+        reltol=reltol_termination, kwargs...)
     return ContinuousDEQSolver(DynamicSS(alg; abstol, reltol, tspan, termination_condition))
 end
 
 """
     DiscreteDEQSolver(alg = LBroyden(; batched=true,
-                                     termination_condition=NLSolveTerminationCondition(NLSolveTerminationMode.RelSafe;
-                                                                                       abstol=1.0f-8, reltol=1.0f-6))
+        termination_condition=NLSolveTerminationCondition(NLSolveTerminationMode.RelSafe;
+            abstol=1.0f-8, reltol=1.0f-6))
 
 Solver for Discrete DEQ Problem [baideep2019](@cite). Similar to `SSrootfind` but provides
 more flexibility needed for solving DEQ problems.
@@ -60,11 +53,9 @@ See also: [`ContinuousDEQSolver`](@ref)
 """
 Base.@kwdef struct DiscreteDEQSolver{A <: AbstractSimpleNonlinearSolveAlgorithm} <:
                    AbstractDEQSolver
-    alg::A = LBroyden(;
-        batched=true,
+    alg::A = LBroyden(; batched=true,
         termination_condition=NLSolveTerminationCondition(NLSolveTerminationMode.RelSafe;
-            abstol=1.0f-8,
-            reltol=1.0f-6))
+            abstol=1.0f-8, reltol=1.0f-6))
 end
 
 """
@@ -84,10 +75,8 @@ end
 
 @truncate_stacktrace EquilibriumSolution 1 2
 
-function DiffEqBase.__solve(prob::AbstractSteadyStateProblem,
-    alg::AbstractDEQSolver,
-    args...;
-    kwargs...)
+function DiffEqBase.__solve(prob::AbstractSteadyStateProblem, alg::AbstractDEQSolver,
+    args...; kwargs...)
     sol = solve(prob, alg.alg, args...; kwargs...)
 
     # This is not necessarily true and might fail. But makes the code type stable

@@ -1,22 +1,8 @@
 module DeepEquilibriumNetworks
 
-using CUDA,
-    DiffEqBase,
-    LinearAlgebra,
-    LinearSolve,
-    Lux,
-    MLUtils,
-    OrdinaryDiffEq,
-    Random,
-    SciMLBase,
-    SciMLSensitivity,
-    Setfield,
-    SimpleNonlinearSolve,
-    Static,
-    Statistics,
-    SteadyStateDiffEq,
-    Zygote,
-    ZygoteRules
+using CUDA, DiffEqBase, LinearAlgebra, LinearSolve, Lux, MLUtils, OrdinaryDiffEq, Random,
+    SciMLBase, SciMLSensitivity, Setfield, SimpleNonlinearSolve, Static, Statistics,
+    SteadyStateDiffEq, Zygote, ZygoteRules
 
 using DiffEqBase: AbstractSteadyStateProblem
 using SciMLBase: AbstractNonlinearSolution, AbstractSteadyStateAlgorithm
@@ -48,11 +34,8 @@ export ContinuousDEQSolver, DiscreteDEQSolver
 export EquilibriumSolution, DeepEquilibriumSolution, estimate_jacobian_trace
 
 # Networks
-export DeepEquilibriumNetwork,
-    SkipDeepEquilibriumNetwork,
-    MultiScaleInputLayer,
-    MultiScaleNeuralODE,
-    MultiScaleDeepEquilibriumNetwork,
+export DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork, MultiScaleInputLayer,
+    MultiScaleNeuralODE, MultiScaleDeepEquilibriumNetwork,
     MultiScaleSkipDeepEquilibriumNetwork
 
 end

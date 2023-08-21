@@ -1,15 +1,7 @@
-function CRC.rrule(::Type{<:DeepEquilibriumSolution},
-    z_star::T,
-    u0::T,
-    residual::T,
-    jacobian_loss::R,
-    nfe::Int) where {T, R <: AbstractFloat}
+function CRC.rrule(::Type{<:DeepEquilibriumSolution}, z_star::T, u0::T, residual::T,
+    jacobian_loss::R, nfe::Int) where {T, R <: AbstractFloat}
     function deep_equilibrium_solution_pullback(dsol)
-        return (CRC.NoTangent(),
-            dsol.z_star,
-            dsol.u0,
-            dsol.residual,
-            dsol.jacobian_loss,
+        return (CRC.NoTangent(), dsol.z_star, dsol.u0, dsol.residual, dsol.jacobian_loss,
             dsol.nfe)
     end
     return (DeepEquilibriumSolution(z_star, u0, residual, jacobian_loss, nfe),
@@ -32,9 +24,7 @@ function CRC.rrule(::Type{T}, args...) where {T <: NamedTuple}
     return y, nt_pullback
 end
 
-function CRC.rrule(::typeof(Setfield.set),
-    obj,
-    l::Setfield.PropertyLens{field},
+function CRC.rrule(::typeof(Setfield.set), obj, l::Setfield.PropertyLens{field},
     val) where {field}
     res = Setfield.set(obj, l, val)
     function setfield_pullback(Δres)
