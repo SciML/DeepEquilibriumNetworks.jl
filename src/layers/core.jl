@@ -18,9 +18,8 @@ abstract type AbstractSkipDeepEquilibriumNetwork <:
 function Lux.initialstates(rng::AbstractRNG, deq::AbstractSkipDeepEquilibriumNetwork)
     rng = Lux.replicate(rng)
     randn(rng, 1)
-    return (; model=Lux.initialstates(rng, deq.model),
-        shortcut=Lux.initialstates(rng, deq.shortcut), fixed_depth=Val(0), solution=nothing,
-        rng)
+    return (; model=Lux.initialstates(rng, deq.model), rng,
+        shortcut=Lux.initialstates(rng, deq.shortcut), fixed_depth=Val(0), solution=nothing)
 end
 
 const AbstractDEQs = Union{AbstractDeepEquilibriumNetwork,
@@ -54,10 +53,10 @@ Stores the solution of a DeepEquilibriumNetwork and its variants.
     can be computed).
   - `nfe`: Number of Function Evaluations
 """
-struct DeepEquilibriumSolution{T, R <: AbstractFloat, TRes}
+@concrete struct DeepEquilibriumSolution{T, R <: AbstractFloat}
     z_star::T
     u0::T
-    residual::TRes
+    residual
     jacobian_loss::R
-    nfe::Int
+    nfe
 end

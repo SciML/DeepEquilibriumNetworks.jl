@@ -22,8 +22,7 @@ using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq
 model = DeepEquilibriumNetwork(Parallel(+,
         Dense(2, 2; use_bias=false),
         Dense(2, 2; use_bias=false)),
-    ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0);
-    save_everystep=true)
+    ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0); save_everystep=true)
 
 rng = Random.default_rng()
 ps, st = Lux.setup(rng, model)
@@ -34,30 +33,18 @@ model(rand(rng, Float32, 2, 1), ps, st)
 See also: [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref),
 [`MultiScaleSkipDeepEquilibriumNetwork`](@ref).
 """
-struct DeepEquilibriumNetwork{J, M, A, S, K} <: AbstractDeepEquilibriumNetwork
-    model::M
-    solver::A
-    sensealg::S
-    kwargs::K
+@concrete struct DeepEquilibriumNetwork{J} <: AbstractDeepEquilibriumNetwork
+    model
+    solver
+    sensealg
+    kwargs
 end
 
 @truncate_stacktrace DeepEquilibriumNetwork 1 2
 
-function DeepEquilibriumNetwork(model,
-    solver;
-    jacobian_regularization::Bool=false,
-    sensealg=SteadyStateAdjoint(),
-    kwargs...)
-    return DeepEquilibriumNetwork{
-        jacobian_regularization,
-        typeof(model),
-        typeof(solver),
-        typeof(sensealg),
-        typeof(kwargs),
-    }(model,
-        solver,
-        sensealg,
-        kwargs)
+function DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=false,
+    sensealg=SteadyStateAdjoint(), kwargs...)
+    return DeepEquilibriumNetwork{jacobian_regularization}(model, solver, sensealg, kwargs)
 end
 
 _jacobian_regularization(::DeepEquilibriumNetwork{J}) where {J} = J
@@ -91,8 +78,7 @@ model = SkipDeepEquilibriumNetwork(Parallel(+,
         Dense(2, 2; use_bias=false),
         Dense(2, 2; use_bias=false)),
     Dense(2, 2),
-    ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0);
-    save_everystep=true)
+    ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0); save_everystep=true)
 
 rng = Random.default_rng()
 ps, st = Lux.setup(rng, model)
@@ -104,8 +90,7 @@ model = SkipDeepEquilibriumNetwork(Parallel(+,
         Dense(2, 2; use_bias=false),
         Dense(2, 2; use_bias=false)),
     nothing,
-    ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0);
-    save_everystep=true)
+    ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0); save_everystep=true)
 
 rng = Random.default_rng()
 ps, st = Lux.setup(rng, model)
@@ -116,41 +101,25 @@ model(rand(rng, Float32, 2, 1), ps, st)
 See also: [`DeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref),
 [`MultiScaleSkipDeepEquilibriumNetwork`](@ref)
 """
-struct SkipDeepEquilibriumNetwork{J, M, Sh, A, S, K} <: AbstractSkipDeepEquilibriumNetwork
-    model::M
-    shortcut::Sh
-    solver::A
-    sensealg::S
-    kwargs::K
+@concrete struct SkipDeepEquilibriumNetwork{J} <: AbstractSkipDeepEquilibriumNetwork
+    model
+    shortcut
+    solver
+    sensealg
+    kwargs
 end
 
 @truncate_stacktrace SkipDeepEquilibriumNetwork 1 2 3
 
-function SkipDeepEquilibriumNetwork(model,
-    shortcut,
-    solver;
-    sensealg=SteadyStateAdjoint(),
-    jacobian_regularization::Bool=false,
-    kwargs...)
-    return SkipDeepEquilibriumNetwork{
-        jacobian_regularization,
-        typeof(model),
-        typeof(shortcut),
-        typeof(solver),
-        typeof(sensealg),
-        typeof(kwargs),
-    }(model,
-        shortcut,
-        solver,
-        sensealg,
-        kwargs)
+function SkipDeepEquilibriumNetwork(model, shortcut, solver; sensealg=SteadyStateAdjoint(),
+    jacobian_regularization::Bool=false, kwargs...)
+    return SkipDeepEquilibriumNetwork{jacobian_regularization}(model, shortcut, solver,
+        sensealg, kwargs)
 end
 
 _jacobian_regularization(::SkipDeepEquilibriumNetwork{J}) where {J} = J
 
-function _get_initial_condition(deq::SkipDeepEquilibriumNetwork{J, M, Nothing},
-    x,
-    ps,
+function _get_initial_condition(deq::SkipDeepEquilibriumNetwork{J, M, Nothing}, x, ps,
     st) where {J, M}
     z, st_ = deq.model((zero(x), x), ps.model, st.model)
     @set! st.model = st_

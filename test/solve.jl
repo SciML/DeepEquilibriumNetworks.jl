@@ -15,8 +15,7 @@ function test_continuous_deq_solver()
 end
 
 function test_discrete_deq_solver()
-    prob = SteadyStateProblem(simple_dudt,
-        reshape([1.0f0], 1, 1),
+    prob = SteadyStateProblem(simple_dudt, reshape([1.0f0], 1, 1),
         SciMLBase.NullParameters())
 
     sol = solve(prob, DiscreteDEQSolver())

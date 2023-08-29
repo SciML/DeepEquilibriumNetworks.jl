@@ -51,9 +51,8 @@ more flexibility needed for solving DEQ problems.
 
 See also: [`ContinuousDEQSolver`](@ref)
 """
-Base.@kwdef struct DiscreteDEQSolver{A <: AbstractSimpleNonlinearSolveAlgorithm} <:
-                   AbstractDEQSolver
-    alg::A = LBroyden(; batched=true,
+Base.@kwdef @concrete struct DiscreteDEQSolver <: AbstractDEQSolver
+    alg = LBroyden(; batched=true,
         termination_condition=NLSolveTerminationCondition(NLSolveTerminationMode.RelSafe;
             abstol=1.0f-8, reltol=1.0f-6))
 end
@@ -65,12 +64,12 @@ Wraps the solution of a SteadyStateProblem using either ContinuousDEQSolver or
 DiscreteDEQSolver. This is mostly an internal implementation detail, which allows proper
 dispatch during adjoint computation without type piracy.
 """
-struct EquilibriumSolution{T, N, uType, P, A, R} <: AbstractNonlinearSolution{T, N}
+@concrete struct EquilibriumSolution{T, N, uType} <: AbstractNonlinearSolution{T, N}
     u::uType
     resid::uType
-    prob::P
-    alg::A
-    retcode::R
+    prob
+    alg
+    retcode
 end
 
 @truncate_stacktrace EquilibriumSolution 1 2
@@ -82,7 +81,6 @@ function DiffEqBase.__solve(prob::AbstractSteadyStateProblem, alg::AbstractDEQSo
     # This is not necessarily true and might fail. But makes the code type stable
     u = sol.u::typeof(prob.u0)
     du, retcode = sol.resid, sol.retcode
-    _types = (eltype(u), ndims(u), typeof(u), typeof(prob), typeof(alg), typeof(retcode))
 
-    return EquilibriumSolution{_types...}(u, du, prob, alg, retcode)
+    return EquilibriumSolution{eltype(u), ndims(u)}(u, du, prob, alg, retcode)
 end
