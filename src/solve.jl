@@ -51,10 +51,16 @@ more flexibility needed for solving DEQ problems.
 
 See also: [`ContinuousDEQSolver`](@ref)
 """
-Base.@kwdef @concrete struct DiscreteDEQSolver <: AbstractDEQSolver
-    alg = LBroyden(; batched=true,
-        termination_condition=NLSolveTerminationCondition(NLSolveTerminationMode.RelSafe;
-            abstol=1.0f-8, reltol=1.0f-6))
+struct DiscreteDEQSolver{A} <: AbstractDEQSolver
+    alg::A
+    function DiscreteDEQSolver(alg=nothing)
+        if alg === nothing
+            alg = LBroyden(; batched=true,
+                termination_condition=NLSolveTerminationCondition(NLSolveTerminationMode.RelSafe;
+                    abstol=1.0f-8, reltol=1.0f-6))
+        end
+        return new{typeof(alg)}(alg)
+    end
 end
 
 """
@@ -78,9 +84,7 @@ function DiffEqBase.__solve(prob::AbstractSteadyStateProblem, alg::AbstractDEQSo
     args...; kwargs...)
     sol = solve(prob, alg.alg, args...; kwargs...)
 
-    # This is not necessarily true and might fail. But makes the code type stable
-    u = sol.u::typeof(prob.u0)
-    du, retcode = sol.resid, sol.retcode
+    u, du, retcode = sol.u, sol.resid, sol.retcode
 
     return EquilibriumSolution{eltype(u), ndims(u)}(u, du, prob, alg, retcode)
 end

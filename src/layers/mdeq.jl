@@ -335,8 +335,7 @@ function MultiScaleNeuralODE(main_layers::Tuple, mapping_layers::Matrix,
         model = MultiScaleInputLayer(Chain(l1, l2), split_idxs, scales)
     else
         model = MultiScaleInputLayer(Chain(l1, l2, Parallel(nothing, post_fuse_layer...)),
-            split_idxs,
-            scales)
+            split_idxs, scales)
     end
 
     return MultiScaleNeuralODE{N}(model, solver, sensealg, scales, split_idxs, kwargs)
@@ -355,8 +354,7 @@ end
 @inline _fix_solution_output(::MultiScaleNeuralODE, x) = x[end]
 
 # Shared Functions
-@generated function _get_zeros_initial_condition_mdeq(::S,
-    x::AbstractArray{T, N},
+@generated function _get_zeros_initial_condition_mdeq(::S, x::AbstractArray{T, N},
     st::NamedTuple{fields}) where {S, T, N, fields}
     scales = known(S)
     sz = sum(prod.(scales))

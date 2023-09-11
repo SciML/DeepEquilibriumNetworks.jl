@@ -30,7 +30,7 @@ function (deq::AbstractDEQs)(x::AbstractArray, ps, st::NamedTuple)
 end
 
 # Utilities
-@inline _check_unrolled_mode(::Val{d}) where {d} = Val(d >= 1)
+@inline _check_unrolled_mode(::Val{d}) where {d} = Val(d ≥ 1)
 @inline _check_unrolled_mode(st::NamedTuple) = _check_unrolled_mode(st.fixed_depth)
 
 @inline _get_unrolled_depth(::Val{d}) where {d} = d

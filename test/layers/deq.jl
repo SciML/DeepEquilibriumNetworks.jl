@@ -122,12 +122,12 @@ function test_skip_deep_equilibrium_network_v2()
     return nothing
 end
 
-Test.@testset "DeepEquilibriumNetwork" begin
+@testset "DeepEquilibriumNetwork" begin
     test_deep_equilibrium_network()
 end
-Test.@testset "SkipDeepEquilibriumNetwork" begin
+@testset "SkipDeepEquilibriumNetwork" begin
     test_skip_deep_equilibrium_network()
 end
-Test.@testset "SkipRegDeepEquilibriumNetwork" begin
+@testset "SkipRegDeepEquilibriumNetwork" begin
     test_skip_deep_equilibrium_network_v2()
 end
