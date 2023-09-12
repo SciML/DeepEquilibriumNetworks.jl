@@ -36,29 +36,31 @@ end
 function (deq::AbstractDEQs)(x::AbstractArray, ps, st::NamedTuple, ::Val{false})
     T = eltype(x)
     z, st = _get_initial_condition(deq, x, ps, st)
-    st_, nfe = st.model, 0
+
+    model = Lux.Experimental.StatefulLuxLayer(deq.model, nothing, st.model)
+    nfe::Int = 0
 
     function dudt(u, p, t)
         nfe += 1
-        u_, st_ = deq.model((u, x), p, st_)
+        u_ = model((u, x), p)
         return u_ .- u
     end
 
     prob = _construct_problem(deq, dudt, z, ps)
     sol = solve(prob, deq.solver; deq.sensealg, deq.kwargs...)
 
-    z_star, st_ = deq.model((_fix_solution_output(deq, sol.u), x), ps.model, st_)
+    z_star = model((_fix_solution_output(deq, sol.u), x), ps.model)
 
     if _jacobian_regularization(deq)
         rng = Lux.replicate(st.rng)
-        jac_loss = estimate_jacobian_trace(Val(:finite_diff), deq.model, ps.model, st.model,
+        jac_loss = estimate_jacobian_trace(Val(:finite_diff), deq.model, ps.model, model.st,
             z_star, x, rng)
     else
         rng = st.rng
         jac_loss = T(0)
     end
 
-    @set! st.model = st_
+    @set! st.model = model.st
     @set! st.solution = build_solution(deq, z_star, z, x, ps, st, nfe, jac_loss)
     @set! st.rng = rng
 

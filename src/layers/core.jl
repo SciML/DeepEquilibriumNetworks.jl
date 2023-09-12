@@ -26,6 +26,7 @@ const AbstractDEQs = Union{AbstractDeepEquilibriumNetwork,
     AbstractSkipDeepEquilibriumNetwork}
 
 function (deq::AbstractDEQs)(x::AbstractArray, ps, st::NamedTuple)
+    # return deq
     return deq(x, ps, st, _check_unrolled_mode(st))
 end
 
