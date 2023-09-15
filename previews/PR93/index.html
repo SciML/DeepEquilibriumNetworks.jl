@@ -33,17 +33,18 @@ gs = Zygote.gradient(p -&gt; sum(abs2, model(x, p, st)[1][1] .- y), ps)[1]</code
   primaryClass={cs.LG}
 }</code></pre><p>For specific algorithms, check the respective documentations and cite the corresponding papers.</p><h2 id="Contributing"><a class="docs-heading-anchor" href="#Contributing">Contributing</a><a id="Contributing-1"></a><a class="docs-heading-anchor-permalink" href="#Contributing" title="Permalink"></a></h2><ul><li><p>Please refer to the <a href="https://github.com/SciML/ColPrac/blob/master/README.md">SciML ColPrac: Contributor&#39;s Guide on Collaborative Practices for Community Packages</a> for guidance on PRs, issues, and other matters relating to contributing to SciML.</p></li><li><p>See the <a href="https://github.com/SciML/SciMLStyle">SciML Style Guide</a> for common coding practices and other style decisions.</p></li><li><p>There are a few community forums:</p><ul><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.org/slack/">Julia Slack</a></li><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged">Julia Zulip</a></li><li>On the <a href="https://discourse.julialang.org">Julia Discourse forums</a></li><li>See also <a href="https://sciml.ai/community/">SciML Community page</a></li></ul></li></ul><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><details><summary>The documentation of this SciML package was built using these direct dependencies,</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl/docs/Project.toml`
   [6748aba7] DeepEquilibriumNetworks v1.3.0 `~/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl`
-  [e30172f5] Documenter v0.27.25
-  [daee34ce] DocumenterCitations v1.0.0</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.9.3
+⌅ [e30172f5] Documenter v0.27.25
+  [daee34ce] DocumenterCitations v1.0.0
+Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated`</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.9.3
 Commit bed2cd540a1 (2023-08-24 14:43 UTC)
 Build Info:
   Official https://julialang.org/ release
 Platform Info:
   OS: Linux (x86_64-linux-gnu)
-  CPU: 2 × Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz
+  CPU: 2 × Intel(R) Xeon(R) Platinum 8171M CPU @ 2.60GHz
   WORD_SIZE: 64
   LIBM: libopenlibm
-  LLVM: libLLVM-14.0.6 (ORCJIT, icelake-server)
+  LLVM: libLLVM-14.0.6 (ORCJIT, skylake-avx512)
   Threads: 1 on 2 virtual cores
 Environment:
   JULIA_DEBUG = Documenter</code></pre></details><details><summary>A more complete overview of all dependencies and their versions is also provided.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl/docs/Manifest.toml`
@@ -63,7 +64,7 @@ Environment:
   [f1be7e48] Bibliography v0.2.19
   [62783981] BitTwiddlingConvenienceFunctions v0.1.5
   [fa961155] CEnum v0.4.2
-  [2a0fbf3d] CPUSummary v0.2.3
+  [2a0fbf3d] CPUSummary v0.2.4
   [49dc2e85] Calculus v0.5.1
   [7057c7e9] Cassette v0.3.12
   [082447d4] ChainRules v1.54.0
@@ -83,7 +84,7 @@ Environment:
   [6748aba7] DeepEquilibriumNetworks v1.3.0 `~/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl`
   [244e2a9f] DefineSingletons v0.1.2
   [8bb1440f] DelimitedFiles v1.9.1
-  [2b5f629d] DiffEqBase v6.128.3
+  [2b5f629d] DiffEqBase v6.128.4
   [459566f4] DiffEqCallbacks v2.29.1
   [77a26b50] DiffEqNoiseProcess v5.18.0
   [163ba53b] DiffResults v1.1.0
@@ -91,7 +92,7 @@ Environment:
   [b4f34e82] Distances v0.10.9
   [31c24e10] Distributions v0.25.100
   [ffbed154] DocStringExtensions v0.9.3
-  [e30172f5] Documenter v0.27.25
+⌅ [e30172f5] Documenter v0.27.25
   [daee34ce] DocumenterCitations v1.0.0
   [fa6b7ba4] DualNumbers v0.6.8
   [da5c29d0] EllipsisNotation v1.7.0
@@ -146,7 +147,7 @@ Environment:
   [b2108857] Lux v0.5.5
   [bb33d45b] LuxCore v0.1.6
   [34f89e08] LuxDeviceUtils v0.1.8
-  [82251201] LuxLib v0.3.3
+  [82251201] LuxLib v0.3.4
   [d8e11817] MLStyle v0.4.17
   [f1d291b0] MLUtils v0.4.3
   [1914dd2f] MacroTools v0.5.11
@@ -184,7 +185,7 @@ Environment:
   [e6cf234a] RandomNumbers v1.5.3
   [c1ae055f] RealDot v0.1.0
   [3cdcf5f2] RecipesBase v1.3.4
-  [731186ca] RecursiveArrayTools v2.38.8
+  [731186ca] RecursiveArrayTools v2.38.10
   [f2c3362d] RecursiveFactorization v0.2.20
   [189a3867] Reexport v1.2.2
   [ae029012] Requires v1.3.0
@@ -194,7 +195,7 @@ Environment:
   [7e49a35a] RuntimeGeneratedFunctions v0.5.12
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.39
-  [0bca4576] SciMLBase v1.97.0
+  [0bca4576] SciMLBase v1.97.1
   [e9a6253c] SciMLNLSolve v0.1.8
   [c0aeaf25] SciMLOperators v0.3.6
   [1ed8b502] SciMLSensitivity v7.38.0
@@ -299,4 +300,4 @@ Environment:
   [3f19e933] p7zip_jll v17.4.0+0
 Info Packages marked with ⌃ and ⌅ have new versions available, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`</code></pre></details>You can also download the 
 <a href="https://github.com/SciML/DeepEquilibriumNetworks.jl/tree/gh-pages/v1.3.0/assets/Manifest.toml">manifest</a> file and the
-<a href="https://github.com/SciML/DeepEquilibriumNetworks.jl/tree/gh-pages/v1.3.0/assets/Project.toml">project</a> file.</article><nav class="docs-footer"><a class="docs-footer-nextpage" href="manual/solvers/">Dynamical Systems »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Tuesday 12 September 2023 17:46">Tuesday 12 September 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+<a href="https://github.com/SciML/DeepEquilibriumNetworks.jl/tree/gh-pages/v1.3.0/assets/Project.toml">project</a> file.</article><nav class="docs-footer"><a class="docs-footer-nextpage" href="manual/solvers/">Dynamical Systems »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Friday 15 September 2023 22:41">Friday 15 September 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
