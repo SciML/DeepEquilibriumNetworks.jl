@@ -347,7 +347,7 @@ function _get_initial_condition(deq::MultiScaleNeuralODE, x, ps, st)
     return _get_zeros_initial_condition_mdeq(deq.scales, x, st)
 end
 
-@inline function _construct_problem(::MultiScaleNeuralODE, dudt, z, ps)
+@inline function _construct_problem(::MultiScaleNeuralODE, dudt, z, ps, x)
     return ODEProblem(ODEFunction{false}(dudt), z, (0.0f0, 1.0f0), ps.model)
 end
 

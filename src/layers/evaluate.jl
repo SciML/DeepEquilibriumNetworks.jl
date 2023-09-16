@@ -13,8 +13,9 @@ end
 
 @inline _postprocess_output(_, z_star) = z_star
 
-@inline function _construct_problem(::AbstractDEQs, dudt, z, ps)
-    return SteadyStateProblem(ODEFunction{false}(dudt), z, ps.model)
+@inline function _construct_problem(::AbstractDEQs, dudt, z, ps, x)
+    return SteadyStateProblem(ODEFunction{false}(dudt), z,
+        NamedTuple{(:ps, :x)}((ps.model, x)))
 end
 
 @inline _fix_solution_output(_, x) = x
@@ -42,14 +43,12 @@ function (deq::AbstractDEQs)(x::AbstractArray, ps, st::NamedTuple, ::Val{false})
 
     function dudt(u, p, t)
         nfe += 1
-        u_ = model((u, x), p)
-        return u_ .- u
+        return model((u, p.x), p.ps) .- u
     end
 
-    prob = _construct_problem(deq, dudt, z, ps)
+    prob = _construct_problem(deq, dudt, z, ps, x)
     sol = solve(prob, deq.solver; deq.sensealg, deq.kwargs...)
-
-    z_star = model((_fix_solution_output(deq, sol.u), x), ps.model)
+    z_star = sol.u
 
     if _jacobian_regularization(deq)
         rng = Lux.replicate(st.rng)

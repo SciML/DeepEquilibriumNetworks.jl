@@ -37,7 +37,11 @@ function CRC.rrule(::typeof(Setfield.set), obj, l::Setfield.PropertyLens{field},
     return res, setfield_pullback
 end
 
-# Honestly no clue why this is needed! -- probably a whacky fix which shouldn't be ever
-# needed.
-ZygoteRules.gradtuple1(::NamedTuple{()}) = (nothing, nothing, nothing, nothing, nothing)
-ZygoteRules.gradtuple1(x::NamedTuple) = collect(values(x))
+function CRC.rrule(::typeof(_construct_problem), deq::AbstractDEQs, dudt, z, ps, x)
+    prob = _construct_problem(deq, dudt, z, ps, x)
+    function ∇_construct_problem(Δ)
+        return (CRC.NoTangent(), CRC.NoTangent(), CRC.NoTangent(), Δ.u0,
+            (; model = Δ.p.ps), Δ.p.x)
+    end
+    return prob, ∇_construct_problem
+end
