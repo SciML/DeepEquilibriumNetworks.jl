@@ -80,8 +80,9 @@ end
 
 @truncate_stacktrace EquilibriumSolution 1 2
 
-function DiffEqBase.__solve(prob::AbstractSteadyStateProblem, alg::AbstractDEQSolver,
+function SciMLBase.__solve(prob::AbstractSteadyStateProblem, alg::AbstractDEQSolver,
     args...; kwargs...)
+    # FIXME: Remove this handle
     sol = solve(prob, alg.alg, args...; kwargs...)
 
     u, du, retcode = sol.u, sol.resid, sol.retcode

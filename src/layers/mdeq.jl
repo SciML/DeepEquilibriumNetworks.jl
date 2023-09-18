@@ -17,7 +17,7 @@ end
         u, x = z
         u_ = split_and_reshape(u, m.split_idxs, m.scales)
         u_res, st = m.model(($(inputs...),), ps, st)
-        return vcat(flatten.(u_res)...), st
+        return mapreduce(flatten, vcat, u_res), st
     end
 end
 
@@ -80,6 +80,10 @@ See also: [`DeepEquilibriumNetwork`](@ref), [`SkipDeepEquilibriumNetwork`](@ref)
     kwargs
 end
 
+function MultiScaleDeepEquilibriumNetwork(model::MultiScaleInputLayer{N}, args...) where {N}
+    return MultiScaleDeepEquilibriumNetwork{N}(model, args...)
+end
+
 @truncate_stacktrace MultiScaleDeepEquilibriumNetwork 1 3
 
 function Lux.initialstates(rng::AbstractRNG, deq::MultiScaleDeepEquilibriumNetwork)
@@ -104,7 +108,7 @@ function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Ma
             split_idxs, scales)
     end
 
-    return MultiScaleDeepEquilibriumNetwork{N}(model, solver, sensealg, scales, split_idxs,
+    return MultiScaleDeepEquilibriumNetwork(model, solver, sensealg, scales, split_idxs,
         kwargs)
 end
 
@@ -205,6 +209,11 @@ See also: [`DeepEquilibriumNetwork`](@ref), [`SkipDeepEquilibriumNetwork`](@ref)
     kwargs
 end
 
+function MultiScaleSkipDeepEquilibriumNetwork(model::MultiScaleInputLayer{N},
+    args...) where {N}
+    return MultiScaleSkipDeepEquilibriumNetwork{N}(model, args...)
+end
+
 @truncate_stacktrace MultiScaleSkipDeepEquilibriumNetwork 1 3 4
 
 function Lux.initialstates(rng::AbstractRNG, deq::MultiScaleSkipDeepEquilibriumNetwork)
@@ -231,7 +240,7 @@ function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers
             split_idxs, scales)
     end
 
-    return MultiScaleSkipDeepEquilibriumNetwork{N}(model, shortcut, solver, sensealg,
+    return MultiScaleSkipDeepEquilibriumNetwork(model, shortcut, solver, sensealg,
         scales, split_idxs, kwargs)
 end
 
