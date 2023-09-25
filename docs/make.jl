@@ -11,10 +11,13 @@ makedocs(;
     sitename="Fast Deep Equilibrium Networks",
     authors="Avik Pal et al.",
     modules=[DeepEquilibriumNetworks],
-    clean=true, doctest=false, linkcheck = true,
-    format=Documenter.HTML(;assets=["assets/favicon.ico"],
+    clean=true,
+    doctest=false,
+    linkcheck=true,
+    format=Documenter.HTML(;
+        assets=["assets/favicon.ico"],
         canonical="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/"),
-    plugins = [bib],
+    plugins=[bib],
     pages)
 
 deploydocs(; repo="github.com/SciML/DeepEquilibriumNetworks.jl.git", push_preview=true)
