@@ -1,5 +1,4 @@
-using ComponentArrays, DeepEquilibriumNetworks, Lux, OrdinaryDiffEq, SciMLSensitivity,
-    SimpleNonlinearSolve, Statistics, Zygote
+using DeepEquilibriumNetworks, Statistics, Zygote
 using Test
 
 include("test_utils.jl")
@@ -29,8 +28,7 @@ end
 
 function DEFAULT_DEQ_SOLVERS()
     termination_condition = NLSolveTerminationCondition(NLSolveTerminationMode.RelSafe;
-        abstol=0.01f0,
-        reltol=0.01f0)
+        abstol=0.01f0, reltol=0.01f0)
 
     return (ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0),
         DiscreteDEQSolver(LBroyden(; batched=true, termination_condition)))
@@ -47,20 +45,19 @@ function test_deep_equilibrium_network_adjoint()
             solver; sensealg, jacobian_regularization, verbose=false, save_everystep=true)
 
         ps, st = Lux.setup(rng, model)
-        ps = ComponentArray(ps)
         x = randn(rng, Float32, 2, 1)
 
-        gs = Zygote.gradient((x, ps) -> loss_function(model, x, ps, st), x, ps)
+        gs = Zygote.gradient(loss_function, model, x, ps, st)
 
-        @test is_finite_gradient(gs[1])
         @test is_finite_gradient(gs[2])
+        @test is_finite_gradient(gs[3])
 
         st = Lux.update_state(st, :fixed_depth, Val(10))
 
-        gs = Zygote.gradient((x, ps) -> loss_function(model, x, ps, st), x, ps)
+        gs = Zygote.gradient(loss_function, model, x, ps, st)
 
-        @test is_finite_gradient(gs[1])
         @test is_finite_gradient(gs[2])
+        @test is_finite_gradient(gs[3])
     end
 
     return nothing
@@ -78,20 +75,19 @@ function test_skip_deep_equilibrium_network_adjoint()
             solver; sensealg, jacobian_regularization, verbose=false, save_everystep=true)
 
         ps, st = Lux.setup(rng, model)
-        ps = ComponentArray(ps)
         x = randn(rng, Float32, 2, 1)
 
-        gs = Zygote.gradient((x, ps) -> loss_function(model, x, ps, st), x, ps)
+        gs = Zygote.gradient(loss_function, model, x, ps, st)
 
-        @test is_finite_gradient(gs[1])
         @test is_finite_gradient(gs[2])
+        @test is_finite_gradient(gs[3])
 
         st = Lux.update_state(st, :fixed_depth, Val(10))
 
-        gs = Zygote.gradient((x, ps) -> loss_function(model, x, ps, st), x, ps)
+        gs = Zygote.gradient(loss_function, model, x, ps, st)
 
-        @test is_finite_gradient(gs[1])
         @test is_finite_gradient(gs[2])
+        @test is_finite_gradient(gs[3])
     end
 
     return nothing
@@ -109,20 +105,19 @@ function test_skip_reg_deep_equilibrium_network_adjoint()
             save_everystep=true)
 
         ps, st = Lux.setup(rng, model)
-        ps = ComponentArray(ps)
         x = randn(rng, Float32, 2, 1)
 
-        gs = Zygote.gradient((x, ps) -> loss_function(model, x, ps, st), x, ps)
+        gs = Zygote.gradient(loss_function, model, x, ps, st)
 
-        @test is_finite_gradient(gs[1])
         @test is_finite_gradient(gs[2])
+        @test is_finite_gradient(gs[3])
 
         st = Lux.update_state(st, :fixed_depth, Val(10))
 
-        gs = Zygote.gradient((x, ps) -> loss_function(model, x, ps, st), x, ps)
+        gs = Zygote.gradient(loss_function, model, x, ps, st)
 
-        @test is_finite_gradient(gs[1])
         @test is_finite_gradient(gs[2])
+        @test is_finite_gradient(gs[3])
     end
 
     return nothing
@@ -148,21 +143,19 @@ function test_multiscale_deep_equilibrium_network_adjoint()
             solver, scales; sensealg, verbose=false, save_everystep=true)
 
         ps, st = Lux.setup(rng, model)
-        ps = ComponentArray(ps)
-
         x = randn(rng, Float32, 4, 1)
 
-        gs = Zygote.gradient((x, ps) -> loss_function(model, x, ps, st), x, ps)
+        gs = Zygote.gradient(loss_function, model, x, ps, st)
 
-        @test is_finite_gradient(gs[1])
         @test is_finite_gradient(gs[2])
+        @test is_finite_gradient(gs[3])
 
         st = Lux.update_state(st, :fixed_depth, Val(10))
 
-        gs = Zygote.gradient((x, ps) -> loss_function(model, x, ps, st), x, ps)
+        gs = Zygote.gradient(loss_function, model, x, ps, st)
 
-        @test is_finite_gradient(gs[1])
         @test is_finite_gradient(gs[2])
+        @test is_finite_gradient(gs[3])
     end
 
     return nothing
@@ -193,21 +186,19 @@ function test_multiscale_skip_deep_equilibrium_network_adjoint()
             shortcut_layers, solver, scales; sensealg, verbose=false, save_everystep=true)
 
         ps, st = Lux.setup(rng, model)
-        ps = ComponentArray(ps)
-
         x = randn(rng, Float32, 4, 1)
 
-        gs = Zygote.gradient((x, ps) -> loss_function(model, x, ps, st), x, ps)
+        gs = Zygote.gradient(loss_function, model, x, ps, st)
 
-        @test is_finite_gradient(gs[1])
         @test is_finite_gradient(gs[2])
+        @test is_finite_gradient(gs[3])
 
         st = Lux.update_state(st, :fixed_depth, Val(10))
 
-        gs = Zygote.gradient((x, ps) -> loss_function(model, x, ps, st), x, ps)
+        gs = Zygote.gradient(loss_function, model, x, ps, st)
 
-        @test is_finite_gradient(gs[1])
         @test is_finite_gradient(gs[2])
+        @test is_finite_gradient(gs[3])
     end
 
     return nothing
@@ -233,21 +224,19 @@ function test_multiscale_skip_reg_deep_equilibrium_network_adjoint()
             nothing, solver, scales; sensealg, verbose=false, save_everystep=true)
 
         ps, st = Lux.setup(rng, model)
-        ps = ComponentArray(ps)
-
         x = randn(rng, Float32, 4, 1)
 
-        gs = Zygote.gradient((x, ps) -> loss_function(model, x, ps, st), x, ps)
+        gs = Zygote.gradient(loss_function, model, x, ps, st)
 
-        @test is_finite_gradient(gs[1])
         @test is_finite_gradient(gs[2])
+        @test is_finite_gradient(gs[3])
 
         st = Lux.update_state(st, :fixed_depth, Val(10))
 
-        gs = Zygote.gradient((x, ps) -> loss_function(model, x, ps, st), x, ps)
+        gs = Zygote.gradient(loss_function, model, x, ps, st)
 
-        @test is_finite_gradient(gs[1])
         @test is_finite_gradient(gs[2])
+        @test is_finite_gradient(gs[3])
     end
 
     return nothing
@@ -273,21 +262,19 @@ function test_multiscale_neural_ode_adjoint()
         abstol=0.01f0, reltol=0.01f0)
 
     ps, st = Lux.setup(rng, model)
-    ps = ComponentArray(ps)
-
     x = randn(rng, Float32, 4, 1)
 
-    gs = Zygote.gradient((x, ps) -> loss_function(model, x, ps, st), x, ps)
+    gs = Zygote.gradient(loss_function, model, x, ps, st)
 
-    @test is_finite_gradient(gs[1])
     @test is_finite_gradient(gs[2])
+    @test is_finite_gradient(gs[3])
 
     st = Lux.update_state(st, :fixed_depth, Val(10))
 
-    gs = Zygote.gradient((x, ps) -> loss_function(model, x, ps, st), x, ps)
+    gs = Zygote.gradient(loss_function, model, x, ps, st)
 
-    @test is_finite_gradient(gs[1])
     @test is_finite_gradient(gs[2])
+    @test is_finite_gradient(gs[3])
 
     return nothing
 end

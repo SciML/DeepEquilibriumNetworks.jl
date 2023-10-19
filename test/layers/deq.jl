@@ -1,4 +1,4 @@
-using DeepEquilibriumNetworks, DiffEqBase, Lux, OrdinaryDiffEq, SimpleNonlinearSolve
+using DeepEquilibriumNetworks, DiffEqBase
 using Test
 
 include("../test_utils.jl")

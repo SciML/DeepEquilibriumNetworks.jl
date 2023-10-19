@@ -282,8 +282,7 @@ end
 """
     MultiScaleNeuralODE(main_layers::Tuple, mapping_layers::Matrix,
                         post_fuse_layer::Union{Nothing,Tuple}, solver, scales;
-                        sensealg=InterpolatingAdjoint(; autojacvec=ZygoteVJP()),
-                        kwargs...)
+                        sensealg=GaussAdjoint(; autojacvec=ZygoteVJP()), kwargs...)
 
 Multiscale Neural ODE with Input Injection.
 
@@ -334,7 +333,7 @@ See also: [`DeepEquilibriumNetwork`](@ref), [`SkipDeepEquilibriumNetwork`](@ref)
 """
 function MultiScaleNeuralODE(main_layers::Tuple, mapping_layers::Matrix,
     post_fuse_layer::Union{Nothing, Tuple}, solver, scales::NTuple{N, NTuple{L, Int64}};
-    sensealg=InterpolatingAdjoint(; autojacvec=ZygoteVJP()), kwargs...) where {N, L}
+    sensealg=GaussAdjoint(; autojacvec=ZygoteVJP()), kwargs...) where {N, L}
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
 
@@ -357,7 +356,7 @@ function _get_initial_condition(deq::MultiScaleNeuralODE, x, ps, st)
 end
 
 @inline function _construct_problem(::MultiScaleNeuralODE, dudt, z, ps, x)
-    return ODEProblem(ODEFunction{false}(dudt), z, (0.0f0, 1.0f0), ps.model)
+    return ODEProblem(ODEFunction{false}(dudt), z, (0.0f0, 1.0f0), (; ps=ps.model, x))
 end
 
 @inline _fix_solution_output(::MultiScaleNeuralODE, x) = x[end]

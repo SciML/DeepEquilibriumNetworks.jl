@@ -18,11 +18,7 @@ function test_get_unrolled_depth()
 end
 
 function test_deep_equilibrium_solution()
-    sol = @test_nowarn DEQs.DeepEquilibriumSolution(randn(10),
-        randn(10),
-        randn(10),
-        0.4,
-        10)
+    sol = @test_nowarn DeepEquilibriumSolution(randn(10), randn(10), randn(10), 0.4, 10)
     @test_nowarn println(sol)
     return nothing
 end

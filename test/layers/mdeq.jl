@@ -1,4 +1,4 @@
-using ComponentArrays, DeepEquilibriumNetworks, Lux, OrdinaryDiffEq, SimpleNonlinearSolve
+using ComponentArrays, DeepEquilibriumNetworks
 using Test
 
 include("../test_utils.jl")

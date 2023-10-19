@@ -14,8 +14,7 @@ end
 @inline _postprocess_output(_, z_star) = z_star
 
 @inline function _construct_problem(::AbstractDEQs, dudt, z, ps, x)
-    return SteadyStateProblem(ODEFunction{false}(dudt), z,
-        NamedTuple{(:ps, :x)}((ps.model, x)))
+    return SteadyStateProblem(ODEFunction{false}(dudt), z, (; ps=ps.model, x))
 end
 
 @inline _fix_solution_output(_, x) = x
@@ -48,7 +47,9 @@ function (deq::AbstractDEQs)(x::AbstractArray, ps, st::NamedTuple, ::Val{false})
 
     prob = _construct_problem(deq, dudt, z, ps, x)
     sol = solve(prob, deq.solver; deq.sensealg, deq.kwargs...)
-    z_star = sol.u
+    _z_star = sol.u
+    # Handle Neural ODEs
+    z_star = _z_star isa Vector{<:AbstractArray} ? last(_z_star) : _z_star
 
     if _jacobian_regularization(deq)
         rng = Lux.replicate(st.rng)

@@ -24,30 +24,31 @@ Pkg.add("DeepEquilibriumNetworks")
 ## Quickstart
 
 ```julia
-import DeepEquilibriumNetworks as DEQs
-import Lux
-import Random
-import Zygote
+using DeepEquilibriumNetworks, Lux, Random, Zygote
+# using LuxCUDA, LuxAMDGPU ## Install and Load for GPU Support
 
 seed = 0
 rng = Random.default_rng()
 Random.seed!(rng, seed)
 
-model = Lux.Chain(Lux.Dense(2, 2),
-    DEQs.DeepEquilibriumNetwork(Lux.Parallel(+,
-            Lux.Dense(2, 2; use_bias=false),
-            Lux.Dense(2, 2; use_bias=false)),
-        DEQs.ContinuousDEQSolver(;
-            abstol=0.1f0,
-            reltol=0.1f0,
-            abstol_termination=0.1f0,
-            reltol_termination=0.1f0)))
+model = Chain(Dense(2 => 2),
+    DeepEquilibriumNetwork(Parallel(+,
+            Dense(2 => 2; use_bias=false),
+            Dense(2 => 2; use_bias=false)),
+        ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0,
+            reltol_termination=0.1f0);
+        save_everystep=true))
 
-ps, st = gpu.(Lux.setup(rng, model))
-x = gpu(rand(rng, Float32, 2, 1))
-y = gpu(rand(rng, Float32, 2, 1))
+gdev = gpu_device()
+cdev = cpu_device()
 
-gs = Zygote.gradient(p -> sum(abs2, model(x, p, st)[1][1] .- y), ps)[1]
+ps, st = Lux.setup(rng, model) |> gdev
+x = rand(rng, Float32, 2, 1) |> gdev
+y = rand(rng, Float32, 2, 1) |> gdev
+
+model(x, ps, st)
+
+gs = only(Zygote.gradient(p -> sum(abs2, first(first(model(x, p, st))) .- y), ps))
 ```
 
 ## Citation

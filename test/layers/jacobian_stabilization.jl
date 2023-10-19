@@ -1,4 +1,4 @@
-using DeepEquilibriumNetworks, Lux, NNlib, Random, Statistics, Zygote
+using DeepEquilibriumNetworks, Random, Statistics, Zygote
 using Test
 
 include("../test_utils.jl")

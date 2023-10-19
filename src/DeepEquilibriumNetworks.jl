@@ -16,6 +16,7 @@ import ChainRulesCore as CRC
 import ConcreteStructs: @concrete
 
 const DEQs = DeepEquilibriumNetworks
+const ∂∅ = CRC.NoTangent()
 
 ## FIXME: Uses of nothing was removed in Lux 0.5 with a deprecation. It was not updated
 ##        here
@@ -32,6 +33,13 @@ include("layers/mdeq.jl")
 include("layers/evaluate.jl")
 
 include("chainrules.jl")
+
+# Start of Weird Patches
+# Honestly no clue why this is needed! -- probably a whacky fix which shouldn't be ever
+# needed.
+ZygoteRules.gradtuple1(::NamedTuple{()}) = (nothing, nothing, nothing, nothing, nothing)
+ZygoteRules.gradtuple1(x::NamedTuple) = collect(values(x))
+# End of Weird Patches
 
 # Useful Shorthand
 export DEQs
