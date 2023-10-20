@@ -4,8 +4,9 @@ import Reexport: @reexport
 
 @reexport using Lux, NonlinearSolve, OrdinaryDiffEq, SciMLSensitivity
 
-using DiffEqBase, LinearAlgebra, LinearSolve, MLUtils, Random, SciMLBase,
-    Setfield, Statistics, SteadyStateDiffEq, Zygote
+using DiffEqBase,
+    LinearAlgebra, LinearSolve, Random, SciMLBase, Statistics,
+    SteadyStateDiffEq, Zygote
 
 import DiffEqBase: AbstractSteadyStateProblem
 import SciMLBase: AbstractNonlinearSolution, AbstractSteadyStateAlgorithm
@@ -33,14 +34,6 @@ include("layers/mdeq.jl")
 include("layers/evaluate.jl")
 
 include("chainrules.jl")
-
-# Start of Weird Patches
-# Honestly no clue why this is needed! -- probably a whacky fix which shouldn't be ever
-# needed.
-using ZygoteRules
-ZygoteRules.gradtuple1(::NamedTuple{()}) = (nothing, nothing, nothing, nothing, nothing)
-ZygoteRules.gradtuple1(x::NamedTuple) = collect(values(x))
-# End of Weird Patches
 
 # Useful Shorthand
 export DEQs

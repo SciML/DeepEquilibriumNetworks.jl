@@ -122,12 +122,10 @@ _jacobian_regularization(::SkipDeepEquilibriumNetwork{J}) where {J} = J
 function _get_initial_condition(deq::SkipDeepEquilibriumNetwork{J, M, Nothing}, x, ps,
     st) where {J, M}
     z, st_ = deq.model((zero(x), x), ps.model, st.model)
-    @set! st.model = st_
-    return z, st
+    return z, merge(st, (; model=st_))
 end
 
 function _get_initial_condition(deq::SkipDeepEquilibriumNetwork, x, ps, st)
     z, st_ = deq.shortcut(x, ps.shortcut, st.shortcut)
-    @set! st.shortcut = st_
-    return z, st
+    return z, merge(st, (; shortcut=st_))
 end

@@ -250,15 +250,13 @@ function _get_initial_condition(deq::MultiScaleSkipDeepEquilibriumNetwork{N, M, 
     x, ps, st) where {N, M}
     u0, st = _get_zeros_initial_condition_mdeq(deq.scales, x, st)
     z, st_ = deq.model((u0, x), ps.model, st.model)
-    @set! st.model = st_
-    return z, st
+    return z, merge(st, (; model=st_))
 end
 
 function _get_initial_condition(deq::MultiScaleSkipDeepEquilibriumNetwork, x, ps, st)
     z0, st_ = deq.shortcut(x, ps.shortcut, st.shortcut)
     z = mapreduce(flatten, vcat, z0)
-    @set! st.shortcut = st_
-    return z, st
+    return z, merge(st, (; shortcut=st_))
 end
 
 @concrete struct MultiScaleNeuralODE{N} <: AbstractDeepEquilibriumNetwork

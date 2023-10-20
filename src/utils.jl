@@ -37,3 +37,7 @@ DEQs.split_and_reshape(x, split_idxs, shapes)
     push!(calls, :(return tuple($(varnames...))))
     return Expr(:block, calls...)
 end
+
+@inline flatten(x::AbstractVector) = reshape(x, length(x), 1)
+@inline flatten(x::AbstractMatrix) = x
+@inline flatten(x::AbstractArray) = reshape(x, :, size(x, ndims(x)))

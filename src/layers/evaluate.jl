@@ -27,10 +27,10 @@ function (deq::AbstractDEQs)(x::AbstractArray{T}, ps, st::NamedTuple, ::Val{true
     z_star, st_ = _evaluate_unrolled_model(deq, deq.model, z, x, ps.model, st.model,
         st.fixed_depth)
 
-    @set! st.model = st_
-    @set! st.solution = build_solution(deq, z_star, z, x, ps, st, depth, T(0))
+    st__ = merge(st,
+        (; model=st_, solution=build_solution(deq, z_star, z, x, ps, st, depth, T(0))))
 
-    return _postprocess_output(deq, z_star), st
+    return _postprocess_output(deq, z_star), st__
 end
 
 function (deq::AbstractDEQs)(x::AbstractArray, ps, st::NamedTuple, ::Val{false})
@@ -60,9 +60,9 @@ function (deq::AbstractDEQs)(x::AbstractArray, ps, st::NamedTuple, ::Val{false})
         jac_loss = T(0)
     end
 
-    @set! st.model = model.st
-    @set! st.solution = build_solution(deq, z_star, z, x, ps, st, nfe, jac_loss)
-    @set! st.rng = rng
+    st_ = merge(st,
+        (; model=model.st, rng,
+            solution=build_solution(deq, z_star, z, x, ps, st, nfe, jac_loss)))
 
-    return _postprocess_output(deq, z_star), st
+    return _postprocess_output(deq, z_star), st_
 end
