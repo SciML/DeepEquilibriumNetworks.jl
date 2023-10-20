@@ -276,7 +276,7 @@ deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
 [[deps.DeepEquilibriumNetworks]]
-deps = ["ChainRulesCore", "ConcreteStructs", "DiffEqBase", "LinearAlgebra", "LinearSolve", "Lux", "MLUtils", "NonlinearSolve", "OrdinaryDiffEq", "Random", "Reexport", "SciMLBase", "SciMLSensitivity", "Setfield", "Static", "Statistics", "SteadyStateDiffEq", "TruncatedStacktraces", "Zygote", "ZygoteRules"]
+deps = ["ChainRulesCore", "ConcreteStructs", "DiffEqBase", "LinearAlgebra", "LinearSolve", "Lux", "MLUtils", "NonlinearSolve", "OrdinaryDiffEq", "Random", "Reexport", "SciMLBase", "SciMLSensitivity", "Setfield", "Statistics", "SteadyStateDiffEq", "TruncatedStacktraces", "Zygote", "ZygoteRules"]
 path = "/home/runner/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl"
 uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 version = "1.4.0"
@@ -1307,9 +1307,9 @@ version = "0.6.39"
 
 [[deps.SciMLBase]]
 deps = ["ADTypes", "ArrayInterface", "ChainRulesCore", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "EnumX", "FillArrays", "FunctionWrappersWrappers", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "Markdown", "PrecompileTools", "Preferences", "RecipesBase", "RecursiveArrayTools", "Reexport", "RuntimeGeneratedFunctions", "SciMLOperators", "StaticArraysCore", "Statistics", "SymbolicIndexingInterface", "Tables", "TruncatedStacktraces", "ZygoteRules"]
-git-tree-sha1 = "6134c8970f82f23c43d3580d79c3e47acf232083"
+git-tree-sha1 = "9c4f861661e72d9257834d8e517d4511e91ca43b"
 uuid = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-version = "2.4.1"
+version = "2.4.2"
 
     [deps.SciMLBase.extensions]
     SciMLBasePyCallExt = "PyCall"
