@@ -1,4 +1,4 @@
-using DeepEquilibriumNetworks, LinearAlgebra, Static
+using DeepEquilibriumNetworks, LinearAlgebra
 using Test
 
 include("test_utils.jl")
@@ -9,8 +9,8 @@ function test_split_and_reshape()
     x3 = zeros(Float32, 1, 4)
 
     x = vcat(x1, x2, x3)
-    split_idxs = static(cumsum((0, size(x1, 1), size(x2, 1), size(x3, 1))))
-    shapes = static((size(x1, 1), size(x2, 1), size(x3, 1)))
+    split_idxs = Val(cumsum((0, size(x1, 1), size(x2, 1), size(x3, 1))))
+    shapes = Val((size(x1, 1), size(x2, 1), size(x3, 1)))
     x_split = DEQs.split_and_reshape(x, split_idxs, shapes)
 
     @test x1 == x_split[1]
@@ -23,17 +23,6 @@ function test_split_and_reshape()
     return nothing
 end
 
-function test_init_identity_matrix()
-    x = zeros(Float32, 5, 5, 2)
-    imat = DEQs.init_identity_matrix(x, 0.5f0)
-
-    @test all(diag(imat) .== 0.5f0)
-    return nothing
-end
-
 @testset "split_and_reshape" begin
     test_split_and_reshape()
-end
-@testset "init identity matrix" begin
-    test_init_identity_matrix()
 end

@@ -1,3 +1,4 @@
+# TODO: Migrate to LuxTestUtils.jl
 using DeepEquilibriumNetworks, Functors, Lux, Random
 
 global test_call(args...; kwargs...) = nothing
@@ -12,7 +13,7 @@ catch
 end
 
 function get_prng(seed::Int)
-    @static if VERSION >= v"1.7"
+    @static if VERSION ≥ v"1.7"
         rng = Xoshiro()
         Random.seed!(rng, seed)
         return rng
@@ -38,7 +39,7 @@ function is_finite_gradient(gs::NamedTuple)
 end
 
 function run_JET_tests(f, args...; call_broken=false, opt_broken=false, kwargs...)
-    @static if VERSION >= v"1.7"
+    @static if VERSION ≥ v"1.7"
         test_call(f, typeof.(args); broken=call_broken, target_modules=(DEQs,))
         test_opt(f, typeof.(args); broken=opt_broken, target_modules=(DEQs,))
     end

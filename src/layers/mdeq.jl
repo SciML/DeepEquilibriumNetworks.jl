@@ -1,21 +1,14 @@
-struct MultiScaleInputLayer{N, M <: Lux.AbstractExplicitLayer, Sp, Sc} <:
-       Lux.AbstractExplicitContainerLayer{(:model,)}
+@concrete struct MultiScaleInputLayer{N, M <: Lux.AbstractExplicitLayer} <:
+                 Lux.AbstractExplicitContainerLayer{(:model,)}
     model::M
-    split_idxs::Sp
-    scales::Sc
+    split_idxs
+    scales
 end
 
 @truncate_stacktrace MultiScaleInputLayer 1 2
 
-function MultiScaleInputLayer(model, split_idxs, scales)
-    return MultiScaleInputLayer{
-        length(scales),
-        typeof(model),
-        typeof(split_idxs),
-        typeof(scales),
-    }(model,
-        split_idxs,
-        scales)
+function MultiScaleInputLayer(model, split_idxs, scales::Val{S}) where {S}
+    return MultiScaleInputLayer{length(S)}(model, split_idxs, scales)
 end
 
 @generated function (m::MultiScaleInputLayer{N})(z, ps, st) where {N}
@@ -24,7 +17,7 @@ end
         u, x = z
         u_ = split_and_reshape(u, m.split_idxs, m.scales)
         u_res, st = m.model(($(inputs...),), ps, st)
-        return vcat(flatten.(u_res)...), st
+        return mapreduce(flatten, vcat, u_res), st
     end
 end
 
@@ -66,12 +59,8 @@ mapping_layers = [NoOpLayer() Dense(4, 3, tanh) Dense(4, 2, tanh) Dense(4, 1, ta
 
 solver = ContinuousDEQSolver(VCABM3(); abstol=0.01f0, reltol=0.01f0)
 
-model = MultiScaleDeepEquilibriumNetwork(main_layers,
-    mapping_layers,
-    nothing,
-    solver,
-    ((4,), (3,), (2,), (1,));
-    save_everystep=true)
+model = MultiScaleDeepEquilibriumNetwork(main_layers, mapping_layers, nothing,
+    solver, ((4,), (3,), (2,), (1,)); save_everystep=true)
 
 rng = Random.default_rng()
 ps, st = Lux.setup(rng, model)
@@ -82,14 +71,17 @@ model(x, ps, st)
 
 See also: [`DeepEquilibriumNetwork`](@ref), [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleSkipDeepEquilibriumNetwork`](@ref)
 """
-struct MultiScaleDeepEquilibriumNetwork{N, Sc, M, A, S, Sp, K} <:
-       AbstractDeepEquilibriumNetwork
-    model::M
-    solver::A
-    sensealg::S
-    scales::Sc
-    split_idxs::Sp
-    kwargs::K
+@concrete struct MultiScaleDeepEquilibriumNetwork{N} <: AbstractDeepEquilibriumNetwork
+    model
+    solver
+    sensealg
+    scales
+    split_idxs
+    kwargs
+end
+
+function MultiScaleDeepEquilibriumNetwork(model::MultiScaleInputLayer{N}, args...) where {N}
+    return MultiScaleDeepEquilibriumNetwork{N}(model, args...)
 end
 
 @truncate_stacktrace MultiScaleDeepEquilibriumNetwork 1 3
@@ -97,47 +89,26 @@ end
 function Lux.initialstates(rng::AbstractRNG, deq::MultiScaleDeepEquilibriumNetwork)
     rng = Lux.replicate(rng)
     randn(rng, 1)
-    return (;
-        model=Lux.initialstates(rng, deq.model),
-        fixed_depth=Val(0),
-        initial_condition=zeros(Float32, 1, 1),
-        solution=nothing,
-        rng)
+    return (; model=Lux.initialstates(rng, deq.model), fixed_depth=Val(0),
+        initial_condition=zeros(Float32, 1, 1), solution=nothing, rng)
 end
 
-function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple,
-    mapping_layers::Matrix,
-    post_fuse_layer::Union{Nothing, Tuple},
-    solver,
-    scales::NTuple{N, NTuple{L, Int64}};
-    sensealg=SteadyStateAdjoint(),
-    kwargs...) where {N, L}
+function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
+    post_fuse_layer::Union{Nothing, Tuple}, solver, scales::NTuple{N, NTuple{L, Int64}};
+    sensealg=SteadyStateAdjoint(), kwargs...) where {N, L}
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
 
-    scales = static(scales)
-    split_idxs = static(Tuple(vcat(0, cumsum(prod.(scales))...)))
+    scales = Val(scales)
+    split_idxs = Val(Tuple(vcat(0, cumsum(prod.(SciMLBase._unwrap_val(scales)))...)))
     if post_fuse_layer === nothing
         model = MultiScaleInputLayer(Chain(l1, l2), split_idxs, scales)
     else
         model = MultiScaleInputLayer(Chain(l1, l2, Parallel(nothing, post_fuse_layer...)),
-            split_idxs,
-            scales)
+            split_idxs, scales)
     end
 
-    _types = (N,
-        typeof(scales),
-        typeof(model),
-        typeof(solver),
-        typeof(sensealg),
-        typeof(split_idxs),
-        typeof(kwargs))
-
-    return MultiScaleDeepEquilibriumNetwork{_types...}(model,
-        solver,
-        sensealg,
-        scales,
-        split_idxs,
+    return MultiScaleDeepEquilibriumNetwork(model, solver, sensealg, scales, split_idxs,
         kwargs)
 end
 
@@ -227,15 +198,20 @@ model(x, ps, st)
 See also: [`DeepEquilibriumNetwork`](@ref), [`SkipDeepEquilibriumNetwork`](@ref),
 [`MultiScaleDeepEquilibriumNetwork`](@ref)
 """
-struct MultiScaleSkipDeepEquilibriumNetwork{N, Sc, M, Sh, A, S, Sp, K} <:
-       AbstractSkipDeepEquilibriumNetwork
-    model::M
-    shortcut::Sh
-    solver::A
-    sensealg::S
-    scales::Sc
-    split_idxs::Sp
-    kwargs::K
+@concrete struct MultiScaleSkipDeepEquilibriumNetwork{N} <:
+                 AbstractSkipDeepEquilibriumNetwork
+    model
+    shortcut
+    solver
+    sensealg
+    scales
+    split_idxs
+    kwargs
+end
+
+function MultiScaleSkipDeepEquilibriumNetwork(model::MultiScaleInputLayer{N},
+    args...) where {N}
+    return MultiScaleSkipDeepEquilibriumNetwork{N}(model, args...)
 end
 
 @truncate_stacktrace MultiScaleSkipDeepEquilibriumNetwork 1 3 4
@@ -243,85 +219,53 @@ end
 function Lux.initialstates(rng::AbstractRNG, deq::MultiScaleSkipDeepEquilibriumNetwork)
     rng = Lux.replicate(rng)
     randn(rng, 1)
-    return (;
-        model=Lux.initialstates(rng, deq.model),
-        shortcut=Lux.initialstates(rng, deq.shortcut),
-        fixed_depth=Val(0),
-        initial_condition=zeros(Float32, 1, 1),
-        solution=nothing,
-        rng)
+    return (; model=Lux.initialstates(rng, deq.model), fixed_depth=Val(0), rng,
+        shortcut=Lux.initialstates(rng, deq.shortcut), solution=nothing,
+        initial_condition=zeros(Float32, 1, 1))
 end
 
-function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple,
-    mapping_layers::Matrix,
-    post_fuse_layer::Union{Nothing, Tuple},
-    shortcut_layers::Union{Nothing, Tuple},
-    solver,
-    scales::NTuple{N, NTuple{L, Int64}};
-    sensealg=SteadyStateAdjoint(),
-    kwargs...) where {N, L}
+function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
+    post_fuse_layer::Union{Nothing, Tuple}, shortcut_layers::Union{Nothing, Tuple},
+    solver, scales::NTuple{N, NTuple{L, Int64}};
+    sensealg=SteadyStateAdjoint(), kwargs...) where {N, L}
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
     shortcut = shortcut_layers === nothing ? nothing : Parallel(nothing, shortcut_layers...)
-    scales = static(scales)
-    split_idxs = static(Tuple(vcat(0, cumsum(prod.(scales))...)))
+    scales = Val(scales)
+    split_idxs = Val(Tuple(vcat(0, cumsum(prod.(SciMLBase._unwrap_val(scales)))...)))
     if post_fuse_layer === nothing
         model = MultiScaleInputLayer(Chain(l1, l2), split_idxs, scales)
     else
         model = MultiScaleInputLayer(Chain(l1, l2, Parallel(nothing, post_fuse_layer...)),
-            split_idxs,
-            scales)
+            split_idxs, scales)
     end
 
-    _types = (N,
-        typeof(scales),
-        typeof(model),
-        typeof(shortcut),
-        typeof(solver),
-        typeof(sensealg),
-        typeof(split_idxs),
-        typeof(kwargs))
-
-    return MultiScaleSkipDeepEquilibriumNetwork{_types...}(model,
-        shortcut,
-        solver,
-        sensealg,
-        scales,
-        split_idxs,
-        kwargs)
+    return MultiScaleSkipDeepEquilibriumNetwork(model, shortcut, solver, sensealg,
+        scales, split_idxs, kwargs)
 end
 
 _jacobian_regularization(::MultiScaleSkipDeepEquilibriumNetwork) = false
 
-function _get_initial_condition(deq::MultiScaleSkipDeepEquilibriumNetwork{
-        N,
-        Sc,
-        M,
-        Nothing,
-    },
-    x,
-    ps,
-    st) where {N, Sc, M}
+function _get_initial_condition(deq::MultiScaleSkipDeepEquilibriumNetwork{N, M, Nothing},
+    x, ps, st) where {N, M}
     u0, st = _get_zeros_initial_condition_mdeq(deq.scales, x, st)
     z, st_ = deq.model((u0, x), ps.model, st.model)
-    @set! st.model = st_
-    return z, st
+    return z, merge(st, (; model=st_))
 end
 
 function _get_initial_condition(deq::MultiScaleSkipDeepEquilibriumNetwork, x, ps, st)
     z0, st_ = deq.shortcut(x, ps.shortcut, st.shortcut)
-    z = vcat(flatten.(z0)...)
-    @set! st.shortcut = st_
-    return z, st
+    z = mapreduce(flatten, vcat, z0)
+    return z, merge(st, (; shortcut=st_))
 end
 
-struct MultiScaleNeuralODE{N, Sc, M, A, S, Sp, K} <: AbstractDeepEquilibriumNetwork
-    model::M
-    solver::A
-    sensealg::S
-    scales::Sc
-    split_idxs::Sp
-    kwargs::K
+@concrete struct MultiScaleNeuralODE{N} <: AbstractDeepEquilibriumNetwork
+    model
+    solver
+    sensealg
+    scales
+    split_idxs
+    kwargs
 end
 
 @truncate_stacktrace MultiScaleNeuralODE 1 3
@@ -329,19 +273,14 @@ end
 function Lux.initialstates(rng::Random.AbstractRNG, node::MultiScaleNeuralODE)
     rng = Lux.replicate(rng)
     randn(rng, 1)
-    return (;
-        model=Lux.initialstates(rng, node.model),
-        fixed_depth=Val(0),
-        initial_condition=zeros(Float32, 1, 1),
-        solution=nothing,
-        rng)
+    return (; model=Lux.initialstates(rng, node.model), fixed_depth=Val(0),
+        initial_condition=zeros(Float32, 1, 1), solution=nothing, rng)
 end
 
 """
     MultiScaleNeuralODE(main_layers::Tuple, mapping_layers::Matrix,
-                                     post_fuse_layer::Union{Nothing,Tuple}, solver, scales;
-                                     sensealg=InterpolatingAdjoint(; autojacvec=ZygoteVJP()),
-                                     kwargs...)
+                        post_fuse_layer::Union{Nothing,Tuple}, solver, scales;
+                        sensealg=GaussAdjoint(; autojacvec=ZygoteVJP()), kwargs...)
 
 Multiscale Neural ODE with Input Injection.
 
@@ -390,40 +329,22 @@ model(x, ps, st)
 
 See also: [`DeepEquilibriumNetwork`](@ref), [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref), [`MultiScaleSkipDeepEquilibriumNetwork`](@ref)
 """
-function MultiScaleNeuralODE(main_layers::Tuple,
-    mapping_layers::Matrix,
-    post_fuse_layer::Union{Nothing, Tuple},
-    solver,
-    scales::NTuple{N, NTuple{L, Int64}};
-    sensealg=InterpolatingAdjoint(; autojacvec=ZygoteVJP()),
-    kwargs...) where {N, L}
+function MultiScaleNeuralODE(main_layers::Tuple, mapping_layers::Matrix,
+    post_fuse_layer::Union{Nothing, Tuple}, solver, scales::NTuple{N, NTuple{L, Int64}};
+    sensealg=GaussAdjoint(; autojacvec=ZygoteVJP()), kwargs...) where {N, L}
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
 
-    scales = static(scales)
-    split_idxs = static(Tuple(vcat(0, cumsum(prod.(scales))...)))
+    scales = Val(scales)
+    split_idxs = Val(Tuple(vcat(0, cumsum(prod.(SciMLBase._unwrap_val(scales)))...)))
     if post_fuse_layer === nothing
         model = MultiScaleInputLayer(Chain(l1, l2), split_idxs, scales)
     else
         model = MultiScaleInputLayer(Chain(l1, l2, Parallel(nothing, post_fuse_layer...)),
-            split_idxs,
-            scales)
+            split_idxs, scales)
     end
 
-    _types = (N,
-        typeof(scales),
-        typeof(model),
-        typeof(solver),
-        typeof(sensealg),
-        typeof(split_idxs),
-        typeof(kwargs))
-
-    return MultiScaleNeuralODE{_types...}(model,
-        solver,
-        sensealg,
-        scales,
-        split_idxs,
-        kwargs)
+    return MultiScaleNeuralODE{N}(model, solver, sensealg, scales, split_idxs, kwargs)
 end
 
 _jacobian_regularization(::MultiScaleNeuralODE) = false
@@ -432,17 +353,15 @@ function _get_initial_condition(deq::MultiScaleNeuralODE, x, ps, st)
     return _get_zeros_initial_condition_mdeq(deq.scales, x, st)
 end
 
-@inline function _construct_problem(::MultiScaleNeuralODE, dudt, z, ps)
-    return ODEProblem(ODEFunction{false}(dudt), z, (0.0f0, 1.0f0), ps.model)
+@inline function _construct_problem(::MultiScaleNeuralODE, dudt, z, ps, x)
+    return ODEProblem(ODEFunction{false}(dudt), z, (0.0f0, 1.0f0), (; ps=ps.model, x))
 end
 
 @inline _fix_solution_output(::MultiScaleNeuralODE, x) = x[end]
 
 # Shared Functions
-@generated function _get_zeros_initial_condition_mdeq(::S,
-    x::AbstractArray{T, N},
-    st::NamedTuple{fields}) where {S, T, N, fields}
-    scales = known(S)
+@generated function _get_zeros_initial_condition_mdeq(::Val{scales}, x::AbstractArray{T, N},
+    st::NamedTuple{fields}) where {scales, T, N, fields}
     sz = sum(prod.(scales))
     calls = []
     if :initial_condition ∈ fields
@@ -457,11 +376,7 @@ end
 
 CRC.@non_differentiable _get_zeros_initial_condition_mdeq(::Any...)
 
-@inline function _postprocess_output(deq::Union{
-        MultiScaleDeepEquilibriumNetwork,
-        MultiScaleSkipDeepEquilibriumNetwork,
-        MultiScaleNeuralODE,
-    },
-    z_star)
+@inline function _postprocess_output(deq::Union{MultiScaleDeepEquilibriumNetwork,
+        MultiScaleSkipDeepEquilibriumNetwork, MultiScaleNeuralODE}, z_star)
     return split_and_reshape(z_star, deq.split_idxs, deq.scales)
 end

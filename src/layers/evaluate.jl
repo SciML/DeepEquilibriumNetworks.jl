@@ -1,9 +1,4 @@
-@generated function _evaluate_unrolled_model(::AbstractDEQs,
-    model,
-    z_star,
-    x,
-    ps,
-    st,
+@generated function _evaluate_unrolled_model(::AbstractDEQs, model, z_star, x, ps, st,
     ::Val{d}) where {d}
     calls = [:((z_star, st) = model((z_star, x), ps, st)) for _ in 1:d]
     push!(calls, :(return z_star, st))
@@ -18,8 +13,8 @@ end
 
 @inline _postprocess_output(_, z_star) = z_star
 
-@inline function _construct_problem(::AbstractDEQs, dudt, z, ps)
-    return SteadyStateProblem(ODEFunction{false}(dudt), z, ps.model)
+@inline function _construct_problem(::AbstractDEQs, dudt, z, ps, x)
+    return SteadyStateProblem(ODEFunction{false}(dudt), z, (; ps=ps.model, x))
 end
 
 @inline _fix_solution_output(_, x) = x
@@ -29,53 +24,45 @@ function (deq::AbstractDEQs)(x::AbstractArray{T}, ps, st::NamedTuple, ::Val{true
     z, st = _get_initial_condition(deq, x, ps, st)
     depth = _get_unrolled_depth(st)
 
-    z_star, st_ = _evaluate_unrolled_model(deq,
-        deq.model,
-        z,
-        x,
-        ps.model,
-        st.model,
+    z_star, st_ = _evaluate_unrolled_model(deq, deq.model, z, x, ps.model, st.model,
         st.fixed_depth)
 
-    @set! st.model = st_
-    @set! st.solution = build_solution(deq, z_star, z, x, ps, st, depth, T(0))
+    st__ = merge(st,
+        (; model=st_, solution=build_solution(deq, z_star, z, x, ps, st, depth, T(0))))
 
-    return _postprocess_output(deq, z_star), st
+    return _postprocess_output(deq, z_star), st__
 end
 
 function (deq::AbstractDEQs)(x::AbstractArray, ps, st::NamedTuple, ::Val{false})
     T = eltype(x)
     z, st = _get_initial_condition(deq, x, ps, st)
-    st_, nfe = st.model, 0
+
+    model = Lux.Experimental.StatefulLuxLayer(deq.model, nothing, st.model)
+    nfe::Int = 0
 
     function dudt(u, p, t)
         nfe += 1
-        u_, st_ = deq.model((u, x), p, st_)
-        return u_ .- u
+        return model((u, p.x), p.ps) .- u
     end
 
-    prob = _construct_problem(deq, dudt, z, ps)
+    prob = _construct_problem(deq, dudt, z, ps, x)
     sol = solve(prob, deq.solver; deq.sensealg, deq.kwargs...)
-
-    z_star, st_ = deq.model((_fix_solution_output(deq, sol.u), x), ps.model, st_)
+    _z_star = sol.u
+    # Handle Neural ODEs
+    z_star = _z_star isa Vector{<:AbstractArray} ? last(_z_star) : _z_star
 
     if _jacobian_regularization(deq)
         rng = Lux.replicate(st.rng)
-        jac_loss = estimate_jacobian_trace(Val(:finite_diff),
-            deq.model,
-            ps.model,
-            st.model,
-            z_star,
-            x,
-            rng)
+        jac_loss = estimate_jacobian_trace(Val(:finite_diff), deq.model, ps.model, model.st,
+            z_star, x, rng)
     else
         rng = st.rng
         jac_loss = T(0)
     end
 
-    @set! st.model = st_
-    @set! st.solution = build_solution(deq, z_star, z, x, ps, st, nfe, jac_loss)
-    @set! st.rng = rng
+    st_ = merge(st,
+        (; model=model.st, rng,
+            solution=build_solution(deq, z_star, z, x, ps, st, nfe, jac_loss)))
 
-    return _postprocess_output(deq, z_star), st
+    return _postprocess_output(deq, z_star), st_
 end

@@ -2,6 +2,6 @@ style = "sciml"
 whitespace_in_kwargs = false
 always_use_return = true
 format_docstrings = true
-join_lines_based_on_source = false
 separate_kwargs_with_semicolon = true
 format_markdown = true
+annotate_untyped_fields_with_any = false

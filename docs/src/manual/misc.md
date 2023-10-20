@@ -4,6 +4,5 @@
 DeepEquilibriumSolution
 EquilibriumSolution
 DeepEquilibriumNetworks.split_and_reshape
-DeepEquilibriumNetworks.init_identity_matrix
 DeepEquilibriumNetworks.estimate_jacobian_trace
 ```

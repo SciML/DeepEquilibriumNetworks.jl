@@ -4,11 +4,8 @@ abstract type AbstractDeepEquilibriumNetwork <:
 function Lux.initialstates(rng::AbstractRNG, deq::AbstractDeepEquilibriumNetwork)
     rng = Lux.replicate(rng)
     randn(rng, 1)
-    return (;
-        model=Lux.initialstates(rng, deq.model),
-        fixed_depth=Val(0),
-        solution=nothing,
-        rng)
+    return (; model=Lux.initialstates(rng, deq.model), fixed_depth=Val(0),
+        solution=nothing, rng)
 end
 
 function Lux.initialparameters(rng::AbstractRNG, deq::AbstractDeepEquilibriumNetwork)
@@ -21,25 +18,19 @@ abstract type AbstractSkipDeepEquilibriumNetwork <:
 function Lux.initialstates(rng::AbstractRNG, deq::AbstractSkipDeepEquilibriumNetwork)
     rng = Lux.replicate(rng)
     randn(rng, 1)
-    return (;
-        model=Lux.initialstates(rng, deq.model),
-        shortcut=Lux.initialstates(rng, deq.shortcut),
-        fixed_depth=Val(0),
-        solution=nothing,
-        rng)
+    return (; model=Lux.initialstates(rng, deq.model), rng,
+        shortcut=Lux.initialstates(rng, deq.shortcut), fixed_depth=Val(0), solution=nothing)
 end
 
-const AbstractDEQs = Union{
-    AbstractDeepEquilibriumNetwork,
-    AbstractSkipDeepEquilibriumNetwork,
-}
+const AbstractDEQs = Union{AbstractDeepEquilibriumNetwork,
+    AbstractSkipDeepEquilibriumNetwork}
 
 function (deq::AbstractDEQs)(x::AbstractArray, ps, st::NamedTuple)
     return deq(x, ps, st, _check_unrolled_mode(st))
 end
 
 # Utilities
-@inline _check_unrolled_mode(::Val{d}) where {d} = Val(d >= 1)
+@inline _check_unrolled_mode(::Val{d}) where {d} = Val(d ≥ 1)
 @inline _check_unrolled_mode(st::NamedTuple) = _check_unrolled_mode(st.fixed_depth)
 
 @inline _get_unrolled_depth(::Val{d}) where {d} = d
@@ -62,10 +53,10 @@ Stores the solution of a DeepEquilibriumNetwork and its variants.
     can be computed).
   - `nfe`: Number of Function Evaluations
 """
-struct DeepEquilibriumSolution{T, R <: AbstractFloat, TRes}
+@concrete struct DeepEquilibriumSolution{T, R <: AbstractFloat}
     z_star::T
     u0::T
-    residual::TRes
+    residual
     jacobian_loss::R
-    nfe::Int
+    nfe
 end
