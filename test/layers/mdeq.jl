@@ -1,4 +1,4 @@
-using ComponentArrays, DeepEquilibriumNetworks
+using DeepEquilibriumNetworks
 using Test
 
 include("../test_utils.jl")
@@ -170,7 +170,6 @@ function test_multiscale_neural_ode()
         abstol=0.01f0, reltol=0.01f0)
 
     ps, st = Lux.setup(rng, model)
-    ps = ComponentArray(ps)
 
     @test st.solution === nothing
 

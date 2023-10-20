@@ -7,8 +7,8 @@ end
 
 @truncate_stacktrace MultiScaleInputLayer 1 2
 
-function MultiScaleInputLayer(model, split_idxs, scales)
-    return MultiScaleInputLayer{length(scales)}(model, split_idxs, scales)
+function MultiScaleInputLayer(model, split_idxs, scales::Val{S}) where {S}
+    return MultiScaleInputLayer{length(S)}(model, split_idxs, scales)
 end
 
 @generated function (m::MultiScaleInputLayer{N})(z, ps, st) where {N}
@@ -99,8 +99,8 @@ function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Ma
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
 
-    scales = static(scales)
-    split_idxs = static(Tuple(vcat(0, cumsum(prod.(scales))...)))
+    scales = Val(scales)
+    split_idxs = Val(Tuple(vcat(0, cumsum(prod.(SciMLBase._unwrap_val(scales)))...)))
     if post_fuse_layer === nothing
         model = MultiScaleInputLayer(Chain(l1, l2), split_idxs, scales)
     else
@@ -231,8 +231,8 @@ function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
     shortcut = shortcut_layers === nothing ? nothing : Parallel(nothing, shortcut_layers...)
-    scales = static(scales)
-    split_idxs = static(Tuple(vcat(0, cumsum(prod.(scales))...)))
+    scales = Val(scales)
+    split_idxs = Val(Tuple(vcat(0, cumsum(prod.(SciMLBase._unwrap_val(scales)))...)))
     if post_fuse_layer === nothing
         model = MultiScaleInputLayer(Chain(l1, l2), split_idxs, scales)
     else
@@ -337,8 +337,8 @@ function MultiScaleNeuralODE(main_layers::Tuple, mapping_layers::Matrix,
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
 
-    scales = static(scales)
-    split_idxs = static(Tuple(vcat(0, cumsum(prod.(scales))...)))
+    scales = Val(scales)
+    split_idxs = Val(Tuple(vcat(0, cumsum(prod.(SciMLBase._unwrap_val(scales)))...)))
     if post_fuse_layer === nothing
         model = MultiScaleInputLayer(Chain(l1, l2), split_idxs, scales)
     else
@@ -362,9 +362,8 @@ end
 @inline _fix_solution_output(::MultiScaleNeuralODE, x) = x[end]
 
 # Shared Functions
-@generated function _get_zeros_initial_condition_mdeq(::S, x::AbstractArray{T, N},
-    st::NamedTuple{fields}) where {S, T, N, fields}
-    scales = known(S)
+@generated function _get_zeros_initial_condition_mdeq(::Val{scales}, x::AbstractArray{T, N},
+    st::NamedTuple{fields}) where {scales, T, N, fields}
     sz = sum(prod.(scales))
     calls = []
     if :initial_condition ∈ fields

@@ -1,4 +1,4 @@
-using DeepEquilibriumNetworks, SciMLBase, SteadyStateDiffEq
+using DeepEquilibriumNetworks, SteadyStateDiffEq
 using Test
 
 simple_dudt(u, p, t) = 0.9f0 .* u .- u
