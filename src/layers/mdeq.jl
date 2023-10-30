@@ -94,8 +94,8 @@ function Lux.initialstates(rng::AbstractRNG, deq::MultiScaleDeepEquilibriumNetwo
 end
 
 function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
-    post_fuse_layer::Union{Nothing, Tuple}, solver, scales::NTuple{N, NTuple{L, Int64}};
-    sensealg=SteadyStateAdjoint(), kwargs...) where {N, L}
+        post_fuse_layer::Union{Nothing, Tuple}, solver, scales::NTuple{N, NTuple{L, Int64}};
+        sensealg=SteadyStateAdjoint(), kwargs...) where {N, L}
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
 
@@ -210,7 +210,7 @@ See also: [`DeepEquilibriumNetwork`](@ref), [`SkipDeepEquilibriumNetwork`](@ref)
 end
 
 function MultiScaleSkipDeepEquilibriumNetwork(model::MultiScaleInputLayer{N},
-    args...) where {N}
+        args...) where {N}
     return MultiScaleSkipDeepEquilibriumNetwork{N}(model, args...)
 end
 
@@ -225,9 +225,9 @@ function Lux.initialstates(rng::AbstractRNG, deq::MultiScaleSkipDeepEquilibriumN
 end
 
 function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
-    post_fuse_layer::Union{Nothing, Tuple}, shortcut_layers::Union{Nothing, Tuple},
-    solver, scales::NTuple{N, NTuple{L, Int64}};
-    sensealg=SteadyStateAdjoint(), kwargs...) where {N, L}
+        post_fuse_layer::Union{Nothing, Tuple}, shortcut_layers::Union{Nothing, Tuple},
+        solver, scales::NTuple{N, NTuple{L, Int64}};
+        sensealg=SteadyStateAdjoint(), kwargs...) where {N, L}
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
     shortcut = shortcut_layers === nothing ? nothing : Parallel(nothing, shortcut_layers...)
@@ -247,7 +247,7 @@ end
 _jacobian_regularization(::MultiScaleSkipDeepEquilibriumNetwork) = false
 
 function _get_initial_condition(deq::MultiScaleSkipDeepEquilibriumNetwork{N, M, Nothing},
-    x, ps, st) where {N, M}
+        x, ps, st) where {N, M}
     u0, st = _get_zeros_initial_condition_mdeq(deq.scales, x, st)
     z, st_ = deq.model((u0, x), ps.model, st.model)
     return z, merge(st, (; model=st_))
@@ -330,8 +330,8 @@ model(x, ps, st)
 See also: [`DeepEquilibriumNetwork`](@ref), [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref), [`MultiScaleSkipDeepEquilibriumNetwork`](@ref)
 """
 function MultiScaleNeuralODE(main_layers::Tuple, mapping_layers::Matrix,
-    post_fuse_layer::Union{Nothing, Tuple}, solver, scales::NTuple{N, NTuple{L, Int64}};
-    sensealg=GaussAdjoint(; autojacvec=ZygoteVJP()), kwargs...) where {N, L}
+        post_fuse_layer::Union{Nothing, Tuple}, solver, scales::NTuple{N, NTuple{L, Int64}};
+        sensealg=GaussAdjoint(; autojacvec=ZygoteVJP()), kwargs...) where {N, L}
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
 
@@ -361,7 +361,7 @@ end
 
 # Shared Functions
 @generated function _get_zeros_initial_condition_mdeq(::Val{scales}, x::AbstractArray{T, N},
-    st::NamedTuple{fields}) where {scales, T, N, fields}
+        st::NamedTuple{fields}) where {scales, T, N, fields}
     sz = sum(prod.(scales))
     calls = []
     if :initial_condition ∈ fields
@@ -377,6 +377,6 @@ end
 CRC.@non_differentiable _get_zeros_initial_condition_mdeq(::Any...)
 
 @inline function _postprocess_output(deq::Union{MultiScaleDeepEquilibriumNetwork,
-        MultiScaleSkipDeepEquilibriumNetwork, MultiScaleNeuralODE}, z_star)
+            MultiScaleSkipDeepEquilibriumNetwork, MultiScaleNeuralODE}, z_star)
     return split_and_reshape(z_star, deq.split_idxs, deq.scales)
 end

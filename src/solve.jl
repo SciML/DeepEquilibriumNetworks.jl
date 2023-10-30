@@ -30,8 +30,8 @@ struct ContinuousDEQSolver{A <: DynamicSS} <: AbstractDEQSolver
 end
 
 function ContinuousDEQSolver(alg=VCAB3(); mode=NLSolveTerminationMode.RelSafeBest,
-    abstol=1.0f-8, reltol=1.0f-6, abstol_termination=abstol, reltol_termination=reltol,
-    tspan=Inf32, kwargs...)
+        abstol=1.0f-8, reltol=1.0f-6, abstol_termination=abstol, reltol_termination=reltol,
+        tspan=Inf32, kwargs...)
     termination_condition = NLSolveTerminationCondition(mode; abstol=abstol_termination,
         reltol=reltol_termination, kwargs...)
     return ContinuousDEQSolver(DynamicSS(alg; abstol, reltol, tspan, termination_condition))
@@ -81,7 +81,7 @@ end
 @truncate_stacktrace EquilibriumSolution 1 2
 
 function SciMLBase.__solve(prob::AbstractSteadyStateProblem, alg::AbstractDEQSolver,
-    args...; kwargs...)
+        args...; kwargs...)
     # FIXME: Remove this handle
     sol = solve(prob, alg.alg, args...; kwargs...)
 

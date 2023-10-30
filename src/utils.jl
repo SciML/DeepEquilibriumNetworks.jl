@@ -27,7 +27,7 @@ DEQs.split_and_reshape(x, split_idxs, shapes)
 ```
 """
 @generated function split_and_reshape(x::AbstractMatrix, ::Val{idxs},
-    ::Val{shapes}) where {idxs, shapes}
+        ::Val{shapes}) where {idxs, shapes}
     dims = [reshape((idxs[i] + 1):idxs[i + 1], shapes[i]...) for i in 1:(length(idxs) - 1)]
     varnames = [gensym("x_view") for _ in dims]
     calls = []
