@@ -43,7 +43,7 @@ end
 @truncate_stacktrace DeepEquilibriumNetwork 1 2
 
 function DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=false,
-    sensealg=SteadyStateAdjoint(), kwargs...)
+        sensealg=SteadyStateAdjoint(), kwargs...)
     return DeepEquilibriumNetwork{jacobian_regularization}(model, solver, sensealg, kwargs)
 end
 
@@ -112,7 +112,7 @@ end
 @truncate_stacktrace SkipDeepEquilibriumNetwork 1 2 3
 
 function SkipDeepEquilibriumNetwork(model, shortcut, solver; sensealg=SteadyStateAdjoint(),
-    jacobian_regularization::Bool=false, kwargs...)
+        jacobian_regularization::Bool=false, kwargs...)
     return SkipDeepEquilibriumNetwork{jacobian_regularization}(model, shortcut, solver,
         sensealg, kwargs)
 end
@@ -120,7 +120,7 @@ end
 _jacobian_regularization(::SkipDeepEquilibriumNetwork{J}) where {J} = J
 
 function _get_initial_condition(deq::SkipDeepEquilibriumNetwork{J, M, Nothing}, x, ps,
-    st) where {J, M}
+        st) where {J, M}
     z, st_ = deq.model((zero(x), x), ps.model, st.model)
     return z, merge(st, (; model=st_))
 end

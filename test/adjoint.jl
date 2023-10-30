@@ -15,7 +15,7 @@ function loss_function(model::DEQs.AbstractSkipDeepEquilibriumNetwork, x, ps, st
 end
 
 function loss_function(model::Union{MultiScaleDeepEquilibriumNetwork, MultiScaleNeuralODE},
-    x, ps, st)
+        x, ps, st)
     y, st_ = model(x, ps, st)
     return sum(sum, y) + st_.solution.jacobian_loss
 end

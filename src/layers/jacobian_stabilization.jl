@@ -29,14 +29,14 @@ Estimates the trace of the jacobian matrix wrt `z`.
 Stochastic Estimate of the trace of the Jacobian.
 """
 function estimate_jacobian_trace(::Val{:reverse}, model::Lux.AbstractExplicitLayer,
-    ps, st::NamedTuple, z::AbstractArray, x::AbstractArray, rng::AbstractRNG)
+        ps, st::NamedTuple, z::AbstractArray, x::AbstractArray, rng::AbstractRNG)
     _, back = Zygote.pullback(u -> model((u, x), ps, st)[1], z)
     vjp_z = back(_gaussian_like(rng, x))[1]
     return mean(abs2, vjp_z)
 end
 
 function estimate_jacobian_trace(::Val{:finite_diff}, model::Lux.AbstractExplicitLayer,
-    ps, st::NamedTuple, z::AbstractArray, x::AbstractArray, rng::AbstractRNG)
+        ps, st::NamedTuple, z::AbstractArray, x::AbstractArray, rng::AbstractRNG)
     f = u -> model((u, x), ps, st)[1]
     res = convert(eltype(z), 0)
     epsilon = cbrt(eps(typeof(res)))
