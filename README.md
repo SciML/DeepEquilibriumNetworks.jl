@@ -11,7 +11,7 @@
 
 DeepEquilibriumNetworks.jl is a framework built on top of
 [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/) and
-[Lux.jl](https://docs.sciml.ai/Lux/stable/) enabling the efficient training and inference for
+[Lux.jl](https://lux.csail.mit.edu/) enabling the efficient training and inference for
 Deep Equilibrium Networks (Infinitely Deep Neural Networks).
 
 ## Installation
