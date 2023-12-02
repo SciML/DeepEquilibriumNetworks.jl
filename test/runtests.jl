@@ -3,6 +3,9 @@ using SafeTestsets, Test
 const GROUP = get(ENV, "GROUP", "ALL")
 
 if GROUP == "ALL" || GROUP == "CORE"
+    @safetestset "Quality Assurance" begin
+        include("qa.jl")
+    end
     @safetestset "Solve" begin
         include("solve.jl")
     end

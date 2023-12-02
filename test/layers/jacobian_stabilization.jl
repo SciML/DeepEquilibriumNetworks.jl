@@ -71,9 +71,9 @@ function test_jacobian_trace_estimation_gradient()
     return nothing
 end
 
-@testset "Jacobian Trace Extimation" begin
+@testset "Jacobian Trace Estimation" begin
     test_jacobian_trace_estimation()
 end
-@testset "Jacobian Trace Extimation: Gradient" begin
+@testset "Jacobian Trace Estimation: Gradient" begin
     test_jacobian_trace_estimation_gradient()
 end
