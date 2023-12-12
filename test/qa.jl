@@ -6,6 +6,6 @@ using DeepEquilibriumNetworks, Aqua
     Aqua.test_piracies(DeepEquilibriumNetworks; broken=true)
     Aqua.test_project_extras(DeepEquilibriumNetworks)
     Aqua.test_stale_deps(DeepEquilibriumNetworks)
-    Aqua.test_unbound_args(DeepEquilibriumNetworks; broken=true)
+    Aqua.test_unbound_args(DeepEquilibriumNetworks)
     Aqua.test_undefined_exports(DeepEquilibriumNetworks; broken=true)
 end
