@@ -347,7 +347,12 @@ function MultiScaleNeuralODE(main_layers::Tuple, mapping_layers::Matrix,
             split_idxs, scales)
     end
 
-    return MultiScaleNeuralODE{nMinus1+1}(model, solver, sensealg, scales, split_idxs, kwargs)
+    return MultiScaleNeuralODE{nMinus1 + 1}(model,
+        solver,
+        sensealg,
+        scales,
+        split_idxs,
+        kwargs)
 end
 
 _jacobian_regularization(::MultiScaleNeuralODE) = false
