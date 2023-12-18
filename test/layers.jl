@@ -1,5 +1,5 @@
 using ADTypes, DeepEquilibriumNetworks, DiffEqBase, NonlinearSolve, OrdinaryDiffEq,
-    SciMLBase, Test, NLsolve
+    SciMLSensitivity, SciMLBase, Test, NLsolve
 
 include("test_utils.jl")
 
@@ -152,6 +152,11 @@ end
                     @test maximum(abs, st.solution.residual) ≤ 1e-3
                 end
 
+                _, gs_x, gs_ps, _ = Zygote.gradient(loss_function, model, x, ps, st)
+
+                @test __is_finite_gradient(gs_x)
+                @test __is_finite_gradient(gs_ps)
+
                 ps, st = Lux.setup(rng, model)
                 st = Lux.update_state(st, :fixed_depth, Val(10))
                 @test st.solution == DeepEquilibriumSolution()
@@ -165,6 +170,11 @@ end
                 @test size(z_) == (sum(prod, scale), size(x, ndims(x)))
                 @test st.solution isa DeepEquilibriumSolution
                 @test st.solution.nfe == 10
+
+                _, gs_x, gs_ps, _ = Zygote.gradient(loss_function, model, x, ps, st)
+
+                @test __is_finite_gradient(gs_x)
+                @test __is_finite_gradient(gs_ps)
             end
         end
     end

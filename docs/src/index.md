@@ -1,4 +1,4 @@
-# DeepEquilibriumNetworks: (Fast) Deep Equilibrium Networks
+# DeepEquilibriumNetworks.jl
 
 DeepEquilibriumNetworks.jl is a framework built on top of
 [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/) and
@@ -16,8 +16,8 @@ Pkg.add("DeepEquilibriumNetworks")
 
 ## Quick-start
 
-```julia
-using DeepEquilibriumNetworks, Lux, Random, NonlinearSolve, Zygote
+```@example
+using DeepEquilibriumNetworks, Lux, Random, NonlinearSolve, Zygote, SciMLSensitivity
 # using LuxCUDA, LuxAMDGPU ## Install and Load for GPU Support
 
 seed = 0
@@ -46,14 +46,11 @@ If you are using this project for research or other academic purposes, consider 
 paper:
 
 ```bibtex
-@misc{pal2022mixing,
-  title={Mixing Implicit and Explicit Deep Learning with Skip DEQs and Infinite Time Neural
-         ODEs (Continuous DEQs)}, 
-  author={Avik Pal and Alan Edelman and Christopher Rackauckas},
-  year={2022},
-  eprint={2201.12240},
-  archivePrefix={arXiv},
-  primaryClass={cs.LG}
+@article{pal2022continuous,
+  title={Continuous Deep Equilibrium Models: Training Neural ODEs Faster by Integrating Them to Infinity},
+  author={Pal, Avik and Edelman, Alan and Rackauckas, Christopher},
+  booktitle={2023 IEEE High Performance Extreme Computing Conference (HPEC)}, 
+  year={2023}
 }
 ```
 

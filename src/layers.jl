@@ -27,13 +27,8 @@ function CRC.rrule(::Type{<:DeepEquilibriumSolution}, z_star, u0, residual, jaco
     sol = DeepEquilibriumSolution(z_star, u0, residual, jacobian_loss, nfe, original)
     ∇DeepEquilibriumSolution(::CRC.NoTangent) = ntuple(_ -> CRC.NoTangent(), 7)
     function ∇DeepEquilibriumSolution(∂sol)
-        ∂z_star = ∂sol.z_star
-        ∂u0 = ∂sol.u0
-        ∂residual = ∂sol.residual
-        ∂jacobian_loss = ∂sol.jacobian_loss
-        ∂nfe = ∂sol.nfe
-        ∂original = CRC.NoTangent()
-        return (CRC.NoTangent(), ∂z_star, ∂u0, ∂residual, ∂jacobian_loss, ∂nfe, ∂original)
+        return (CRC.NoTangent(), ∂sol.z_star, ∂sol.u0, ∂sol.residual, ∂sol.jacobian_loss,
+            ∂sol.nfe, CRC.NoTangent())
     end
     return sol, ∇DeepEquilibriumSolution
 end
@@ -149,11 +144,11 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing]
 
 ## Example
 
-```julia
+```@example
 using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq
 
 model = DeepEquilibriumNetwork(Parallel(+, Dense(2, 2; use_bias=false),
-        Dense(2, 2; use_bias=false)), VCABM3(); save_everystep=true)
+        Dense(2, 2; use_bias=false)), VCABM3())
 
 rng = Random.default_rng()
 ps, st = Lux.setup(rng, model)
@@ -218,7 +213,7 @@ For keyword arguments, see [`DeepEquilibriumNetwork`](@ref).
 
 ## Example
 
-```julia
+```@example
 using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq
 
 main_layers = (Parallel(+, Dense(4 => 4, tanh; use_bias=false),
