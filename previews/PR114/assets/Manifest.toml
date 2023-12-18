@@ -261,14 +261,13 @@ deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
 [[deps.DeepEquilibriumNetworks]]
-deps = ["ADTypes", "ChainRulesCore", "ConcreteStructs", "ConstructionBase", "DiffEqBase", "LinearAlgebra", "Lux", "Random", "SciMLBase", "Statistics", "SteadyStateDiffEq", "TruncatedStacktraces"]
+deps = ["ADTypes", "ChainRulesCore", "ConcreteStructs", "ConstructionBase", "DiffEqBase", "LinearAlgebra", "Lux", "Random", "SciMLBase", "SciMLSensitivity", "Statistics", "SteadyStateDiffEq", "TruncatedStacktraces"]
 path = "/home/runner/work/DeepEquilibriumNetworks.jl/DeepEquilibriumNetworks.jl"
 uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 version = "2.0.0"
-weakdeps = ["SciMLSensitivity", "Zygote"]
+weakdeps = ["Zygote"]
 
     [deps.DeepEquilibriumNetworks.extensions]
-    DeepEquilibriumNetworksSciMLSensitivityExt = "SciMLSensitivity"
     DeepEquilibriumNetworksZygoteExt = "Zygote"
 
 [[deps.DelimitedFiles]]
