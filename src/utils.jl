@@ -26,12 +26,10 @@ end
 
 function CRC.rrule(::typeof(__flatten_vcat), x)
     y = __flatten_vcat(x)
-    projects = CRC.ProjectTo.(x)
+    project_x = CRC.ProjectTo(x)
     function ∇__flatten_vcat(∂y)
         ∂y isa CRC.NoTangent && return (CRC.NoTangent(), CRC.NoTangent())
-        ∂x = __split_and_reshape(∂y, x)
-        ∂x = map((∂xᵢ, project) -> project(∂xᵢ), ∂x, projects)
-        return CRC.NoTangent(), ∂x
+        return CRC.NoTangent(), project_x(__split_and_reshape(∂y, x))
     end
     return y, ∇__flatten_vcat
 end

@@ -111,10 +111,8 @@ end
     jacobian_regularizations = (nothing, AutoFiniteDiff(), AutoZygote())
 
     for mtype in model_type, jacobian_regularization in jacobian_regularizations
-        # @testset "Solver: $(__nameof(solver))"
-        for solver in solvers
-            # @testset "x_size: $(x_size)"
-            for (main_layer, mapping_layer, init_layer, x_size, scale) in zip(main_layers,
+        @testset "Solver: $(__nameof(solver))" for solver in solvers
+            @testset "x_size: $(x_size)" for (main_layer, mapping_layer, init_layer, x_size, scale) in zip(main_layers,
                 mapping_layers, init_layers, x_sizes, scales)
                 @info solver, mtype, jacobian_regularization, main_layer, mapping_layer,
                 init_layer, x_size, scale
