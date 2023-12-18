@@ -335,7 +335,7 @@ If `init` is not passed, it creates a MultiScale Regularized Deep Equilibrium Ne
 """
 function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
         post_fuse_layer::Union{Nothing, Tuple}, init::Tuple, solver, scales; kwargs...)
-    init = Chain(Parallel(nothing, init...), x -> mapreduce(__flatten, vcat, x))
+    init = Chain(Parallel(nothing, init...), __flatten_vcat)
     return MultiScaleDeepEquilibriumNetwork(main_layers, mapping_layers, post_fuse_layer,
         solver, scales; init, kwargs...)
 end
@@ -393,6 +393,6 @@ end
         u, x = z
         u_ = __split_and_reshape(u, m.split_idxs, m.scales)
         u_res, st = Lux.apply(m.model, ($(inputs...),), ps, st)
-        return mapreduce(__flatten, vcat, u_res), st
+        return __flatten_vcat(u_res), st
     end
 end

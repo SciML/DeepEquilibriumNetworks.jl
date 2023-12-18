@@ -11,9 +11,30 @@ end
 __split_and_reshape(x::AbstractMatrix, ::Nothing, ::Nothing) = x
 __split_and_reshape(x::AbstractArray, ::Nothing, ::Nothing) = x
 
+function __split_and_reshape(y::AbstractMatrix, x)
+    szs = [prod(size(xᵢ)[1:(end - 1)]) for xᵢ in x]
+    counters = vcat(0, cumsum(szs)[1:(end - 1)])
+    return map((sz, c, xᵢ) -> reshape(view(y, (c + 1):(c + sz), :), size(xᵢ)),
+        szs, counters, x)
+end
+
 @inline __flatten(x::AbstractVector) = reshape(x, length(x), 1)
 @inline __flatten(x::AbstractMatrix) = x
 @inline __flatten(x::AbstractArray) = reshape(x, :, size(x, ndims(x)))
+
+@inline __flatten_vcat(x) = mapreduce(__flatten, vcat, x)
+
+function CRC.rrule(::typeof(__flatten_vcat), x)
+    y = __flatten_vcat(x)
+    projects = CRC.ProjectTo.(x)
+    function ∇__flatten_vcat(∂y)
+        ∂y isa CRC.NoTangent && return (CRC.NoTangent(), CRC.NoTangent())
+        ∂x = __split_and_reshape(∂y, x)
+        ∂x = map((∂xᵢ, project) -> project(∂xᵢ), ∂x, projects)
+        return CRC.NoTangent(), ∂x
+    end
+    return y, ∇__flatten_vcat
+end
 
 @inline __check_unrolled_mode(::Val{d}) where {d} = Val(d ≥ 1)
 @inline __check_unrolled_mode(st::NamedTuple) = __check_unrolled_mode(st.fixed_depth)
