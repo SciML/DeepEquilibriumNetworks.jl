@@ -144,16 +144,28 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing]
 
 ## Example
 
-```@example
-using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq
+```jldoctest
+julia> using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq
 
-model = DeepEquilibriumNetwork(Parallel(+, Dense(2, 2; use_bias=false),
-        Dense(2, 2; use_bias=false)), VCABM3())
+julia> model = DeepEquilibriumNetwork(Parallel(+, Dense(2, 2; use_bias=false),
+               Dense(2, 2; use_bias=false)), VCABM3())
+DeepEquilibriumNetwork(
+    model = Parallel(
+        +
+        Dense(2 => 2, bias=false),      # 4 parameters
+        Dense(2 => 2, bias=false),      # 4 parameters
+    ),
+    init = WrappedFunction(Base.Fix1{typeof(DeepEquilibriumNetworks.__zeros_init), Nothing}(DeepEquilibriumNetworks.__zeros_init, nothing)),
+)         # Total: 8 parameters,
+          #        plus 0 states.
 
-rng = Random.default_rng()
-ps, st = Lux.setup(rng, model)
+julia> rng = Random.default_rng()
+TaskLocalRNG()
 
-model(rand(rng, Float32, 2, 1), ps, st)
+julia> ps, st = Lux.setup(rng, model);
+
+julia> model(ones(Float32, 2, 1), ps, st);
+
 ```
 
 See also: [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref),
@@ -213,26 +225,84 @@ For keyword arguments, see [`DeepEquilibriumNetwork`](@ref).
 
 ## Example
 
-```@example
-using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq
+```jldoctest
+julia> using DeepEquilibriumNetworks, Lux, Random, NonlinearSolve
 
-main_layers = (Parallel(+, Dense(4 => 4, tanh; use_bias=false),
-        Dense(4 => 4, tanh; use_bias=false)), Dense(3 => 3, tanh), Dense(2 => 2, tanh),
-    Dense(1 => 1, tanh))
+julia> main_layers = (Parallel(+, Dense(4 => 4, tanh; use_bias=false),
+               Dense(4 => 4, tanh; use_bias=false)), Dense(3 => 3, tanh), Dense(2 => 2, tanh),
+           Dense(1 => 1, tanh))
+(Parallel(), Dense(3 => 3, tanh_fast), Dense(2 => 2, tanh_fast), Dense(1 => 1, tanh_fast))
 
-mapping_layers = [NoOpLayer() Dense(4 => 3, tanh) Dense(4 => 2, tanh) Dense(4 => 1, tanh);
-    Dense(3 => 4, tanh) NoOpLayer() Dense(3 => 2, tanh) Dense(3 => 1, tanh);
-    Dense(2 => 4, tanh) Dense(2 => 3, tanh) NoOpLayer() Dense(2 => 1, tanh);
-    Dense(1 => 4, tanh) Dense(1 => 3, tanh) Dense(1 => 2, tanh) NoOpLayer()]
+julia> mapping_layers = [NoOpLayer() Dense(4 => 3, tanh) Dense(4 => 2, tanh) Dense(4 => 1, tanh);
+           Dense(3 => 4, tanh) NoOpLayer() Dense(3 => 2, tanh) Dense(3 => 1, tanh);
+           Dense(2 => 4, tanh) Dense(2 => 3, tanh) NoOpLayer() Dense(2 => 1, tanh);
+           Dense(1 => 4, tanh) Dense(1 => 3, tanh) Dense(1 => 2, tanh) NoOpLayer()]
+4×4 Matrix{LuxCore.AbstractExplicitLayer}:
+ NoOpLayer()               …  Dense(4 => 1, tanh_fast)
+ Dense(3 => 4, tanh_fast)     Dense(3 => 1, tanh_fast)
+ Dense(2 => 4, tanh_fast)     Dense(2 => 1, tanh_fast)
+ Dense(1 => 4, tanh_fast)     NoOpLayer()
 
-model = MultiScaleDeepEquilibriumNetwork(main_layers, mapping_layers, nothing, VCAB3(),
-    ((4,), (3,), (2,), (1,)))
+julia> model = MultiScaleDeepEquilibriumNetwork(main_layers, mapping_layers, nothing,
+           NewtonRaphson(), ((4,), (3,), (2,), (1,)))
+DeepEquilibriumNetwork(
+    model = MultiScaleInputLayer{scales = 4}(
+        model = Chain(
+            layer_1 = Parallel(
+                layer_1 = Parallel(
+                    +
+                    Dense(4 => 4, tanh_fast, bias=false),  # 16 parameters
+                    Dense(4 => 4, tanh_fast, bias=false),  # 16 parameters
+                ),
+                layer_2 = Dense(3 => 3, tanh_fast),  # 12 parameters
+                layer_3 = Dense(2 => 2, tanh_fast),  # 6 parameters
+                layer_4 = Dense(1 => 1, tanh_fast),  # 2 parameters
+            ),
+            layer_2 = BranchLayer(
+                layer_1 = Parallel(
+                    +
+                    NoOpLayer(),
+                    Dense(3 => 4, tanh_fast),  # 16 parameters
+                    Dense(2 => 4, tanh_fast),  # 12 parameters
+                    Dense(1 => 4, tanh_fast),  # 8 parameters
+                ),
+                layer_2 = Parallel(
+                    +
+                    Dense(4 => 3, tanh_fast),  # 15 parameters
+                    NoOpLayer(),
+                    Dense(2 => 3, tanh_fast),  # 9 parameters
+                    Dense(1 => 3, tanh_fast),  # 6 parameters
+                ),
+                layer_3 = Parallel(
+                    +
+                    Dense(4 => 2, tanh_fast),  # 10 parameters
+                    Dense(3 => 2, tanh_fast),  # 8 parameters
+                    NoOpLayer(),
+                    Dense(1 => 2, tanh_fast),  # 4 parameters
+                ),
+                layer_4 = Parallel(
+                    +
+                    Dense(4 => 1, tanh_fast),  # 5 parameters
+                    Dense(3 => 1, tanh_fast),  # 4 parameters
+                    Dense(2 => 1, tanh_fast),  # 3 parameters
+                    NoOpLayer(),
+                ),
+            ),
+        ),
+    ),
+    init = WrappedFunction(Base.Fix1{typeof(DeepEquilibriumNetworks.__zeros_init), Val{((4,), (3,), (2,), (1,))}}(DeepEquilibriumNetworks.__zeros_init, Val{((4,), (3,), (2,), (1,))}())),
+)         # Total: 152 parameters,
+          #        plus 0 states.
 
-rng = Random.default_rng()
-ps, st = Lux.setup(rng, model)
-x = rand(rng, Float32, 4, 12)
+julia> rng = Random.default_rng()
+TaskLocalRNG()
 
-model(x, ps, st)
+julia> ps, st = Lux.setup(rng, model);
+
+julia> x = rand(rng, Float32, 4, 12);
+
+julia> model(x, ps, st);
+
 ```
 """
 function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,

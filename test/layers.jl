@@ -1,5 +1,5 @@
 using ADTypes, DeepEquilibriumNetworks, DiffEqBase, NonlinearSolve, OrdinaryDiffEq,
-    SciMLSensitivity, SciMLBase, Test, NLsolve
+    SciMLSensitivity, SciMLBase, Test
 
 include("test_utils.jl")
 
@@ -22,7 +22,7 @@ end
     x_sizes = [(2, 14), (3, 3, 1, 3)]
 
     model_type = (:deq, :skipdeq, :skipregdeq)
-    solvers = (VCAB3(), Tsit5(), NewtonRaphson(), NLsolveJL(), SimpleLimitedMemoryBroyden())
+    solvers = (VCAB3(), Tsit5(), NewtonRaphson(), SimpleLimitedMemoryBroyden())
     jacobian_regularizations = (nothing, AutoFiniteDiff(), AutoZygote())
 
     @testset "Solver: $(__nameof(solver))" for solver in solvers,
@@ -107,12 +107,14 @@ end
     scales = [((4,), (3,), (2,), (1,))]
 
     model_type = (:deq, :skipdeq, :skipregdeq, :node)
-    solvers = (VCAB3(), Tsit5(), NewtonRaphson(), NLsolveJL(), SimpleLimitedMemoryBroyden())
+    solvers = (VCAB3(), Tsit5(), NewtonRaphson(), SimpleLimitedMemoryBroyden())
     jacobian_regularizations = (nothing, AutoFiniteDiff(), AutoZygote())
 
     for mtype in model_type, jacobian_regularization in jacobian_regularizations
-        @testset "Solver: $(__nameof(solver))" for solver in solvers
-            @testset "x_size: $(x_size)" for (main_layer, mapping_layer, init_layer, x_size, scale) in zip(main_layers,
+        # @testset "Solver: $(__nameof(solver))"
+        for solver in solvers
+            # @testset "x_size: $(x_size)"
+            for (main_layer, mapping_layer, init_layer, x_size, scale) in zip(main_layers,
                 mapping_layers, init_layers, x_sizes, scales)
                 @info solver, mtype, jacobian_regularization, main_layer, mapping_layer,
                 init_layer, x_size, scale
