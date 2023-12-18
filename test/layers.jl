@@ -11,7 +11,7 @@ function loss_function(model, x, ps, st)
     return l1 + l2 + l3
 end
 
-@testset "DeepEquilibriumNetwork" begin
+@testset "DeepEquilibriumNetwork: $(mode)" for (mode, aType, dev, ongpu) in MODES
     rng = __get_prng(0)
 
     base_models = [
@@ -41,10 +41,10 @@ end
                 SkipDeepEquilibriumNetwork(base_model, solver; jacobian_regularization)
             end
 
-            ps, st = Lux.setup(rng, model)
+            ps, st = Lux.setup(rng, model) |> dev
             @test st.solution == DeepEquilibriumSolution()
 
-            x = randn(rng, Float32, x_size...)
+            x = randn(rng, Float32, x_size...) |> dev
             z, st = model(x, ps, st)
 
             opt_broken = solver isa NewtonRaphson ||
@@ -62,7 +62,7 @@ end
             @test __is_finite_gradient(gs_x)
             @test __is_finite_gradient(gs_ps)
 
-            ps, st = Lux.setup(rng, model)
+            ps, st = Lux.setup(rng, model) |> dev
             st = Lux.update_state(st, :fixed_depth, Val(10))
             @test st.solution == DeepEquilibriumSolution()
 
@@ -82,7 +82,7 @@ end
     end
 end
 
-@testset "MultiScaleDeepEquilibriumNetworks" begin
+@testset "MultiScaleDeepEquilibriumNetwork: $(mode)" for (mode, aType, dev, ongpu) in MODES
     rng = __get_prng(0)
 
     main_layers = [

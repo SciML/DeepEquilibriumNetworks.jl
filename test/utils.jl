@@ -2,10 +2,10 @@ using DeepEquilibriumNetworks, LinearAlgebra, SciMLBase, Test
 
 include("test_utils.jl")
 
-@testset "split_and_reshape" begin
-    x1 = ones(Float32, 4, 4)
-    x2 = fill(0.5f0, 2, 4)
-    x3 = zeros(Float32, 1, 4)
+@testset "split_and_reshape: $mode" for (mode, aType, dev, ongpu) in MODES
+    x1 = ones(Float32, 4, 4) |> aType
+    x2 = fill(0.5f0, 2, 4) |> aType
+    x3 = zeros(Float32, 1, 4) |> aType
 
     x = vcat(x1, x2, x3)
     split_idxs = Val(cumsum((0, size(x1, 1), size(x2, 1), size(x3, 1))))

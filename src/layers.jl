@@ -308,7 +308,7 @@ julia> model(x, ps, st);
 function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
         post_fuse_layer::Union{Nothing, Tuple}, solver, scales;
         jacobian_regularization=nothing, kwargs...)
-    @assert jacobian_regularization === nothing "Jacobian Regularization is not supported yet for MultiScale Models."
+    @assert jacobian_regularization===nothing "Jacobian Regularization is not supported yet for MultiScale Models."
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
 

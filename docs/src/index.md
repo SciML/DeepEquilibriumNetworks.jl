@@ -35,12 +35,12 @@ ps, st = Lux.setup(rng, model) |> gdev
 x = rand(rng, Float32, 2, 3) |> gdev
 y = rand(rng, Float32, 2, 3) |> gdev
 
-y, st_ = model(x, ps, st)
+res, st_ = model(x, ps, st)
 st_.layer_2.solution
 ```
 
 ```@example quickstart
-gs = only(Zygote.gradient(p -> sum(abs2, first(first(model(x, p, st))) .- y), ps))
+gs = only(Zygote.gradient(p -> sum(abs2, first(model(x, p, st)) .- y), ps))
 ```
 
 ## Citation
