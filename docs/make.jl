@@ -7,17 +7,10 @@ bib = CitationBibliography(joinpath(@__DIR__, "ref.bib"); style=:authoryear)
 
 include("pages.jl")
 
-makedocs(;
-    sitename="Fast Deep Equilibrium Networks",
-    authors="Avik Pal et al.",
-    modules=[DeepEquilibriumNetworks],
-    clean=true,
-    doctest=false,
-    linkcheck=true,
-    format=Documenter.HTML(;
-        assets=["assets/favicon.ico"],
+makedocs(; sitename="Deep Equilibrium Networks", authors="Avik Pal et al.",
+    modules=[DeepEquilibriumNetworks], clean=true, doctest=true,
+    linkcheck=true, format=Documenter.HTML(; assets=["assets/favicon.ico"],
         canonical="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/"),
-    plugins=[bib],
-    pages)
+    plugins=[bib], pages)
 
 deploydocs(; repo="github.com/SciML/DeepEquilibriumNetworks.jl.git", push_preview=true)

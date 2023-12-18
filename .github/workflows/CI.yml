@@ -21,10 +21,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        group:
-          - CORE
-          - LAYERS
-          - ADJOINT
         version:
           - '1'
     steps:
@@ -44,9 +40,9 @@ jobs:
             ${{ runner.os }}-
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
-        env:
-          GROUP: ${{ matrix.group }}
       - uses: julia-actions/julia-processcoverage@v1
+        with:
+          directories: src,ext
       - uses: codecov/codecov-action@v3
         with:
           files: lcov.info

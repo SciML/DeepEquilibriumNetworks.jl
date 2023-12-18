@@ -1,9 +1,6 @@
 pages = [
     "Home" => "index.md",
-    "Manual" => [
-        "Dynamical Systems" => "manual/solvers.md",
-        "DEQ Layers" => "manual/deqs.md",
-        "Miscellaneous" => "manual/misc.md",
-    ],
+    "Tutorial" => "tutorial.md",
+    "API References" => "api.md",
     "References" => "references.md",
 ]

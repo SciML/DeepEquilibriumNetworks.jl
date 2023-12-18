@@ -57,14 +57,11 @@ If you are using this project for research or other academic purposes consider c
 paper:
 
 ```bibtex
-@misc{pal2022mixing,
-  title={Mixing Implicit and Explicit Deep Learning with Skip DEQs and Infinite Time Neural
-         ODEs (Continuous DEQs)}, 
-  author={Avik Pal and Alan Edelman and Christopher Rackauckas},
-  year={2022},
-  eprint={2201.12240},
-  archivePrefix={arXiv},
-  primaryClass={cs.LG}
+@article{pal2022continuous,
+  title={Continuous Deep Equilibrium Models: Training Neural ODEs Faster by Integrating Them to Infinity},
+  author={Pal, Avik and Edelman, Alan and Rackauckas, Christopher},
+  booktitle={2023 IEEE High Performance Extreme Computing Conference (HPEC)}, 
+  year={2023}
 }
 ```
 
