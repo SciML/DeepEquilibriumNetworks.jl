@@ -2,6 +2,8 @@ using DeepEquilibriumNetworks, Functors, Lux, Random, StableRNGs, Zygote
 import LuxTestUtils: @jet
 using LuxCUDA
 
+CUDA.allowscalar(false)
+
 __nameof(::X) where {X} = nameof(X)
 
 __get_prng(seed::Int) = StableRNG(seed)

@@ -23,7 +23,8 @@ end
 
     model_type = (:deq, :skipdeq, :skipregdeq)
     solvers = (VCAB3(), Tsit5(), NewtonRaphson(), SimpleLimitedMemoryBroyden())
-    jacobian_regularizations = (nothing, AutoFiniteDiff(), AutoZygote())
+    jacobian_regularizations = Any[nothing, AutoZygote()]
+    !ongpu && push!(jacobian_regularizations, AutoFiniteDiff())
 
     @testset "Solver: $(__nameof(solver))" for solver in solvers,
         mtype in model_type, jacobian_regularization in jacobian_regularizations
@@ -133,10 +134,10 @@ end
                         jacobian_regularization)
                 end
 
-                ps, st = Lux.setup(rng, model)
+                ps, st = Lux.setup(rng, model) |> dev
                 @test st.solution == DeepEquilibriumSolution()
 
-                x = randn(rng, Float32, x_size...)
+                x = randn(rng, Float32, x_size...) |> dev
                 z, st = model(x, ps, st)
                 z_ = DEQs.__flatten_vcat(z)
 
@@ -157,7 +158,7 @@ end
                 @test __is_finite_gradient(gs_x)
                 @test __is_finite_gradient(gs_ps)
 
-                ps, st = Lux.setup(rng, model)
+                ps, st = Lux.setup(rng, model) |> dev
                 st = Lux.update_state(st, :fixed_depth, Val(10))
                 @test st.solution == DeepEquilibriumSolution()
 

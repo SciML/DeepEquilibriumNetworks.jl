@@ -2,7 +2,7 @@
         ::Val{shapes}) where {idxs, shapes}
     dims = [reshape((idxs[i] + 1):idxs[i + 1], shapes[i]...) for i in 1:(length(idxs) - 1)]
     varnames = map(_ -> gensym("x_view"), dims)
-    calls = [:($(varnames[i]) = view(x, $(dims[i]), :)) for i in 1:length(dims)]
+    calls = [:($(varnames[i]) = x[$(dims[i]), :]) for i in 1:length(dims)]
     return quote
         $(calls...)
         return tuple($(varnames...))
@@ -14,7 +14,8 @@ __split_and_reshape(x::AbstractArray, ::Nothing, ::Nothing) = x
 function __split_and_reshape(y::AbstractMatrix, x)
     szs = [prod(size(xᵢ)[1:(end - 1)]) for xᵢ in x]
     counters = vcat(0, cumsum(szs)[1:(end - 1)])
-    return map((sz, c, xᵢ) -> reshape(view(y, (c + 1):(c + sz), :), size(xᵢ)),
+    # Make the data contiguous
+    return map((sz, c, xᵢ) -> copy(reshape(view(y, (c + 1):(c + sz), :), size(xᵢ))),
         szs, counters, x)
 end
 
@@ -95,7 +96,7 @@ CRC.@non_differentiable __gaussian_like(::Any...)
 
 # Jacobian Stabilization
 function __estimate_jacobian_trace(::AutoFiniteDiff, model, ps, z, x, rng)
-    __f = u -> first(model((u, x), ps))
+    __f = u -> model((u, x), ps)
     res = zero(eltype(x))
     ϵ = cbrt(eps(typeof(res)))
     ϵ⁻¹ = inv(ϵ)
