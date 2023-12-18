@@ -10,20 +10,19 @@ ConcreteStructs = "2569d6c7-a4a2-43d3-a901-331e8e4be471"
 ConstructionBase = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-LinearSolve = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
 Lux = "b2108857-7c20-44ae-9111-449ecde12c47"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-SciMLSensitivity = "1ed8b502-d754-442c-8d5d-10ac956f44a1"
-SimpleNonlinearSolve = "727e6d20-b764-4bd8-a329-72de5adea6c7"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 SteadyStateDiffEq = "9672c7b4-1e72-59bd-8a11-6ac3964bc41f"
 TruncatedStacktraces = "781d530d-4396-4725-bb49-402e4bee1e77"
 
 [weakdeps]
+SciMLSensitivity = "1ed8b502-d754-442c-8d5d-10ac956f44a1"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [extensions]
+DeepEquilibriumNetworksSciMLSensitivityExt = "SciMLSensitivity"
 DeepEquilibriumNetworksZygoteExt = "Zygote"
 
 [compat]
@@ -37,7 +36,6 @@ Lux = "0.5.7"
 Random = "1"
 SciMLBase = "2"
 SciMLSensitivity = "7.43"
-SimpleNonlinearSolve = "1.0.3"
 Statistics = "1"
 SteadyStateDiffEq = "2"
 TruncatedStacktraces = "1.1"
