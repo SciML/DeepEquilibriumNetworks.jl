@@ -5,19 +5,17 @@ __nameof(::X) where {X} = nameof(X)
 
 __get_prng(seed::Int) = StableRNG(seed)
 
-# is_finite_gradient(x::AbstractArray) = all(isfinite, x)
+__is_finite_gradient(x::AbstractArray) = all(isfinite, x)
 
-# function is_finite_gradient(gs::NamedTuple)
-#     gradient_is_finite = [true]
-#     function _is_gradient_finite(x)
-#         if !isnothing(x) && !all(isfinite, x)
-#             gradient_is_finite[1] = false
-#         end
-#         return x
-#     end
-#     Functors.fmap(_is_gradient_finite, gs)
-#     return gradient_is_finite[1]
-# end
+function __is_finite_gradient(gs::NamedTuple)
+    gradient_is_finite = Ref(true)
+    function __is_gradient_finite(x)
+        !isnothing(x) && !all(isfinite, x) && (gradient_is_finite[] = false)
+        return x
+    end
+    fmap(__is_gradient_finite, gs)
+    return gradient_is_finite[]
+end
 
 function __get_dense_layer(args...; kwargs...)
     init_weight(rng::AbstractRNG, dims...) = randn(rng, Float32, dims) .* 0.001f0

@@ -22,6 +22,22 @@ Stores the solution of a DeepEquilibriumNetwork and its variants.
     original
 end
 
+function CRC.rrule(::Type{<:DeepEquilibriumSolution}, z_star, u0, residual, jacobian_loss,
+        nfe, original)
+    sol = DeepEquilibriumSolution(z_star, u0, residual, jacobian_loss, nfe, original)
+    ∇DeepEquilibriumSolution(::CRC.NoTangent) = ntuple(_ -> CRC.NoTangent(), 7)
+    function ∇DeepEquilibriumSolution(∂sol)
+        ∂z_star = ∂sol.z_star
+        ∂u0 = ∂sol.u0
+        ∂residual = ∂sol.residual
+        ∂jacobian_loss = ∂sol.jacobian_loss
+        ∂nfe = ∂sol.nfe
+        ∂original = CRC.NoTangent()
+        return (CRC.NoTangent(), ∂z_star, ∂u0, ∂residual, ∂jacobian_loss, ∂nfe, ∂original)
+    end
+    return sol, ∇DeepEquilibriumSolution
+end
+
 function DeepEquilibriumSolution()
     return DeepEquilibriumSolution(ntuple(Returns(nothing), 4)..., 0, nothing)
 end
@@ -66,8 +82,8 @@ function (deq::DEQ)(x, ps, st::NamedTuple, ::Val{true})
     repeated_model = RepeatedLayer(deq.model; repeats=st.fixed_depth)
 
     zˢᵗᵃʳ, st_ = repeated_model((z, x), ps.model, st.model)
-    model = Lux.Experimental.StatefulLuxLayer(deq.model, ps.model, st_)
-    resid = CRC.ignore_derivatives(zˢᵗᵃʳ .- model((zˢᵗᵃʳ, x)))
+    model = Lux.Experimental.StatefulLuxLayer(deq.model, nothing, st_)
+    resid = CRC.ignore_derivatives(zˢᵗᵃʳ .- model((zˢᵗᵃʳ, x), ps.model))
 
     rng = Lux.replicate(st.rng)
     jac_loss = __estimate_jacobian_trace(__getproperty(deq, Val(:jacobian_regularization)),
@@ -156,7 +172,7 @@ function DeepEquilibriumNetwork(model, solver; init=missing,
     if init === missing # Regular DEQ
         init = WrappedFunction(Base.Fix1(__zeros_init, __getproperty(model, Val(:scales))))
     elseif init === nothing # SkipRegDEQ
-        init = nothing
+        init = NoOpLayer()
     elseif !(init isa AbstractExplicitLayer)
         init = Lux.transform(init)
     end
@@ -225,8 +241,7 @@ model(x, ps, st)
 ```
 """
 function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
-        post_fuse_layer::Union{Nothing, Tuple}, solver,
-        scales::NTuple{N, NTuple{L, Int64}}; kwargs...) where {N, L}
+        post_fuse_layer::Union{Nothing, Tuple}, solver, scales; kwargs...)
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
 
@@ -254,8 +269,7 @@ creates a [`MultiScaleDeepEquilibriumNetwork`](@ref) with `init` kwarg set to pa
 If `init` is not passed, it creates a MultiScale Regularized Deep Equilibrium Network.
 """
 function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
-        post_fuse_layer::Union{Nothing, Tuple}, init::Tuple, solver,
-        scales::NTuple{N, NTuple{L, Int64}}; kwargs...) where {N, L}
+        post_fuse_layer::Union{Nothing, Tuple}, init::Tuple, solver, scales; kwargs...)
     init = Chain(Parallel(nothing, init...), x -> mapreduce(__flatten, vcat, x))
     return MultiScaleDeepEquilibriumNetwork(main_layers, mapping_layers, post_fuse_layer,
         solver, scales; init, kwargs...)
@@ -279,7 +293,8 @@ function MultiScaleNeuralODE(args...; kwargs...)
 end
 
 ## Generate Initial Condition
-@inline function __get_initial_condition(deq::DEQ{pType, Nothing}, x, ps, st) where {pType}
+@inline function __get_initial_condition(deq::DEQ{pType, NoOpLayer}, x, ps,
+        st) where {pType}
     zₓ = __zeros_init(__getproperty(deq.model, Val(:scales)), x)
     z, st_ = deq.model((zₓ, x), ps.model, st.model)
     return z, (; st..., model=st_)

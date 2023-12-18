@@ -3,6 +3,14 @@ using ADTypes, DeepEquilibriumNetworks, DiffEqBase, NonlinearSolve, OrdinaryDiff
 
 include("test_utils.jl")
 
+function loss_function(model, x, ps, st)
+    y, st = model(x, ps, st)
+    l1 = y isa Tuple ? sum(Base.Fix1(sum, abs2), y) : sum(abs2, y)
+    l2 = st.solution.jacobian_loss
+    l3 = sum(abs2, st.solution.z_star .- st.solution.u0)
+    return l1 + l2 + l3
+end
+
 @testset "DeepEquilibriumNetwork" begin
     rng = __get_prng(0)
 
@@ -22,6 +30,8 @@ include("test_utils.jl")
 
         @testset "x_size: $(x_size)" for (base_model, init_model, x_size) in zip(base_models,
             init_models, x_sizes)
+            @info solver, mtype, jacobian_regularization, base_model, init_model, x_size
+
             model = if mtype === :deq
                 DeepEquilibriumNetwork(base_model, solver; jacobian_regularization)
             elseif mtype === :skipdeq
@@ -47,6 +57,11 @@ include("test_utils.jl")
             @test st.solution isa DeepEquilibriumSolution
             @test maximum(abs, st.solution.residual) ≤ 1e-3
 
+            _, gs_x, gs_ps, _ = Zygote.gradient(loss_function, model, x, ps, st)
+
+            @test __is_finite_gradient(gs_x)
+            @test __is_finite_gradient(gs_ps)
+
             ps, st = Lux.setup(rng, model)
             st = Lux.update_state(st, :fixed_depth, Val(10))
             @test st.solution == DeepEquilibriumSolution()
@@ -58,6 +73,11 @@ include("test_utils.jl")
             @test size(z) == size(x)
             @test st.solution isa DeepEquilibriumSolution
             @test st.solution.nfe == 10
+
+            _, gs_x, gs_ps, _ = Zygote.gradient(loss_function, model, x, ps, st)
+
+            @test __is_finite_gradient(gs_x)
+            @test __is_finite_gradient(gs_ps)
         end
     end
 end
@@ -91,11 +111,12 @@ end
     jacobian_regularizations = (nothing, AutoFiniteDiff(), AutoZygote())
 
     for mtype in model_type, jacobian_regularization in jacobian_regularizations
-
         @testset "Solver: $(__nameof(solver))" for solver in solvers
-
             @testset "x_size: $(x_size)" for (main_layer, mapping_layer, init_layer, x_size, scale) in zip(main_layers,
                 mapping_layers, init_layers, x_sizes, scales)
+                @info solver, mtype, jacobian_regularization, main_layer, mapping_layer,
+                init_layer, x_size, scale
+
                 model = if mtype === :deq
                     MultiScaleDeepEquilibriumNetwork(main_layer, mapping_layer, nothing,
                         solver,

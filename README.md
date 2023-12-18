@@ -24,7 +24,7 @@ Pkg.add("DeepEquilibriumNetworks")
 ## Quickstart
 
 ```julia
-using DeepEquilibriumNetworks, Lux, Random, Zygote
+using DeepEquilibriumNetworks, Lux, Random, NonlinearSolve, Zygote
 # using LuxCUDA, LuxAMDGPU ## Install and Load for GPU Support
 
 seed = 0
@@ -32,19 +32,15 @@ rng = Random.default_rng()
 Random.seed!(rng, seed)
 
 model = Chain(Dense(2 => 2),
-    DeepEquilibriumNetwork(Parallel(+,
-            Dense(2 => 2; use_bias=false),
-            Dense(2 => 2; use_bias=false)),
-        ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0,
-            reltol_termination=0.1f0);
-        save_everystep=true))
+    DeepEquilibriumNetwork(Parallel(+, Dense(2 => 2; use_bias=false),
+            Dense(2 => 2; use_bias=false)), NewtonRaphson()))
 
 gdev = gpu_device()
 cdev = cpu_device()
 
 ps, st = Lux.setup(rng, model) |> gdev
-x = rand(rng, Float32, 2, 1) |> gdev
-y = rand(rng, Float32, 2, 1) |> gdev
+x = rand(rng, Float32, 2, 3) |> gdev
+y = rand(rng, Float32, 2, 3) |> gdev
 
 model(x, ps, st)
 

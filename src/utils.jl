@@ -93,6 +93,8 @@ function __estimate_jacobian_trace(::AutoFiniteDiff, model, ps, z, x, rng)
             z[idx] = _z
         end
     end
+
+    return res
 end
 
 __estimate_jacobian_trace(::Nothing, model, ps, z, x, rng) = zero(eltype(x))
