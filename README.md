@@ -45,7 +45,7 @@ y = rand(rng, Float32, 2, 3) |> gdev
 
 model(x, ps, st)
 
-gs = only(Zygote.gradient(p -> sum(abs2, first(first(model(x, p, st))) .- y), ps))
+gs = only(Zygote.gradient(p -> sum(abs2, first(model(x, p, st)) .- y), ps))
 ```
 
 ## Citation
