@@ -2,7 +2,7 @@
 
 julia_version = "1.10.0-rc2"
 manifest_format = "2.0"
-project_hash = "014ca85a3845de2d1ab4491eb2d8b2f946e37a20"
+project_hash = "8d33856ceafbd0190b2f9c40c1bcfddbb51890fa"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "332e5d7baeff8497b923b730b994fa480601efc7"
@@ -696,9 +696,11 @@ uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[deps.LinearSolve]]
 deps = ["ArrayInterface", "ConcreteStructs", "DocStringExtensions", "EnumX", "FastLapackInterface", "GPUArraysCore", "InteractiveUtils", "KLU", "Krylov", "Libdl", "LinearAlgebra", "MKL_jll", "PrecompileTools", "Preferences", "RecursiveFactorization", "Reexport", "Requires", "SciMLBase", "SciMLOperators", "Setfield", "SparseArrays", "Sparspak", "StaticArraysCore", "UnPack"]
-git-tree-sha1 = "03cd36673f050ec49f9bdfce31e0e7e22d877e64"
+git-tree-sha1 = "7c9f62dc6f7d11b0f8dfb3c1f3637cb220dc9866"
+repo-rev = "ap/normal_cholesky_dispatches"
+repo-url = "https://github.com/SciML/LinearSolve.jl.git"
 uuid = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
-version = "2.21.0"
+version = "2.21.1"
 
     [deps.LinearSolve.extensions]
     LinearSolveBandedMatricesExt = "BandedMatrices"

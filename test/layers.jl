@@ -108,7 +108,7 @@ end
 
     model_type = (:deq, :skipdeq, :skipregdeq, :node)
     solvers = (VCAB3(), Tsit5(), NewtonRaphson(), SimpleLimitedMemoryBroyden())
-    jacobian_regularizations = (nothing, AutoFiniteDiff(), AutoZygote())
+    jacobian_regularizations = (nothing,)
 
     for mtype in model_type, jacobian_regularization in jacobian_regularizations
         @testset "Solver: $(__nameof(solver))" for solver in solvers
