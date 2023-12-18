@@ -5,6 +5,7 @@
 
 [![codecov](https://codecov.io/gh/SciML/DeepEquilibriumNetworks.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/SciML/DeepEquilibriumNetworks.jl)
 [![Build Status](https://github.com/SciML/DeepEquilibriumNetworks.jl/workflows/CI/badge.svg)](https://github.com/SciML/DeepEquilibriumNetworks.jl/actions?query=workflow%3ACI)
+[![Build status](https://badge.buildkite.com/d7ce1858c4f89456c2d90e80c9b04b710bd81d7641db0a087c.svg?branch=main)](https://buildkite.com/julialang/deepequilibriumnetworks)
 
 [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor%27s%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
@@ -24,8 +25,8 @@ Pkg.add("DeepEquilibriumNetworks")
 ## Quickstart
 
 ```julia
-using DeepEquilibriumNetworks, Lux, Random, NonlinearSolve, Zygote
-# using LuxCUDA, LuxAMDGPU ## Install and Load for GPU Support
+using DeepEquilibriumNetworks, Lux, Random, NonlinearSolve, Zygote, SciMLSensitivity
+# using LuxCUDA, LuxAMDGPU ## Install and Load for GPU Support. See https://lux.csail.mit.edu/dev/manual/gpu_management
 
 seed = 0
 rng = Random.default_rng()

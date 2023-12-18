@@ -16,9 +16,9 @@ Pkg.add("DeepEquilibriumNetworks")
 
 ## Quick-start
 
-```@example
+```@example quickstart
 using DeepEquilibriumNetworks, Lux, Random, NonlinearSolve, Zygote, SciMLSensitivity
-# using LuxCUDA, LuxAMDGPU ## Install and Load for GPU Support
+using LuxCUDA  # For NVIDIA GPU support
 
 seed = 0
 rng = Random.default_rng()
@@ -35,8 +35,11 @@ ps, st = Lux.setup(rng, model) |> gdev
 x = rand(rng, Float32, 2, 3) |> gdev
 y = rand(rng, Float32, 2, 3) |> gdev
 
-model(x, ps, st)
+y, st_ = model(x, ps, st)
+st_.layer_2.solution
+```
 
+```@example quickstart
 gs = only(Zygote.gradient(p -> sum(abs2, first(first(model(x, p, st))) .- y), ps))
 ```
 

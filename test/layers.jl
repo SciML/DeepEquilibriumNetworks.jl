@@ -138,7 +138,7 @@ end
 
                 x = randn(rng, Float32, x_size...)
                 z, st = model(x, ps, st)
-                z_ = mapreduce(DEQs.__flatten, vcat, z)
+                z_ = DEQs.__flatten_vcat(z)
 
                 opt_broken = solver isa NewtonRaphson ||
                              solver isa SimpleLimitedMemoryBroyden ||
@@ -162,7 +162,7 @@ end
                 @test st.solution == DeepEquilibriumSolution()
 
                 z, st = model(x, ps, st)
-                z_ = mapreduce(DEQs.__flatten, vcat, z)
+                z_ = DEQs.__flatten_vcat(z)
                 opt_broken = jacobian_regularization isa AutoZygote
                 @jet model(x, ps, st) opt_broken=opt_broken
 
