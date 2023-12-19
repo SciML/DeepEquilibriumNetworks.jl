@@ -4,8 +4,7 @@ We will train a simple Deep Equilibrium Model on MNIST. First we load a few pack
 
 ```@example basic_mnist_deq
 using DeepEquilibriumNetworks, SciMLSensitivity, Lux, NonlinearSolve, OrdinaryDiffEq,
-    Statistics, Random, Optimization, OptimizationOptimisers
-using LuxCUDA
+    Statistics, Random, Optimization, OptimizationOptimisers, LuxCUDA
 using MLDatasets: MNIST
 using MLDataUtils: LabelEnc, convertlabel, stratifiedobs
 
