@@ -131,7 +131,6 @@ function train_model(solver, model_type; data_train=zip(x_train, y_train),
     acc = accuracy(model, data_test, ps, st) * 100
     @info "Starting Accuracy: $(acc)"
 
-    # = Uncomment these lines to enavle pretraining. See what happens
     @info "Pretrain with unrolling to a depth of 5"
     st = Lux.update_state(st, :fixed_depth, Val(5))
     model_st = Lux.Experimental.StatefulLuxLayer(model, ps, st)
@@ -146,7 +145,6 @@ function train_model(solver, model_type; data_train=zip(x_train, y_train),
 
     acc = accuracy(model, data_test, ps, model_st.st) * 100
     @info "Pretraining complete. Accuracy: $(acc)"
-    # =#
 
     st = Lux.update_state(st, :fixed_depth, Val(0))
     model_st = Lux.Experimental.StatefulLuxLayer(model, ps, st)

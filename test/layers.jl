@@ -49,8 +49,7 @@ end
             z, st = model(x, ps, st)
 
             opt_broken = solver isa NewtonRaphson ||
-                         solver isa SimpleLimitedMemoryBroyden ||
-                         jacobian_regularization isa AutoZygote
+                         solver isa SimpleLimitedMemoryBroyden
             @jet model(x, ps, st) opt_broken=opt_broken # Broken due to nfe dynamic dispatch
 
             @test all(isfinite, z)
@@ -142,8 +141,7 @@ end
                 z_ = DEQs.__flatten_vcat(z)
 
                 opt_broken = solver isa NewtonRaphson ||
-                             solver isa SimpleLimitedMemoryBroyden ||
-                             jacobian_regularization isa AutoZygote
+                             solver isa SimpleLimitedMemoryBroyden
                 @jet model(x, ps, st) opt_broken=opt_broken # Broken due to nfe dynamic dispatch
 
                 @test all(isfinite, z_)
