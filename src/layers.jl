@@ -13,7 +13,7 @@ Stores the solution of a DeepEquilibriumNetwork and its variants.
   - `nfe`: Number of Function Evaluations
   - `original`: Original Internal Solution
 """
-@concrete struct DeepEquilibriumSolution
+struct DeepEquilibriumSolution  # This is intentionally left untyped to allow updating `st`
     z_star
     u0
     residual
@@ -85,7 +85,7 @@ function (deq::DEQ)(x, ps, st::NamedTuple, ::Val{true})
         model, ps.model, zˢᵗᵃʳ, x, rng)
 
     solution = DeepEquilibriumSolution(zˢᵗᵃʳ, z, resid, zero(eltype(x)),
-        _unwrap_val(st.fixed_depth), nothing)
+        _unwrap_val(st.fixed_depth), jac_loss)
     res = __split_and_reshape(zˢᵗᵃʳ, __getproperty(deq.model, Val(:split_idxs)),
         __getproperty(deq.model, Val(:scales)))
 
@@ -102,7 +102,7 @@ function (deq::DEQ{pType})(x, ps, st::NamedTuple, ::Val{false}) where {pType}
     prob = __construct_prob(pType, ODEFunction{false}(dudt), z, (; ps=ps.model, x))
     alg = __normalize_alg(deq)
     sol = solve(prob, alg; sensealg=__default_sensealg(prob), abstol=1e-3, reltol=1e-3,
-        termination_condition=AbsNormTerminationMode(), maxiters=100, deq.kwargs...)
+        termination_condition=AbsNormTerminationMode(), maxiters=32, deq.kwargs...)
     zˢᵗᵃʳ = __get_steady_state(sol)
 
     rng = Lux.replicate(st.rng)
@@ -148,7 +148,7 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing]
 julia> using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq
 
 julia> model = DeepEquilibriumNetwork(Parallel(+, Dense(2, 2; use_bias=false),
-               Dense(2, 2; use_bias=false)), VCABM3())
+               Dense(2, 2; use_bias=false)), VCABM3(); verbose=false)
 DeepEquilibriumNetwork(
     model = Parallel(
         +
