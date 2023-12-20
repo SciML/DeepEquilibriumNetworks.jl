@@ -1,11 +1,8 @@
-using DeepEquilibriumNetworks, Aqua
+using DeepEquilibriumNetworks, Aqua, Test
+import ChainRulesCore as CRC
+
 @testset "Aqua" begin
-    Aqua.find_persistent_tasks_deps(DeepEquilibriumNetworks)
-    Aqua.test_ambiguities(DeepEquilibriumNetworks; recursive=false, broken=true)
-    Aqua.test_deps_compat(DeepEquilibriumNetworks)
-    Aqua.test_piracies(DeepEquilibriumNetworks; broken=true)
-    Aqua.test_project_extras(DeepEquilibriumNetworks)
-    Aqua.test_stale_deps(DeepEquilibriumNetworks)
-    Aqua.test_unbound_args(DeepEquilibriumNetworks)
-    Aqua.test_undefined_exports(DeepEquilibriumNetworks; broken=true)
+    Aqua.test_all(DeepEquilibriumNetworks; ambiguities=false)
+    Aqua.test_ambiguities(DeepEquilibriumNetworks; recursive=false,
+        exclude=[CRC.rrule, CRC.frule])
 end

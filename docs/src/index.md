@@ -1,4 +1,4 @@
-# DeepEquilibriumNetworks: (Fast) Deep Equilibrium Networks
+# DeepEquilibriumNetworks.jl
 
 DeepEquilibriumNetworks.jl is a framework built on top of
 [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/) and
@@ -16,31 +16,31 @@ Pkg.add("DeepEquilibriumNetworks")
 
 ## Quick-start
 
-```julia
-using DeepEquilibriumNetworks, Lux, Random, Zygote
-# using LuxCUDA, LuxAMDGPU ## Install and Load for GPU Support
+```@example quickstart
+using DeepEquilibriumNetworks, Lux, Random, NonlinearSolve, Zygote, SciMLSensitivity
+using LuxCUDA  # For NVIDIA GPU support
 
 seed = 0
 rng = Random.default_rng()
 Random.seed!(rng, seed)
+
 model = Chain(Dense(2 => 2),
-    DeepEquilibriumNetwork(Parallel(+,
-            Dense(2 => 2; use_bias=false),
-            Dense(2 => 2; use_bias=false)),
-        ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0,
-            reltol_termination=0.1f0);
-        save_everystep=true))
+    DeepEquilibriumNetwork(Parallel(+, Dense(2 => 2; use_bias=false),
+            Dense(2 => 2; use_bias=false)), NewtonRaphson()))
 
 gdev = gpu_device()
 cdev = cpu_device()
 
 ps, st = Lux.setup(rng, model) |> gdev
-x = rand(rng, Float32, 2, 1) |> gdev
-y = rand(rng, Float32, 2, 1) |> gdev
+x = rand(rng, Float32, 2, 3) |> gdev
+y = rand(rng, Float32, 2, 3) |> gdev
 
-model(x, ps, st)
+res, st_ = model(x, ps, st)
+st_.layer_2.solution
+```
 
-gs = only(Zygote.gradient(p -> sum(abs2, first(first(model(x, p, st))) .- y), ps))
+```@example quickstart
+gs = only(Zygote.gradient(p -> sum(abs2, first(model(x, p, st)) .- y), ps))
 ```
 
 ## Citation
@@ -49,14 +49,11 @@ If you are using this project for research or other academic purposes, consider 
 paper:
 
 ```bibtex
-@misc{pal2022mixing,
-  title={Mixing Implicit and Explicit Deep Learning with Skip DEQs and Infinite Time Neural
-         ODEs (Continuous DEQs)}, 
-  author={Avik Pal and Alan Edelman and Christopher Rackauckas},
-  year={2022},
-  eprint={2201.12240},
-  archivePrefix={arXiv},
-  primaryClass={cs.LG}
+@article{pal2022continuous,
+  title={Continuous Deep Equilibrium Models: Training Neural ODEs Faster by Integrating Them to Infinity},
+  author={Pal, Avik and Edelman, Alan and Rackauckas, Christopher},
+  booktitle={2023 IEEE High Performance Extreme Computing Conference (HPEC)}, 
+  year={2023}
 }
 ```
 

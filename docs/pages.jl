@@ -1,9 +1,9 @@
 pages = [
     "Home" => "index.md",
-    "Manual" => [
-        "Dynamical Systems" => "manual/solvers.md",
-        "DEQ Layers" => "manual/deqs.md",
-        "Miscellaneous" => "manual/misc.md",
+    "Tutorials" => [
+        "tutorials/basic_mnist_deq.md",
+        "tutorials/reduced_dim_deq.md",
     ],
+    "API References" => "api.md",
     "References" => "references.md",
 ]

@@ -5,6 +5,7 @@
 
 [![codecov](https://codecov.io/gh/SciML/DeepEquilibriumNetworks.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/SciML/DeepEquilibriumNetworks.jl)
 [![Build Status](https://github.com/SciML/DeepEquilibriumNetworks.jl/workflows/CI/badge.svg)](https://github.com/SciML/DeepEquilibriumNetworks.jl/actions?query=workflow%3ACI)
+[![Build status](https://badge.buildkite.com/d7ce1858c4f89456c2d90e80c9b04b710bd81d7641db0a087c.svg?branch=main)](https://buildkite.com/julialang/deepequilibriumnetworks)
 
 [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor%27s%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
@@ -24,31 +25,27 @@ Pkg.add("DeepEquilibriumNetworks")
 ## Quickstart
 
 ```julia
-using DeepEquilibriumNetworks, Lux, Random, Zygote
-# using LuxCUDA, LuxAMDGPU ## Install and Load for GPU Support
+using DeepEquilibriumNetworks, Lux, Random, NonlinearSolve, Zygote, SciMLSensitivity
+# using LuxCUDA, LuxAMDGPU ## Install and Load for GPU Support. See https://lux.csail.mit.edu/dev/manual/gpu_management
 
 seed = 0
 rng = Random.default_rng()
 Random.seed!(rng, seed)
 
 model = Chain(Dense(2 => 2),
-    DeepEquilibriumNetwork(Parallel(+,
-            Dense(2 => 2; use_bias=false),
-            Dense(2 => 2; use_bias=false)),
-        ContinuousDEQSolver(; abstol=0.1f0, reltol=0.1f0, abstol_termination=0.1f0,
-            reltol_termination=0.1f0);
-        save_everystep=true))
+    DeepEquilibriumNetwork(Parallel(+, Dense(2 => 2; use_bias=false),
+            Dense(2 => 2; use_bias=false)), NewtonRaphson()))
 
 gdev = gpu_device()
 cdev = cpu_device()
 
 ps, st = Lux.setup(rng, model) |> gdev
-x = rand(rng, Float32, 2, 1) |> gdev
-y = rand(rng, Float32, 2, 1) |> gdev
+x = rand(rng, Float32, 2, 3) |> gdev
+y = rand(rng, Float32, 2, 3) |> gdev
 
 model(x, ps, st)
 
-gs = only(Zygote.gradient(p -> sum(abs2, first(first(model(x, p, st))) .- y), ps))
+gs = only(Zygote.gradient(p -> sum(abs2, first(model(x, p, st)) .- y), ps))
 ```
 
 ## Citation
@@ -57,14 +54,11 @@ If you are using this project for research or other academic purposes consider c
 paper:
 
 ```bibtex
-@misc{pal2022mixing,
-  title={Mixing Implicit and Explicit Deep Learning with Skip DEQs and Infinite Time Neural
-         ODEs (Continuous DEQs)}, 
-  author={Avik Pal and Alan Edelman and Christopher Rackauckas},
-  year={2022},
-  eprint={2201.12240},
-  archivePrefix={arXiv},
-  primaryClass={cs.LG}
+@article{pal2022continuous,
+  title={Continuous Deep Equilibrium Models: Training Neural ODEs Faster by Integrating Them to Infinity},
+  author={Pal, Avik and Edelman, Alan and Rackauckas, Christopher},
+  booktitle={2023 IEEE High Performance Extreme Computing Conference (HPEC)}, 
+  year={2023}
 }
 ```
 
