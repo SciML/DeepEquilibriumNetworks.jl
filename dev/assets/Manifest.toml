@@ -413,9 +413,9 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
 [[deps.DeepEquilibriumNetworks]]
 deps = ["ADTypes", "ChainRulesCore", "ConcreteStructs", "ConstructionBase", "DiffEqBase", "LinearAlgebra", "Lux", "Random", "SciMLBase", "Statistics", "SteadyStateDiffEq", "TruncatedStacktraces"]
-path = "/var/lib/buildkite-agent/builds/gpuci-16/julialang/deepequilibriumnetworks"
+path = "/var/lib/buildkite-agent/builds/gpuci-17/julialang/deepequilibriumnetworks"
 uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
-version = "2.0.1"
+version = "2.0.2"
 weakdeps = ["LinearSolve", "SciMLSensitivity", "Zygote"]
 
     [deps.DeepEquilibriumNetworks.extensions]
