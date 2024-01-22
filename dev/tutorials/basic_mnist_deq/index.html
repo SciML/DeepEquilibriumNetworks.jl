@@ -140,101 +140,101 @@ function train_model(solver, model_type; data_train=zip(x_train, y_train),
 end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">train_model (generic function with 1 method)</code></pre><p>Now we can train our model. First we will train a Discrete DEQ, which effectively means pass in a root finding algorithm. Typically most packages lack good nonlinear solvers, and end up using solvers like <code>Broyden</code>, but we can simply slap in any of the fancy solvers from NonlinearSolve.jl. Here we will use Newton-Krylov Method:</p><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr36"><span class="sgr1">[ Info: </span></span>warming up forward pass
 <span class="sgr36"><span class="sgr1">[ Info: </span></span>warming up backward pass
 <span class="sgr36"><span class="sgr1">[ Info: </span></span>warmup complete
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Training Model: regdeq with Solver: NewtonRaphson
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Starting Accuracy: 9.815705128205128
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Training Model: regdeq with Solver: GeneralizedFirstOrderAlgorithm
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Starting Accuracy: 11.338141025641026
 <span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretrain with unrolling to a depth of 5
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [1/468] Loss: 3.330751359462738
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [51/468] Loss: 2.309669009409845
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [101/468] Loss: 2.2545359865762293
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [151/468] Loss: 2.199625452980399
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [201/468] Loss: 2.146916497964412
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [251/468] Loss: 2.114489217288792
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [301/468] Loss: 1.8955288925208151
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [351/468] Loss: 1.8875683401711285
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [401/468] Loss: 1.6469420732464641
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [451/468] Loss: 1.1985668113920838
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining complete. Accuracy: 92.59815705128204
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [1/468] Loss: 1.0475590268615633
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [51/468] Loss: 0.8497849772684276
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [101/468] Loss: 0.594392946921289
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [151/468] Loss: 0.49044189462438226
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [201/468] Loss: 0.3819922338007018
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [251/468] Loss: 0.34852195775602013
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [301/468] Loss: 0.3139978914987296
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [351/468] Loss: 0.3218982338439673
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [401/468] Loss: 0.3192886095494032
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [451/468] Loss: 0.23114506108686328
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Accuracy: 97.49599358974359
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [1/468] Loss: 0.17701745894737542
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [51/468] Loss: 0.17107011028565466
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [101/468] Loss: 0.13015575427561998
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [151/468] Loss: 0.15089968626853079
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [201/468] Loss: 0.16662552079651505
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [251/468] Loss: 0.15307520551141351
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [301/468] Loss: 0.10173928912263364
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [351/468] Loss: 0.16089882247615606
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [401/468] Loss: 0.1767611854011193
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [451/468] Loss: 0.13907072483561933
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Accuracy: 97.56610576923077
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [1/468] Loss: 0.09167209372390062
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [51/468] Loss: 0.1248952483292669
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [101/468] Loss: 0.07823489722795784
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [151/468] Loss: 0.10948942124377936
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [201/468] Loss: 0.13097850896883756
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [251/468] Loss: 0.10425213642884046
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [301/468] Loss: 0.07753681717440486
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [351/468] Loss: 0.10684263939037919
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [401/468] Loss: 0.10888150066602975
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [451/468] Loss: 0.07842138520209119
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Accuracy: 98.22716346153845
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [1/468] Loss: 3.0657129883766174
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [51/468] Loss: 2.307141877245158
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [101/468] Loss: 2.259043117053807
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [151/468] Loss: 2.186050646007061
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [201/468] Loss: 2.0783990183845162
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [251/468] Loss: 1.986975668463856
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [301/468] Loss: 1.7289463141933084
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [351/468] Loss: 1.7575290966778994
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [401/468] Loss: 1.6296475566923618
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [451/468] Loss: 1.363139913417399
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining complete. Accuracy: 77.0733173076923
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [1/468] Loss: 1.2374248839914799
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [51/468] Loss: 1.2197489310055971
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [101/468] Loss: 1.0330189131200314
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [151/468] Loss: 0.8740549478679895
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [201/468] Loss: 0.7575580002740026
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [251/468] Loss: 0.6864444175735116
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [301/468] Loss: 0.5705740451812744
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [351/468] Loss: 0.7292759604752064
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [401/468] Loss: 0.6024848558008671
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [451/468] Loss: 0.41953044291585684
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Accuracy: 95.36258012820514
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [1/468] Loss: 0.3480170415714383
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [51/468] Loss: 0.3680779552087188
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [101/468] Loss: 0.34784929268062115
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [151/468] Loss: 0.320041261613369
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [201/468] Loss: 0.3039373904466629
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [251/468] Loss: 0.2871396550908685
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [301/468] Loss: 0.21786461398005486
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [351/468] Loss: 0.2932729087769985
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [401/468] Loss: 0.35954953730106354
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [451/468] Loss: 0.2521524531766772
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Accuracy: 96.7948717948718
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [1/468] Loss: 0.2086863899603486
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [51/468] Loss: 0.22372082294896245
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [101/468] Loss: 0.2081399681046605
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [151/468] Loss: 0.19090352253988385
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [201/468] Loss: 0.17888377327471972
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [251/468] Loss: 0.18263230938464403
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [301/468] Loss: 0.13341705640777946
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [351/468] Loss: 0.1867245831526816
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [401/468] Loss: 0.24992780899628997
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [451/468] Loss: 0.18092766171321273
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Accuracy: 97.6161858974359
 <span class="sgr36"><span class="sgr1">[ Info: </span></span>Training complete.</code></pre><p>We can also train a continuous DEQ by passing in an ODE solver. Here we will use <code>VCAB3()</code> which tend to be quite fast for continuous Neural Network problems.</p><pre><code class="language-julia hljs">train_model(VCAB3(), :deq)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr36"><span class="sgr1">[ Info: </span></span>warming up forward pass
 <span class="sgr36"><span class="sgr1">[ Info: </span></span>warming up backward pass
 <span class="sgr36"><span class="sgr1">[ Info: </span></span>warmup complete
 <span class="sgr36"><span class="sgr1">[ Info: </span></span>Training Model: deq with Solver: VCAB3
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Starting Accuracy: 11.007612179487179
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Starting Accuracy: 10.316506410256409
 <span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretrain with unrolling to a depth of 5
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [1/468] Loss: 4.069970458745956
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [51/468] Loss: 2.3272042013704777
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [101/468] Loss: 2.21156123559922
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [151/468] Loss: 2.1286493511870503
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [201/468] Loss: 2.0395961962640285
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [251/468] Loss: 1.981815936975181
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [301/468] Loss: 1.7682592049241066
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [351/468] Loss: 1.8295120606198907
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [401/468] Loss: 1.778864191379398
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [451/468] Loss: 1.5824153553694487
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining complete. Accuracy: 67.86858974358975
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [1/468] Loss: 1.7575346492230892
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [51/468] Loss: 1.4247666262090206
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [101/468] Loss: 1.2546319402754307
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [151/468] Loss: 1.1416069800034165
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [201/468] Loss: 1.088306698948145
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [251/468] Loss: 0.9884116710163653
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [301/468] Loss: 0.804865937680006
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [351/468] Loss: 0.8606297406367958
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [401/468] Loss: 0.7694414616562426
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [451/468] Loss: 0.6440622229129076
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Accuracy: 92.91866987179486
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [1/468] Loss: 0.6537533048540354
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [51/468] Loss: 0.5829425784759223
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [101/468] Loss: 0.4429827299900353
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [151/468] Loss: 0.4448100090958178
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [201/468] Loss: 0.37119410606101155
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [251/468] Loss: 0.3872480383142829
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [301/468] Loss: 1.0401564098428935
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [351/468] Loss: 0.8164333829190582
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [401/468] Loss: 0.7130869142711163
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [451/468] Loss: 0.5475917607545853
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Accuracy: 93.7099358974359
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [1/468] Loss: 0.5321172256954014
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [51/468] Loss: 0.49156659841537476
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [101/468] Loss: 0.40321235777810216
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [151/468] Loss: 0.3552880606148392
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [201/468] Loss: 0.3518441419582814
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [251/468] Loss: 0.35335386311635375
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [301/468] Loss: 0.30499093420803547
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [351/468] Loss: 0.3680614880286157
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [401/468] Loss: 0.3554929755628109
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [451/468] Loss: 0.3076688947621733
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Accuracy: 96.47435897435898
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Training complete.</code></pre><p>This code is setup to allow playing around with different DEQ models. Try modifying the <code>model_type</code> argument to <code>train_model</code> to <code>:skipdeq</code> or <code>:deq</code> to see how the model behaves. You can also try different solvers from NonlinearSolve.jl and OrdinaryDiffEq.jl! Even 3rd party solvers from Sundials.jl will work, just remember to use CPU for those.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../reduced_dim_deq/">Modelling Equilibrium Models with Reduced State Size »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Monday 8 January 2024 22:31">Monday 8 January 2024</span>. Using Julia version 1.10.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [1/468] Loss: 4.236337810754776
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [51/468] Loss: 2.3369451304897666
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [101/468] Loss: 2.2180131329223514
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [151/468] Loss: 2.126252954825759
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [201/468] Loss: 2.0540128089487553
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [251/468] Loss: 2.0125103099271655
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [301/468] Loss: 1.8147916197776794
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [351/468] Loss: 1.8039415371604264
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [401/468] Loss: 1.7927064700052142
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [451/468] Loss: 1.6104821907356381
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining complete. Accuracy: 60.90745192307693
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [1/468] Loss: 1.7946238089352846
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [51/468] Loss: 1.4678007503971457
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [101/468] Loss: 1.3034662106074393
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [151/468] Loss: 1.1939875870011747
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [201/468] Loss: 1.166822722647339
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [251/468] Loss: 1.046801463700831
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [301/468] Loss: 0.8091823332943022
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [351/468] Loss: 0.9364965851418674
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [401/468] Loss: 0.794427412096411
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [451/468] Loss: 0.6742356149479747
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Accuracy: 90.83533653846155
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [1/468] Loss: 0.6648058327846229
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [51/468] Loss: 0.5869030277244747
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [101/468] Loss: 0.4830635925754905
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [151/468] Loss: 2.5553276855498552
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [201/468] Loss: 1.216355866752565
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [251/468] Loss: 0.9505242425948381
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [301/468] Loss: 0.7163282269611955
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [351/468] Loss: 0.7962803347036242
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [401/468] Loss: 0.6449905391782522
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [451/468] Loss: 0.5783877242356539
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Accuracy: 93.65985576923077
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [1/468] Loss: 0.5599905699491501
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [51/468] Loss: 0.5999409202486277
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [101/468] Loss: 0.45546888187527657
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [151/468] Loss: 0.4503066688776016
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [201/468] Loss: 0.4204248432070017
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [251/468] Loss: 0.43859706819057465
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [301/468] Loss: 0.367935998365283
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [351/468] Loss: 0.4137013256549835
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [401/468] Loss: 0.3495127446949482
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [451/468] Loss: 0.3193033132702112
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Accuracy: 96.86498397435898
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Training complete.</code></pre><p>This code is setup to allow playing around with different DEQ models. Try modifying the <code>model_type</code> argument to <code>train_model</code> to <code>:skipdeq</code> or <code>:deq</code> to see how the model behaves. You can also try different solvers from NonlinearSolve.jl and OrdinaryDiffEq.jl! Even 3rd party solvers from Sundials.jl will work, just remember to use CPU for those.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../reduced_dim_deq/">Modelling Equilibrium Models with Reduced State Size »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Monday 22 January 2024 21:58">Monday 22 January 2024</span>. Using Julia version 1.10.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
