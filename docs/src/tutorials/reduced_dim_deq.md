@@ -6,7 +6,7 @@ same MNIST example as before, but this time we will use a reduced state size.
 
 ```@example reduced_dim_mnist
 using DeepEquilibriumNetworks, SciMLSensitivity, Lux, NonlinearSolve, OrdinaryDiffEq,
-    Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve
+    Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve, LoggingExtras
 using MLDatasets: MNIST
 using MLDataUtils: LabelEnc, convertlabel, stratifiedobs, batchview
 
@@ -15,6 +15,13 @@ ENV["DATADEPS_ALWAYS_ACCEPT"] = true
 
 const cdev = cpu_device()
 const gdev = gpu_device()
+
+function remove_syms_warning(log_args)
+    return log_args.message !=
+           "The use of keyword arguments `syms`, `paramsyms` and `indepsym` for `SciMLFunction`s is deprecated. Pass `sys = SymbolCache(syms, paramsyms, indepsym)` instead."
+end
+
+filtered_logger = ActiveFilteredLogger(remove_syms_warning, global_logger())
 
 function onehot(labels_raw)
     return convertlabel(LabelEnc.OneOfK, labels_raw, LabelEnc.NativeLabels(collect(0:9)))
@@ -168,11 +175,15 @@ Now we can train our model. We can't use `:regdeq` here currently, but we will s
 in the future.
 
 ```@example reduced_dim_mnist
-train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :skipdeq)
+with_logger(filtered_logger) do
+    train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :skipdeq)
+end
 nothing # hide
 ```
 
 ```@example reduced_dim_mnist
-train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :deq)
+with_logger(filtered_logger) do
+    train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :deq)
+end
 nothing # hide
 ```
