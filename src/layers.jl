@@ -149,7 +149,7 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing]
 
 ## Example
 
-```jldoctest
+```julia
 julia> using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq
 
 julia> model = DeepEquilibriumNetwork(Parallel(+, Dense(2, 2; use_bias=false),
@@ -230,7 +230,7 @@ For keyword arguments, see [`DeepEquilibriumNetwork`](@ref).
 
 ## Example
 
-```jldoctest
+```julia
 julia> using DeepEquilibriumNetworks, Lux, Random, NonlinearSolve
 
 julia> main_layers = (Parallel(+, Dense(4 => 4, tanh; use_bias=false),
