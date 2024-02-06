@@ -22,7 +22,9 @@ end
     x_sizes = [(2, 14), (3, 3, 1, 3)]
 
     model_type = (:deq, :skipdeq, :skipregdeq)
-    solvers = (VCAB3(), Tsit5(), NewtonRaphson(), SimpleLimitedMemoryBroyden())
+    solvers = (VCAB3(), Tsit5(),
+        NewtonRaphson(; autodiff=AutoForwardDiff(; chunksize=12)),
+        SimpleLimitedMemoryBroyden())
     jacobian_regularizations = Any[nothing, AutoZygote()]
     !ongpu && push!(jacobian_regularizations, AutoFiniteDiff())
 
@@ -31,8 +33,6 @@ end
 
         @testset "x_size: $(x_size)" for (base_model, init_model, x_size) in zip(base_models,
             init_models, x_sizes)
-            @info solver, mtype, jacobian_regularization, base_model, init_model, x_size
-
             model = if mtype === :deq
                 DeepEquilibriumNetwork(base_model, solver; jacobian_regularization)
             elseif mtype === :skipdeq
@@ -48,9 +48,8 @@ end
             x = randn(rng, Float32, x_size...) |> dev
             z, st = model(x, ps, st)
 
-            opt_broken = solver isa NewtonRaphson ||
-                         solver isa SimpleLimitedMemoryBroyden
-            @jet model(x, ps, st) opt_broken=opt_broken # Broken due to nfe dynamic dispatch
+            opt_broken = solver isa SimpleLimitedMemoryBroyden
+            @jet model(x, ps, st) opt_broken=opt_broken
 
             @test all(isfinite, z)
             @test size(z) == size(x)
@@ -107,20 +106,18 @@ end
     scales = [((4,), (3,), (2,), (1,))]
 
     model_type = (:deq, :skipdeq, :skipregdeq, :node)
-    solvers = (VCAB3(), Tsit5(), NewtonRaphson(), SimpleLimitedMemoryBroyden())
+    solvers = (VCAB3(), Tsit5(),
+        NewtonRaphson(; autodiff=AutoForwardDiff(; chunksize=12)),
+        SimpleLimitedMemoryBroyden())
     jacobian_regularizations = (nothing,)
 
     for mtype in model_type, jacobian_regularization in jacobian_regularizations
         @testset "Solver: $(__nameof(solver))" for solver in solvers
             @testset "x_size: $(x_size)" for (main_layer, mapping_layer, init_layer, x_size, scale) in zip(main_layers,
                 mapping_layers, init_layers, x_sizes, scales)
-                @info solver, mtype, jacobian_regularization, main_layer, mapping_layer,
-                init_layer, x_size, scale
-
                 model = if mtype === :deq
                     MultiScaleDeepEquilibriumNetwork(main_layer, mapping_layer, nothing,
-                        solver,
-                        scale; jacobian_regularization)
+                        solver, scale; jacobian_regularization)
                 elseif mtype === :skipdeq
                     MultiScaleSkipDeepEquilibriumNetwork(main_layer, mapping_layer, nothing,
                         init_layer, solver, scale; jacobian_regularization)
@@ -140,8 +137,7 @@ end
                 z, st = model(x, ps, st)
                 z_ = DEQs.__flatten_vcat(z)
 
-                opt_broken = solver isa NewtonRaphson ||
-                             solver isa SimpleLimitedMemoryBroyden
+                opt_broken = solver isa SimpleLimitedMemoryBroyden
                 @jet model(x, ps, st) opt_broken=opt_broken # Broken due to nfe dynamic dispatch
 
                 @test all(isfinite, z_)

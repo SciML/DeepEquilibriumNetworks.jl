@@ -1,13 +1,7 @@
-using SafeTestsets, Test
+using SafeTestsets, Test, TestSetExtensions
 
-@testset "Deep Equilibrium Networks" begin
-    @safetestset "Quality Assurance" begin
-        include("qa.jl")
-    end
-    @safetestset "Utilities" begin
-        include("utils.jl")
-    end
-    @safetestset "Layers" begin
-        include("layers.jl")
-    end
+@testset ExtendedTestSet "Deep Equilibrium Networks" begin
+    @safetestset "Quality Assurance" include("qa.jl")
+    @safetestset "Utilities" include("utils.jl")
+    @safetestset "Layers" include("layers.jl")
 end

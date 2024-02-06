@@ -97,7 +97,12 @@ function (deq::DEQ{pType})(x, ps, st::NamedTuple, ::Val{false}) where {pType}
 
     model = Lux.Experimental.StatefulLuxLayer(deq.model, nothing, st.model)
 
-    dudt(u, p, t) = model((u, p.x), p.ps) .- u
+    dudt = @closure (u, p, t) -> begin
+        # The type-assert is needed because of an upstream Lux issue with type stability of
+        # conv with Dual numbers
+        y = model((u, p.x), p.ps)::typeof(u)
+        return y .- u
+    end
 
     prob = __construct_prob(pType, ODEFunction{false}(dudt), z, (; ps=ps.model, x))
     alg = __normalize_alg(deq)
