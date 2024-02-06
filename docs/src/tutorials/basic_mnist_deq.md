@@ -4,7 +4,7 @@ We will train a simple Deep Equilibrium Model on MNIST. First we load a few pack
 
 ```@example basic_mnist_deq
 using DeepEquilibriumNetworks, SciMLSensitivity, Lux, NonlinearSolve, OrdinaryDiffEq,
-    Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve
+    Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve, LoggingExtras
 using MLDatasets: MNIST
 using MLDataUtils: LabelEnc, convertlabel, stratifiedobs, batchview
 
@@ -18,6 +18,18 @@ Setup device functions from Lux. See
 ```@example basic_mnist_deq
 const cdev = cpu_device()
 const gdev = gpu_device()
+```
+
+SciMLBase introduced a warning instead of depwarn which pollutes the output. We can suppress
+it with the following logger
+
+```@example basic_mnist_deq
+function remove_syms_warning(log_args)
+    return log_args.message !=
+           "The use of keyword arguments `syms`, `paramsyms` and `indepsym` for `SciMLFunction`s is deprecated. Pass `sys = SymbolCache(syms, paramsyms, indepsym)` instead."
+end
+
+filtered_logger = ActiveFilteredLogger(remove_syms_warning, global_logger())
 ```
 
 We can now construct our dataloader.
@@ -175,7 +187,9 @@ and end up using solvers like `Broyden`, but we can simply slap in any of the fa
 from NonlinearSolve.jl. Here we will use Newton-Krylov Method:
 
 ```@example basic_mnist_deq
-train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq)
+with_logger(filtered_logger) do
+    train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq)
+end
 nothing # hide
 ```
 
@@ -183,7 +197,9 @@ We can also train a continuous DEQ by passing in an ODE solver. Here we will use
 which tend to be quite fast for continuous Neural Network problems.
 
 ```@example basic_mnist_deq
-train_model(VCAB3(), :deq)
+with_logger(filtered_logger) do
+    train_model(VCAB3(), :deq)
+end
 nothing # hide
 ```
 

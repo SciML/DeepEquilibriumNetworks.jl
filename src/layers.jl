@@ -97,7 +97,12 @@ function (deq::DEQ{pType})(x, ps, st::NamedTuple, ::Val{false}) where {pType}
 
     model = Lux.Experimental.StatefulLuxLayer(deq.model, nothing, st.model)
 
-    dudt(u, p, t) = model((u, p.x), p.ps) .- u
+    dudt = @closure (u, p, t) -> begin
+        # The type-assert is needed because of an upstream Lux issue with type stability of
+        # conv with Dual numbers
+        y = model((u, p.x), p.ps)::typeof(u)
+        return y .- u
+    end
 
     prob = __construct_prob(pType, ODEFunction{false}(dudt), z, (; ps=ps.model, x))
     alg = __normalize_alg(deq)
@@ -144,7 +149,7 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing]
 
 ## Example
 
-```jldoctest
+```julia
 julia> using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq
 
 julia> model = DeepEquilibriumNetwork(Parallel(+, Dense(2, 2; use_bias=false),
@@ -225,7 +230,7 @@ For keyword arguments, see [`DeepEquilibriumNetwork`](@ref).
 
 ## Example
 
-```jldoctest
+```julia
 julia> using DeepEquilibriumNetworks, Lux, Random, NonlinearSolve
 
 julia> main_layers = (Parallel(+, Dense(4 => 4, tanh; use_bias=false),
