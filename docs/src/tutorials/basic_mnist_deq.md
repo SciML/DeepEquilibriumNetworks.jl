@@ -4,7 +4,7 @@ We will train a simple Deep Equilibrium Model on MNIST. First we load a few pack
 
 ```@example basic_mnist_deq
 using DeepEquilibriumNetworks, SciMLSensitivity, Lux, NonlinearSolve, OrdinaryDiffEq,
-    Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve, LoggingExtras
+      Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve, LoggingExtras
 using MLDatasets: MNIST
 using MLDataUtils: LabelEnc, convertlabel, stratifiedobs, batchview
 
@@ -65,7 +65,8 @@ function construct_model(solver; model_type::Symbol=:deq)
         Conv((4, 4), 64 => 64; stride=2, pad=1))
 
     # The input layer of the DEQ
-    deq_model = Chain(Parallel(+,
+    deq_model = Chain(
+        Parallel(+,
             Conv((3, 3), 64 => 64, tanh; stride=1, pad=SamePad()),
             Conv((3, 3), 64 => 64, tanh; stride=1, pad=SamePad())),
         Conv((3, 3), 64 => 64, tanh; stride=1, pad=SamePad()))
