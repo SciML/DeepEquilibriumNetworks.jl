@@ -25,8 +25,10 @@ rng = Random.default_rng()
 Random.seed!(rng, seed)
 
 model = Chain(Dense(2 => 2),
-    DeepEquilibriumNetwork(Parallel(+, Dense(2 => 2; use_bias=false),
-            Dense(2 => 2; use_bias=false)), NewtonRaphson()))
+    DeepEquilibriumNetwork(
+        Parallel(+, Dense(2 => 2; use_bias=false),
+            Dense(2 => 2; use_bias=false)),
+        NewtonRaphson()))
 
 gdev = gpu_device()
 cdev = cpu_device()
