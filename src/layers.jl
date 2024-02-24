@@ -152,8 +152,10 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing]
 ```julia
 julia> using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq
 
-julia> model = DeepEquilibriumNetwork(Parallel(+, Dense(2, 2; use_bias=false),
-               Dense(2, 2; use_bias=false)), VCABM3(); verbose=false)
+julia> model = DeepEquilibriumNetwork(
+           Parallel(+, Dense(2, 2; use_bias=false),
+               Dense(2, 2; use_bias=false)),
+           VCABM3(); verbose=false)
 DeepEquilibriumNetwork(
     model = Parallel(
         +
@@ -233,15 +235,17 @@ For keyword arguments, see [`DeepEquilibriumNetwork`](@ref).
 ```julia
 julia> using DeepEquilibriumNetworks, Lux, Random, NonlinearSolve
 
-julia> main_layers = (Parallel(+, Dense(4 => 4, tanh; use_bias=false),
-               Dense(4 => 4, tanh; use_bias=false)), Dense(3 => 3, tanh), Dense(2 => 2, tanh),
+julia> main_layers = (
+           Parallel(+, Dense(4 => 4, tanh; use_bias=false),
+               Dense(4 => 4, tanh; use_bias=false)),
+           Dense(3 => 3, tanh), Dense(2 => 2, tanh),
            Dense(1 => 1, tanh))
 (Parallel(), Dense(3 => 3, tanh_fast), Dense(2 => 2, tanh_fast), Dense(1 => 1, tanh_fast))
 
 julia> mapping_layers = [NoOpLayer() Dense(4 => 3, tanh) Dense(4 => 2, tanh) Dense(4 => 1, tanh);
-           Dense(3 => 4, tanh) NoOpLayer() Dense(3 => 2, tanh) Dense(3 => 1, tanh);
-           Dense(2 => 4, tanh) Dense(2 => 3, tanh) NoOpLayer() Dense(2 => 1, tanh);
-           Dense(1 => 4, tanh) Dense(1 => 3, tanh) Dense(1 => 2, tanh) NoOpLayer()]
+                         Dense(3 => 4, tanh) NoOpLayer() Dense(3 => 2, tanh) Dense(3 => 1, tanh);
+                         Dense(2 => 4, tanh) Dense(2 => 3, tanh) NoOpLayer() Dense(2 => 1, tanh);
+                         Dense(1 => 4, tanh) Dense(1 => 3, tanh) Dense(1 => 2, tanh) NoOpLayer()]
 4×4 Matrix{LuxCore.AbstractExplicitLayer}:
  NoOpLayer()               …  Dense(4 => 1, tanh_fast)
  Dense(3 => 4, tanh_fast)     Dense(3 => 1, tanh_fast)

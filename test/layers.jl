@@ -1,5 +1,5 @@
 using ADTypes, DeepEquilibriumNetworks, DiffEqBase, NonlinearSolve, OrdinaryDiffEq,
-    SciMLSensitivity, SciMLBase, Test
+      SciMLSensitivity, SciMLBase, Test
 
 include("test_utils.jl")
 
@@ -16,7 +16,7 @@ end
 
     base_models = [
         Parallel(+, __get_dense_layer(2 => 2), __get_dense_layer(2 => 2)),
-        Parallel(+, __get_conv_layer((1, 1), 1 => 1), __get_conv_layer((1, 1), 1 => 1)),
+        Parallel(+, __get_conv_layer((1, 1), 1 => 1), __get_conv_layer((1, 1), 1 => 1))
     ]
     init_models = [__get_dense_layer(2 => 2), __get_conv_layer((1, 1), 1 => 1)]
     x_sizes = [(2, 14), (3, 3, 1, 3)]
@@ -31,7 +31,8 @@ end
     @testset "Solver: $(__nameof(solver))" for solver in solvers,
         mtype in model_type, jacobian_regularization in jacobian_regularizations
 
-        @testset "x_size: $(x_size)" for (base_model, init_model, x_size) in zip(base_models,
+        @testset "x_size: $(x_size)" for (base_model, init_model, x_size) in zip(
+            base_models,
             init_models, x_sizes)
             model = if mtype === :deq
                 DeepEquilibriumNetwork(base_model, solver; jacobian_regularization)
@@ -86,20 +87,20 @@ end
 
     main_layers = [
         (Parallel(+, __get_dense_layer(4 => 4), __get_dense_layer(4 => 4)),
-            __get_dense_layer(3 => 3), __get_dense_layer(2 => 2),
-            __get_dense_layer(1 => 1)),
+        __get_dense_layer(3 => 3), __get_dense_layer(2 => 2),
+        __get_dense_layer(1 => 1))
     ]
 
     mapping_layers = [
         [NoOpLayer() __get_dense_layer(4 => 3) __get_dense_layer(4 => 2) __get_dense_layer(4 => 1);
-            __get_dense_layer(3 => 4) NoOpLayer() __get_dense_layer(3 => 2) __get_dense_layer(3 => 1);
-            __get_dense_layer(2 => 4) __get_dense_layer(2 => 3) NoOpLayer() __get_dense_layer(2 => 1);
-            __get_dense_layer(1 => 4) __get_dense_layer(1 => 3) __get_dense_layer(1 => 2) NoOpLayer()],
+         __get_dense_layer(3 => 4) NoOpLayer() __get_dense_layer(3 => 2) __get_dense_layer(3 => 1);
+         __get_dense_layer(2 => 4) __get_dense_layer(2 => 3) NoOpLayer() __get_dense_layer(2 => 1);
+         __get_dense_layer(1 => 4) __get_dense_layer(1 => 3) __get_dense_layer(1 => 2) NoOpLayer()]
     ]
 
     init_layers = [
         (__get_dense_layer(4 => 4), __get_dense_layer(4 => 3), __get_dense_layer(4 => 2),
-            __get_dense_layer(4 => 1)),
+        __get_dense_layer(4 => 1))
     ]
 
     x_sizes = [(4, 3)]
@@ -113,16 +114,19 @@ end
 
     for mtype in model_type, jacobian_regularization in jacobian_regularizations
         @testset "Solver: $(__nameof(solver))" for solver in solvers
-            @testset "x_size: $(x_size)" for (main_layer, mapping_layer, init_layer, x_size, scale) in zip(main_layers,
+            @testset "x_size: $(x_size)" for (main_layer, mapping_layer, init_layer, x_size, scale) in zip(
+                main_layers,
                 mapping_layers, init_layers, x_sizes, scales)
                 model = if mtype === :deq
                     MultiScaleDeepEquilibriumNetwork(main_layer, mapping_layer, nothing,
                         solver, scale; jacobian_regularization)
                 elseif mtype === :skipdeq
-                    MultiScaleSkipDeepEquilibriumNetwork(main_layer, mapping_layer, nothing,
+                    MultiScaleSkipDeepEquilibriumNetwork(
+                        main_layer, mapping_layer, nothing,
                         init_layer, solver, scale; jacobian_regularization)
                 elseif mtype === :skipregdeq
-                    MultiScaleSkipDeepEquilibriumNetwork(main_layer, mapping_layer, nothing,
+                    MultiScaleSkipDeepEquilibriumNetwork(
+                        main_layer, mapping_layer, nothing,
                         solver, scale; jacobian_regularization)
                 elseif mtype === :node
                     solver isa SciMLBase.AbstractODEAlgorithm || continue

@@ -6,7 +6,7 @@ same MNIST example as before, but this time we will use a reduced state size.
 
 ```@example reduced_dim_mnist
 using DeepEquilibriumNetworks, SciMLSensitivity, Lux, NonlinearSolve, OrdinaryDiffEq,
-    Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve, LoggingExtras
+      Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve, LoggingExtras
 using MLDatasets: MNIST
 using MLDataUtils: LabelEnc, convertlabel, stratifiedobs, batchview
 
