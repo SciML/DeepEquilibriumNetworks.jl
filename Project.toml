@@ -29,7 +29,7 @@ DeepEquilibriumNetworksLinearSolveSciMLSensitivityExt = ["LinearSolve", "SciMLSe
 DeepEquilibriumNetworksZygoteExt = "Zygote"
 
 [compat]
-ADTypes = "0.2.5"
+ADTypes = "0.2.5, 1"
 ChainRulesCore = "1"
 ConcreteStructs = "0.2"
 ConstructionBase = "1"
