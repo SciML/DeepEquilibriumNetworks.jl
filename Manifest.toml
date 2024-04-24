@@ -497,7 +497,7 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [[deps.Lux]]
 deps = ["ADTypes", "Adapt", "ArrayInterface", "ChainRulesCore", "ConcreteStructs", "ConstructionBase", "FastClosures", "Functors", "GPUArraysCore", "LinearAlgebra", "LuxCore", "LuxDeviceUtils", "LuxLib", "MacroTools", "Markdown", "PrecompileTools", "Preferences", "Random", "Reexport", "Setfield", "Statistics", "WeightInitializers"]
-git-tree-sha1 = "295c76513705518749fd4e151d9de77c75049d43"
+git-tree-sha1 = "ae13ecbe29ee7432dfd477b233db43c462b6a4ff"
 repo-rev = "ap/nested_ad"
 repo-url = "https://github.com/LuxDL/Lux.jl.git"
 uuid = "b2108857-7c20-44ae-9111-449ecde12c47"
@@ -574,9 +574,9 @@ version = "0.1.20"
 
 [[deps.LuxLib]]
 deps = ["ArrayInterface", "ChainRulesCore", "FastBroadcast", "FastClosures", "GPUArraysCore", "KernelAbstractions", "LinearAlgebra", "LuxCore", "Markdown", "NNlib", "PrecompileTools", "Random", "Reexport", "Statistics", "Strided"]
-git-tree-sha1 = "7cb3cdf01835d508f2c81e09d2e93f309434b5d6"
+git-tree-sha1 = "edbf65f5ceb15ebbfad9d03c6a846d83b9a97baf"
 uuid = "82251201-b29d-42c6-8e01-566dec8acb11"
-version = "0.3.15"
+version = "0.3.16"
 
     [deps.LuxLib.extensions]
     LuxLibAMDGPUExt = "AMDGPU"

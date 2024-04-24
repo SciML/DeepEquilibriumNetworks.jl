@@ -6,7 +6,7 @@ same MNIST example as before, but this time we will use a reduced state size.
 
 ```@example reduced_dim_mnist
 using DeepEquilibriumNetworks, SciMLSensitivity, Lux, NonlinearSolve, OrdinaryDiffEq,
-      Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve, LoggingExtras
+      Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve, Dates, Printf
 using MLDatasets: MNIST
 using MLDataUtils: LabelEnc, convertlabel, stratifiedobs, batchview
 
@@ -15,13 +15,6 @@ ENV["DATADEPS_ALWAYS_ACCEPT"] = true
 
 const cdev = cpu_device()
 const gdev = gpu_device()
-
-function remove_syms_warning(log_args)
-    return log_args.message !=
-           "The use of keyword arguments `syms`, `paramsyms` and `indepsym` for `SciMLFunction`s is deprecated. Pass `sys = SymbolCache(syms, paramsyms, indepsym)` instead."
-end
-
-filtered_logger = ActiveFilteredLogger(remove_syms_warning, global_logger())
 
 function onehot(labels_raw)
     return convertlabel(LabelEnc.OneOfK, labels_raw, LabelEnc.NativeLabels(collect(0:9)))
@@ -83,12 +76,12 @@ function construct_model(solver; model_type::Symbol=:regdeq)
     x = randn(rng, Float32, 28, 28, 1, 128)
     y = onehot(rand(Random.default_rng(), 0:9, 128)) |> gdev
 
-    model_ = Lux.Experimental.StatefulLuxLayer(model, ps, st)
-    @info "warming up forward pass"
+    model_ = StatefulLuxLayer(model, ps, st)
+    @printf "[%s] warming up forward pass\n" string(now())
     logitcrossentropy(model_, x, ps, y)
-    @info "warming up backward pass"
+    @printf "[%s] warming up backward pass\n" string(now())
     Zygote.gradient(logitcrossentropy, model_, x, ps, y)
-    @info "warmup complete"
+    @printf "[%s] warmup complete\n" string(now())
 
     return model, ps, st
 end
@@ -110,7 +103,7 @@ classify(x) = argmax.(eachcol(x))
 function accuracy(model, data, ps, st)
     total_correct, total = 0, 0
     st = Lux.testmode(st)
-    model = Lux.Experimental.StatefulLuxLayer(model, ps, st)
+    model = StatefulLuxLayer(model, ps, st)
     for (x, y) in data
         target_class = classify(cdev(y))
         predicted_class = classify(cdev(model(x)))
@@ -123,48 +116,43 @@ end
 function train_model(
         solver, model_type; data_train=zip(x_train, y_train), data_test=zip(x_test, y_test))
     model, ps, st = construct_model(solver; model_type)
-    model_st = Lux.Experimental.StatefulLuxLayer(model, nothing, st)
+    model_st = StatefulLuxLayer(model, nothing, st)
 
-    @info "Training Model: $(model_type) with Solver: $(nameof(typeof(solver)))"
+    @printf "[%s] Training Model: %s with Solver: %s\n" string(now()) model_type nameof(typeof(solver))
 
     opt_st = Optimisers.setup(Adam(0.001), ps)
 
     acc = accuracy(model, data_test, ps, st) * 100
-    @info "Starting Accuracy: $(acc)"
+    @printf "[%s] Starting Accuracy: %.5f%%\n" string(now()) acc
 
-    @info "Pretrain with unrolling to a depth of 5"
+    @printf "[%s] Pretrain with unrolling to a depth of 5\n" string(now())
     st = Lux.update_state(st, :fixed_depth, Val(5))
-    model_st = Lux.Experimental.StatefulLuxLayer(model, ps, st)
+    model_st = StatefulLuxLayer(model, ps, st)
 
     for (i, (x, y)) in enumerate(data_train)
         res = Zygote.withgradient(logitcrossentropy, model_st, x, ps, y)
         Optimisers.update!(opt_st, ps, res.grad[3])
-        if i % 50 == 1
-            @info "Pretraining Batch: [$(i)/$(length(data_train))] Loss: $(res.val)"
-        end
+        i % 50 == 1 && @printf "[%s] Pretraining Batch: [%4d/%4d] Loss: %.5f\n" string(now()) i length(data_train) res.val
     end
 
     acc = accuracy(model, data_test, ps, model_st.st) * 100
-    @info "Pretraining complete. Accuracy: $(acc)"
+    @printf "[%s] Pretraining complete. Accuracy: %.5f%%\n" string(now()) acc
 
     st = Lux.update_state(st, :fixed_depth, Val(0))
-    model_st = Lux.Experimental.StatefulLuxLayer(model, ps, st)
+    model_st = StatefulLuxLayer(model, ps, st)
 
     for epoch in 1:3
         for (i, (x, y)) in enumerate(data_train)
             res = Zygote.withgradient(logitcrossentropy, model_st, x, ps, y)
             Optimisers.update!(opt_st, ps, res.grad[3])
-            if i % 50 == 1
-                @info "Epoch: [$(epoch)/3] Batch: [$(i)/$(length(data_train))] Loss: $(res.val)"
-            end
+            i % 50 == 1 && @printf "[%s] Epoch: [%d/%d] Batch: [%4d/%4d] Loss: %.5f\n" string(now()) epoch 3 i length(data_train) res.val
         end
 
         acc = accuracy(model, data_test, ps, model_st.st) * 100
-        @info "Epoch: [$(epoch)/3] Accuracy: $(acc)"
+        @printf "[%s] Epoch: [%d/%d] Accuracy: %.5f%%\n" string(now()) epoch 3 acc
     end
 
-    @info "Training complete."
-    println()
+    @printf "[%s] Training complete.\n" string(now())
 
     return model, ps, st
 end
@@ -174,15 +162,11 @@ Now we can train our model. We can't use `:regdeq` here currently, but we will s
 in the future.
 
 ```@example reduced_dim_mnist
-with_logger(filtered_logger) do
-    train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :skipdeq)
-end
+train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :skipdeq)
 nothing # hide
 ```
 
 ```@example reduced_dim_mnist
-with_logger(filtered_logger) do
-    train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :deq)
-end
+train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :deq)
 nothing # hide
 ```
