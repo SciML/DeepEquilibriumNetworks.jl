@@ -66,8 +66,7 @@ function construct_model(solver; model_type::Symbol=:deq)
 
     # The input layer of the DEQ
     deq_model = Chain(
-        Parallel(+,
-            Conv((3, 3), 64 => 64, tanh; stride=1, pad=SamePad()),
+        Parallel(+, Conv((3, 3), 64 => 64, tanh; stride=1, pad=SamePad()),
             Conv((3, 3), 64 => 64, tanh; stride=1, pad=SamePad())),
         Conv((3, 3), 64 => 64, tanh; stride=1, pad=SamePad()))
 
@@ -79,11 +78,11 @@ function construct_model(solver; model_type::Symbol=:deq)
         init = missing
     end
 
-    deq = DeepEquilibriumNetwork(deq_model, solver; init, verbose=false,
-        linsolve_kwargs=(; maxiters=10))
+    deq = DeepEquilibriumNetwork(
+        deq_model, solver; init, verbose=false, linsolve_kwargs=(; maxiters=10))
 
-    classifier = Chain(GroupNorm(64, 64, relu), GlobalMeanPool(), FlattenLayer(),
-        Dense(64, 10))
+    classifier = Chain(
+        GroupNorm(64, 64, relu), GlobalMeanPool(), FlattenLayer(), Dense(64, 10))
 
     model = Chain(; down, deq, classifier)
 
@@ -132,8 +131,8 @@ function accuracy(model, data, ps, st)
     return total_correct / total
 end
 
-function train_model(solver, model_type; data_train=zip(x_train, y_train),
-        data_test=zip(x_test, y_test))
+function train_model(
+        solver, model_type; data_train=zip(x_train, y_train), data_test=zip(x_test, y_test))
     model, ps, st = construct_model(solver; model_type)
     model_st = Lux.Experimental.StatefulLuxLayer(model, nothing, st)
 

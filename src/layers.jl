@@ -22,13 +22,13 @@ struct DeepEquilibriumSolution  # This is intentionally left untyped to allow up
     original
 end
 
-function CRC.rrule(::Type{<:DeepEquilibriumSolution}, z_star, u0, residual, jacobian_loss,
-        nfe, original)
+function CRC.rrule(::Type{<:DeepEquilibriumSolution}, z_star,
+        u0, residual, jacobian_loss, nfe, original)
     sol = DeepEquilibriumSolution(z_star, u0, residual, jacobian_loss, nfe, original)
     ∇DeepEquilibriumSolution(::CRC.NoTangent) = ntuple(_ -> CRC.NoTangent(), 7)
     function ∇DeepEquilibriumSolution(∂sol)
-        return (CRC.NoTangent(), ∂sol.z_star, ∂sol.u0, ∂sol.residual, ∂sol.jacobian_loss,
-            ∂sol.nfe, CRC.NoTangent())
+        return (CRC.NoTangent(), ∂sol.z_star, ∂sol.u0, ∂sol.residual,
+            ∂sol.jacobian_loss, ∂sol.nfe, CRC.NoTangent())
     end
     return sol, ∇DeepEquilibriumSolution
 end
@@ -39,10 +39,14 @@ end
 
 function Base.show(io::IO, sol::DeepEquilibriumSolution)
     println(io, "DeepEquilibriumSolution")
-    println(io, " * Initial Guess: ", sol.u0)
-    println(io, " * Steady State: ", sol.z_star)
-    println(io, " * Residual: ", sol.residual)
-    println(io, " * Jacobian Loss: ", sol.jacobian_loss)
+    println(io, " * Initial Guess: ",
+        sprint(print, sol.u0; context=(:compact => true, :limit => true)))
+    println(io, " * Steady State: ",
+        sprint(print, sol.z_star; context=(:compact => true, :limit => true)))
+    println(io, " * Residual: ",
+        sprint(print, sol.residual; context=(:compact => true, :limit => true)))
+    println(io, " * Jacobian Loss: ",
+        sprint(print, sol.jacobian_loss; context=(:compact => true, :limit => true)))
     print(io, " * NFE: ", sol.nfe)
 end
 
@@ -56,11 +60,9 @@ end
     kwargs
 end
 
-@truncate_stacktrace DeepEquilibriumNetwork 3 2
-
 const DEQ = DeepEquilibriumNetwork
 
-constructorof(::Type{<:DEQ{pType}}) where {pType} = DEQ{pType}
+ConstructionBase.constructorof(::Type{<:DEQ{pType}}) where {pType} = DEQ{pType}
 
 function Lux.initialstates(rng::AbstractRNG, deq::DEQ)
     rng = Lux.replicate(rng)
@@ -76,17 +78,17 @@ function (deq::DEQ)(x, ps, st::NamedTuple, ::Val{true})
     z, st = __get_initial_condition(deq, x, ps, st)
     repeated_model = RepeatedLayer(deq.model; repeats=st.fixed_depth)
 
-    zˢᵗᵃʳ, st_ = repeated_model((z, x), ps.model, st.model)
-    model = Lux.Experimental.StatefulLuxLayer(deq.model, nothing, st_)
-    resid = CRC.ignore_derivatives(zˢᵗᵃʳ .- model((zˢᵗᵃʳ, x), ps.model))
+    z_star, st_ = repeated_model((z, x), ps.model, st.model)
+    model = StatefulLuxLayer(deq.model, ps.model, st_)
+    resid = CRC.ignore_derivatives(z_star .- model((z_star, x)))
 
     rng = Lux.replicate(st.rng)
-    jac_loss = __estimate_jacobian_trace(__getproperty(deq, Val(:jacobian_regularization)),
-        model, ps.model, zˢᵗᵃʳ, x, rng)
+    jac_loss = __estimate_jacobian_trace(
+        __getproperty(deq, Val(:jacobian_regularization)), model, z_star, x, rng)
 
-    solution = DeepEquilibriumSolution(zˢᵗᵃʳ, z, resid, zero(eltype(x)),
-        _unwrap_val(st.fixed_depth), jac_loss)
-    res = __split_and_reshape(zˢᵗᵃʳ, __getproperty(deq.model, Val(:split_idxs)),
+    solution = DeepEquilibriumSolution(
+        z_star, z, resid, zero(eltype(x)), _unwrap_val(st.fixed_depth), jac_loss)
+    res = __split_and_reshape(z_star, __getproperty(deq.model, Val(:split_idxs)),
         __getproperty(deq.model, Val(:scales)))
 
     return res, (; st..., model=model.st, solution, rng)
@@ -95,7 +97,7 @@ end
 function (deq::DEQ{pType})(x, ps, st::NamedTuple, ::Val{false}) where {pType}
     z, st = __get_initial_condition(deq, x, ps, st)
 
-    model = Lux.Experimental.StatefulLuxLayer(deq.model, nothing, st.model)
+    model = StatefulLuxLayer(deq.model, ps.model, st.model)
 
     dudt = @closure (u, p, t) -> begin
         # The type-assert is needed because of an upstream Lux issue with type stability of
@@ -106,17 +108,18 @@ function (deq::DEQ{pType})(x, ps, st::NamedTuple, ::Val{false}) where {pType}
 
     prob = __construct_prob(pType, ODEFunction{false}(dudt), z, (; ps=ps.model, x))
     alg = __normalize_alg(deq)
-    sol = solve(prob, alg; sensealg=__default_sensealg(prob), abstol=1e-3, reltol=1e-3,
-        termination_condition=AbsNormTerminationMode(), maxiters=32, deq.kwargs...)
-    zˢᵗᵃʳ = __get_steady_state(sol)
+    termination_condition = AbsNormTerminationMode(Base.Fix1(maximum, abs))
+    sol = solve(prob, alg; sensealg=__default_sensealg(prob), abstol=1e-3,
+        reltol=1e-3, termination_condition, maxiters=32, deq.kwargs...)
+    z_star = __get_steady_state(sol)
 
     rng = Lux.replicate(st.rng)
-    jac_loss = __estimate_jacobian_trace(__getproperty(deq, Val(:jacobian_regularization)),
-        model, ps.model, zˢᵗᵃʳ, x, rng)
+    jac_loss = __estimate_jacobian_trace(
+        __getproperty(deq, Val(:jacobian_regularization)), model, z_star, x, rng)
 
-    solution = DeepEquilibriumSolution(zˢᵗᵃʳ, z, __getproperty(sol, Val(:resid)), jac_loss,
-        __get_nfe(sol), sol)
-    res = __split_and_reshape(zˢᵗᵃʳ, __getproperty(deq.model, Val(:split_idxs)),
+    solution = DeepEquilibriumSolution(
+        z_star, z, __getproperty(sol, Val(:resid)), jac_loss, __get_nfe(sol), sol)
+    res = __split_and_reshape(z_star, __getproperty(deq.model, Val(:split_idxs)),
         __getproperty(deq.model, Val(:scales)))
 
     return res, (; st..., model=model.st, solution, rng)
@@ -153,8 +156,7 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing]
 julia> using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq
 
 julia> model = DeepEquilibriumNetwork(
-           Parallel(+, Dense(2, 2; use_bias=false),
-               Dense(2, 2; use_bias=false)),
+           Parallel(+, Dense(2, 2; use_bias=false), Dense(2, 2; use_bias=false)),
            VCABM3(); verbose=false)
 DeepEquilibriumNetwork(
     model = Parallel(
@@ -178,8 +180,8 @@ julia> model(ones(Float32, 2, 1), ps, st);
 See also: [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref),
 [`MultiScaleSkipDeepEquilibriumNetwork`](@ref).
 """
-function DeepEquilibriumNetwork(model, solver; init=missing,
-        jacobian_regularization=nothing,
+function DeepEquilibriumNetwork(
+        model, solver; init=missing, jacobian_regularization=nothing,
         problem_type::Type{pType}=SteadyStateProblem{false}, kwargs...) where {pType}
     model isa AbstractExplicitLayer || (model = Lux.transform(model))
 
@@ -190,8 +192,8 @@ function DeepEquilibriumNetwork(model, solver; init=missing,
     elseif !(init isa AbstractExplicitLayer)
         init = Lux.transform(init)
     end
-    return DeepEquilibriumNetwork{pType}(init, model, solver, jacobian_regularization,
-        kwargs)
+    return DeepEquilibriumNetwork{pType}(
+        init, model, solver, jacobian_regularization, kwargs)
 end
 
 """
@@ -236,10 +238,8 @@ For keyword arguments, see [`DeepEquilibriumNetwork`](@ref).
 julia> using DeepEquilibriumNetworks, Lux, Random, NonlinearSolve
 
 julia> main_layers = (
-           Parallel(+, Dense(4 => 4, tanh; use_bias=false),
-               Dense(4 => 4, tanh; use_bias=false)),
-           Dense(3 => 3, tanh), Dense(2 => 2, tanh),
-           Dense(1 => 1, tanh))
+           Parallel(+, Dense(4 => 4, tanh; use_bias=false), Dense(4 => 4, tanh; use_bias=false)),
+           Dense(3 => 3, tanh), Dense(2 => 2, tanh), Dense(1 => 1, tanh))
 (Parallel(), Dense(3 => 3, tanh_fast), Dense(2 => 2, tanh_fast), Dense(1 => 1, tanh_fast))
 
 julia> mapping_layers = [NoOpLayer() Dense(4 => 3, tanh) Dense(4 => 2, tanh) Dense(4 => 1, tanh);
@@ -252,8 +252,8 @@ julia> mapping_layers = [NoOpLayer() Dense(4 => 3, tanh) Dense(4 => 2, tanh) Den
  Dense(2 => 4, tanh_fast)     Dense(2 => 1, tanh_fast)
  Dense(1 => 4, tanh_fast)     NoOpLayer()
 
-julia> model = MultiScaleDeepEquilibriumNetwork(main_layers, mapping_layers, nothing,
-           NewtonRaphson(), ((4,), (3,), (2,), (1,)))
+julia> model = MultiScaleDeepEquilibriumNetwork(
+           main_layers, mapping_layers, nothing, NewtonRaphson(), ((4,), (3,), (2,), (1,)))
 DeepEquilibriumNetwork(
     model = MultiScaleInputLayer{scales = 4}(
         model = Chain(
@@ -314,9 +314,9 @@ julia> model(x, ps, st);
 
 ```
 """
-function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
-        post_fuse_layer::Union{Nothing, Tuple}, solver, scales;
-        jacobian_regularization=nothing, kwargs...)
+function MultiScaleDeepEquilibriumNetwork(
+        main_layers::Tuple, mapping_layers::Matrix, post_fuse_layer::Union{Nothing, Tuple},
+        solver, scales; jacobian_regularization=nothing, kwargs...)
     @assert jacobian_regularization===nothing "Jacobian Regularization is not supported yet for MultiScale Models."
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
@@ -327,8 +327,8 @@ function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Ma
     if post_fuse_layer === nothing
         model = MultiScaleInputLayer(Chain(l1, l2), split_idxs, scales)
     else
-        model = MultiScaleInputLayer(Chain(l1, l2, Parallel(nothing, post_fuse_layer...)),
-            split_idxs, scales)
+        model = MultiScaleInputLayer(
+            Chain(l1, l2, Parallel(nothing, post_fuse_layer...)), split_idxs, scales)
     end
 
     return DeepEquilibriumNetwork(model, solver; kwargs...)
@@ -347,14 +347,14 @@ If `init` is not passed, it creates a MultiScale Regularized Deep Equilibrium Ne
 function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
         post_fuse_layer::Union{Nothing, Tuple}, init::Tuple, solver, scales; kwargs...)
     init = Chain(Parallel(nothing, init...), __flatten_vcat)
-    return MultiScaleDeepEquilibriumNetwork(main_layers, mapping_layers, post_fuse_layer,
-        solver, scales; init, kwargs...)
+    return MultiScaleDeepEquilibriumNetwork(
+        main_layers, mapping_layers, post_fuse_layer, solver, scales; init, kwargs...)
 end
 
 function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
         post_fuse_layer::Union{Nothing, Tuple}, args...; kwargs...)
-    return MultiScaleDeepEquilibriumNetwork(main_layers, mapping_layers, post_fuse_layer,
-        args...; init=nothing, kwargs...)
+    return MultiScaleDeepEquilibriumNetwork(
+        main_layers, mapping_layers, post_fuse_layer, args...; init=nothing, kwargs...)
 end
 
 """
@@ -364,13 +364,13 @@ Same arguments as [`MultiScaleDeepEquilibriumNetwork`](@ref) but sets `problem_t
 `ODEProblem{false}`.
 """
 function MultiScaleNeuralODE(args...; kwargs...)
-    return MultiScaleDeepEquilibriumNetwork(args...; kwargs...,
-        problem_type=ODEProblem{false})
+    return MultiScaleDeepEquilibriumNetwork(
+        args...; kwargs..., problem_type=ODEProblem{false})
 end
 
 ## Generate Initial Condition
-@inline function __get_initial_condition(deq::DEQ{pType, NoOpLayer}, x, ps,
-        st) where {pType}
+@inline function __get_initial_condition(
+        deq::DEQ{pType, NoOpLayer}, x, ps, st) where {pType}
     zₓ = __zeros_init(__getproperty(deq.model, Val(:scales)), x)
     z, st_ = deq.model((zₓ, x), ps.model, st.model)
     return z, (; st..., model=st_)
@@ -389,10 +389,10 @@ end
     scales
 end
 
-constructorof(::Type{<:MultiScaleInputLayer{N}}) where {N} = MultiScaleInputLayer{N}
+function ConstructionBase.constructorof(::Type{<:MultiScaleInputLayer{N}}) where {N}
+    return MultiScaleInputLayer{N}
+end
 Lux.display_name(::MultiScaleInputLayer{N}) where {N} = "MultiScaleInputLayer{scales = $N}"
-
-@truncate_stacktrace MultiScaleInputLayer 1 2
 
 function MultiScaleInputLayer(model, split_idxs, scales::Val{S}) where {S}
     return MultiScaleInputLayer{length(S)}(model, split_idxs, scales)

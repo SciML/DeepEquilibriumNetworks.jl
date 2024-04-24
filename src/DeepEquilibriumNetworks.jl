@@ -3,19 +3,25 @@ module DeepEquilibriumNetworks
 import PrecompileTools: @recompile_invalidations
 
 @recompile_invalidations begin
-    using ADTypes, DiffEqBase, FastClosures, LinearAlgebra, Lux, Random, SciMLBase,
-          Statistics, SteadyStateDiffEq
-
-    import ChainRulesCore as CRC
-    import ConcreteStructs: @concrete
-    import ConstructionBase: constructorof
-    import Lux: AbstractExplicitLayer, AbstractExplicitContainerLayer
-    import SciMLBase: AbstractNonlinearAlgorithm,
-                      AbstractODEAlgorithm, _unwrap_val, NonlinearSolution
-    import TruncatedStacktraces: @truncate_stacktrace
+    using ADTypes: AutoFiniteDiff
+    using ChainRulesCore: ChainRulesCore
+    using CommonSolve: solve
+    using ConcreteStructs: @concrete
+    using ConstructionBase: ConstructionBase
+    using DiffEqBase: DiffEqBase, AbsNormTerminationMode
+    using FastClosures: @closure
+    using Lux: Lux, BranchLayer, Chain, NoOpLayer, Parallel, RepeatedLayer,
+               StatefulLuxLayer, WrappedFunction
+    using LuxCore: AbstractExplicitLayer, AbstractExplicitContainerLayer
+    using Random: Random, AbstractRNG, randn!
+    using SciMLBase: SciMLBase, AbstractNonlinearAlgorithm, AbstractODEAlgorithm,
+                     NonlinearSolution, ODESolution, ODEFunction, ODEProblem,
+                     SteadyStateProblem, _unwrap_val
+    using SteadyStateDiffEq: DynamicSS, SSRootfind
 end
 
 # Useful Constants
+const CRC = ChainRulesCore
 const DEQs = DeepEquilibriumNetworks
 
 include("layers.jl")

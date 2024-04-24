@@ -53,8 +53,7 @@ function construct_model(solver; model_type::Symbol=:regdeq)
     down = Chain(FlattenLayer(), Dense(784 => 512, gelu))
 
     # The input layer of the DEQ
-    deq_model = Chain(Parallel(+,
-            Dense(128 => 64, tanh),   # Reduced dim of `128`
+    deq_model = Chain(Parallel(+, Dense(128 => 64, tanh),   # Reduced dim of `128`
             Dense(512 => 64, tanh)),  # Original dim of `512`
         Dense(64 => 64, tanh), Dense(64 => 128))       # Return the reduced dim of `128`
 
@@ -65,12 +64,12 @@ function construct_model(solver; model_type::Symbol=:regdeq)
     else
         # This should preferably done via `ChainRulesCore.@ignore_derivatives`. But here
         # we are only using Zygote so this is fine.
-        init = WrappedFunction(x -> Zygote.@ignore(fill!(similar(x, 128, size(x, 2)),
-            false)))
+        init = WrappedFunction(x -> Zygote.@ignore(fill!(
+            similar(x, 128, size(x, 2)), false)))
     end
 
-    deq = DeepEquilibriumNetwork(deq_model, solver; init, verbose=false,
-        linsolve_kwargs=(; maxiters=10))
+    deq = DeepEquilibriumNetwork(
+        deq_model, solver; init, verbose=false, linsolve_kwargs=(; maxiters=10))
 
     classifier = Chain(Dense(128 => 128, gelu), Dense(128, 10))
 
@@ -121,8 +120,8 @@ function accuracy(model, data, ps, st)
     return total_correct / total
 end
 
-function train_model(solver, model_type; data_train=zip(x_train, y_train),
-        data_test=zip(x_test, y_test))
+function train_model(
+        solver, model_type; data_train=zip(x_train, y_train), data_test=zip(x_test, y_test))
     model, ps, st = construct_model(solver; model_type)
     model_st = Lux.Experimental.StatefulLuxLayer(model, nothing, st)
 
