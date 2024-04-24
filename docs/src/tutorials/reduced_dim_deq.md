@@ -132,7 +132,8 @@ function train_model(
     for (i, (x, y)) in enumerate(data_train)
         res = Zygote.withgradient(logitcrossentropy, model_st, x, ps, y)
         Optimisers.update!(opt_st, ps, res.grad[3])
-        i % 50 == 1 && @printf "[%s] Pretraining Batch: [%4d/%4d] Loss: %.5f\n" string(now()) i length(data_train) res.val
+        i % 50 == 1 &&
+            @printf "[%s] Pretraining Batch: [%4d/%4d] Loss: %.5f\n" string(now()) i length(data_train) res.val
     end
 
     acc = accuracy(model, data_test, ps, model_st.st) * 100
@@ -145,7 +146,8 @@ function train_model(
         for (i, (x, y)) in enumerate(data_train)
             res = Zygote.withgradient(logitcrossentropy, model_st, x, ps, y)
             Optimisers.update!(opt_st, ps, res.grad[3])
-            i % 50 == 1 && @printf "[%s] Epoch: [%d/%d] Batch: [%4d/%4d] Loss: %.5f\n" string(now()) epoch 3 i length(data_train) res.val
+            i % 50 == 1 &&
+                @printf "[%s] Epoch: [%d/%d] Batch: [%4d/%4d] Loss: %.5f\n" string(now()) epoch 3 i length(data_train) res.val
         end
 
         acc = accuracy(model, data_test, ps, model_st.st) * 100

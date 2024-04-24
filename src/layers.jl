@@ -314,9 +314,8 @@ julia> model(x, ps, st);
 
 ```
 """
-function MultiScaleDeepEquilibriumNetwork(
-        main_layers::Tuple, mapping_layers::Matrix, post_fuse_layer::Union{Nothing, Tuple},
-        solver, scales; kwargs...)
+function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
+        post_fuse_layer::Union{Nothing, Tuple}, solver, scales; kwargs...)
     l1 = Parallel(nothing, main_layers...)
     l2 = BranchLayer(Parallel.(+, map(x -> tuple(x...), eachrow(mapping_layers))...)...)
 

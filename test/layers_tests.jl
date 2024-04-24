@@ -34,7 +34,7 @@ end
         jacobian_regularizations = ongpu ? _jacobian_regularizations[1:(end - 1)] :
                                    _jacobian_regularizations
 
-        @testset "Solver: $(__nameof(solver))" for solver in SOLVERS,
+        @testset "Solver: $(__nameof(solver)) | Model Type: $(mtype) | Jac. Reg: $(jacobian_regularization)" for solver in SOLVERS,
             mtype in model_type,
             jacobian_regularization in jacobian_regularizations
 

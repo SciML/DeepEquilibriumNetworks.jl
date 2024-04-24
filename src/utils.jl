@@ -87,8 +87,8 @@ CRC.@non_differentiable __zeros_init(::Any, ::Any)
 ## Don't rely on SciMLSensitivity's choice
 @inline __default_sensealg(prob) = nothing
 
-@inline function __gaussian_like(rng::AbstractRNG, x)
-    y = similar(x)
+@inline function __gaussian_like(rng::AbstractRNG, x::AbstractArray)
+    y = similar(x)::typeof(x)
     randn!(rng, y)
     return y
 end

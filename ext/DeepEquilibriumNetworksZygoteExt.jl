@@ -50,7 +50,6 @@ function CRC.rrule(
 end
 
 ## Don't remove `ad`. See https://github.com/ericphanson/ExplicitImports.jl/issues/33
-## FIXME: This will be broken in the new Lux release let's fix this
 function DEQs.__estimate_jacobian_trace(ad::AutoZygote, model, z, x, rng)
     return mean(abs2, __compute_vector_jacobian_product(model, model.ps, z, x, rng))
 end
