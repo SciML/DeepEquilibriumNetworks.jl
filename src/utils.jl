@@ -1,8 +1,8 @@
-@generated function __split_and_reshape(x::AbstractMatrix, ::Val{idxs},
-        ::Val{shapes}) where {idxs, shapes}
+@generated function __split_and_reshape(
+        x::AbstractMatrix, ::Val{idxs}, ::Val{shapes}) where {idxs, shapes}
     dims = [reshape((idxs[i] + 1):idxs[i + 1], shapes[i]...) for i in 1:(length(idxs) - 1)]
     varnames = map(_ -> gensym("x_view"), dims)
-    calls = [:($(varnames[i]) = x[$(dims[i]), :]) for i in 1:length(dims)]
+    calls = [:($(varnames[i]) = x[$(dims[i]), :]) for i in eachindex(dims)]
     return quote
         $(calls...)
         return tuple($(varnames...))
@@ -28,7 +28,7 @@ end
 function CRC.rrule(::typeof(__flatten_vcat), x)
     y = __flatten_vcat(x)
     project_x = CRC.ProjectTo(x)
-    function ∇__flatten_vcat(∂y)
+    ∇__flatten_vcat = @closure ∂y -> begin
         ∂y isa CRC.NoTangent && return (CRC.NoTangent(), CRC.NoTangent())
         return CRC.NoTangent(), project_x(__split_and_reshape(∂y, x))
     end
@@ -52,7 +52,8 @@ end
 @inline __get_nfe(sol::ODESolution) = __get_nfe(sol.stats)
 @inline function __get_nfe(sol::NonlinearSolution)
     return ifelse(sol.stats === nothing,
-        ifelse(sol.original === nothing, -1, __get_nfe(sol.original)), __get_nfe(sol.stats))
+        ifelse(sol.original === nothing, -1, __get_nfe(sol.original)),
+        __get_nfe(sol.stats))
 end
 @inline __get_nfe(stats) = -1
 @inline __get_nfe(stats::Union{SciMLBase.NLStats, SciMLBase.DEStats}) = stats.nf
@@ -86,8 +87,8 @@ CRC.@non_differentiable __zeros_init(::Any, ::Any)
 ## Don't rely on SciMLSensitivity's choice
 @inline __default_sensealg(prob) = nothing
 
-@inline function __gaussian_like(rng::AbstractRNG, x)
-    y = similar(x)
+@inline function __gaussian_like(rng::AbstractRNG, x::AbstractArray)
+    y = similar(x)::typeof(x)
     randn!(rng, y)
     return y
 end
@@ -95,8 +96,9 @@ end
 CRC.@non_differentiable __gaussian_like(::Any...)
 
 # Jacobian Stabilization
-function __estimate_jacobian_trace(::AutoFiniteDiff, model, ps, z, x, rng)
-    __f = u -> model((u, x), ps)
+## Don't remove `ad`. See https://github.com/ericphanson/ExplicitImports.jl/issues/33
+function __estimate_jacobian_trace(ad::AutoFiniteDiff, model, z, x, rng)
+    __f = @closure u -> model((u, x))
     res = zero(eltype(x))
     ϵ = cbrt(eps(typeof(res)))
     ϵ⁻¹ = inv(ϵ)
@@ -117,4 +119,4 @@ function __estimate_jacobian_trace(::AutoFiniteDiff, model, ps, z, x, rng)
     return res
 end
 
-__estimate_jacobian_trace(::Nothing, model, ps, z, x, rng) = zero(eltype(x))
+__estimate_jacobian_trace(::Nothing, model, z, x, rng) = zero(eltype(x))

@@ -1,7 +1,3 @@
-using SafeTestsets, Test, TestSetExtensions
+using ReTestItems
 
-@testset ExtendedTestSet "Deep Equilibrium Networks" begin
-    @safetestset "Quality Assurance" include("qa.jl")
-    @safetestset "Utilities" include("utils.jl")
-    @safetestset "Layers" include("layers.jl")
-end
+ReTestItems.runtests(@__DIR__)

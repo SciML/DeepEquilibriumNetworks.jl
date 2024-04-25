@@ -4,7 +4,7 @@ We will train a simple Deep Equilibrium Model on MNIST. First we load a few pack
 
 ```@example basic_mnist_deq
 using DeepEquilibriumNetworks, SciMLSensitivity, Lux, NonlinearSolve, OrdinaryDiffEq,
-      Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve, LoggingExtras
+      Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve, Dates, Printf
 using MLDatasets: MNIST
 using MLDataUtils: LabelEnc, convertlabel, stratifiedobs, batchview
 
@@ -18,18 +18,6 @@ Setup device functions from Lux. See
 ```@example basic_mnist_deq
 const cdev = cpu_device()
 const gdev = gpu_device()
-```
-
-SciMLBase introduced a warning instead of depwarn which pollutes the output. We can suppress
-it with the following logger
-
-```@example basic_mnist_deq
-function remove_syms_warning(log_args)
-    return log_args.message !=
-           "The use of keyword arguments `syms`, `paramsyms` and `indepsym` for `SciMLFunction`s is deprecated. Pass `sys = SymbolCache(syms, paramsyms, indepsym)` instead."
-end
-
-filtered_logger = ActiveFilteredLogger(remove_syms_warning, global_logger())
 ```
 
 We can now construct our dataloader.
@@ -66,8 +54,7 @@ function construct_model(solver; model_type::Symbol=:deq)
 
     # The input layer of the DEQ
     deq_model = Chain(
-        Parallel(+,
-            Conv((3, 3), 64 => 64, tanh; stride=1, pad=SamePad()),
+        Parallel(+, Conv((3, 3), 64 => 64, tanh; stride=1, pad=SamePad()),
             Conv((3, 3), 64 => 64, tanh; stride=1, pad=SamePad())),
         Conv((3, 3), 64 => 64, tanh; stride=1, pad=SamePad()))
 
@@ -79,11 +66,11 @@ function construct_model(solver; model_type::Symbol=:deq)
         init = missing
     end
 
-    deq = DeepEquilibriumNetwork(deq_model, solver; init, verbose=false,
-        linsolve_kwargs=(; maxiters=10))
+    deq = DeepEquilibriumNetwork(
+        deq_model, solver; init, verbose=false, linsolve_kwargs=(; maxiters=10))
 
-    classifier = Chain(GroupNorm(64, 64, relu), GlobalMeanPool(), FlattenLayer(),
-        Dense(64, 10))
+    classifier = Chain(
+        GroupNorm(64, 64, relu), GlobalMeanPool(), FlattenLayer(), Dense(64, 10))
 
     model = Chain(; down, deq, classifier)
 
@@ -95,12 +82,12 @@ function construct_model(solver; model_type::Symbol=:deq)
     x = randn(rng, Float32, 28, 28, 1, 128)
     y = onehot(rand(Random.default_rng(), 0:9, 128)) |> gdev
 
-    model_ = Lux.Experimental.StatefulLuxLayer(model, ps, st)
-    @info "warming up forward pass"
+    model_ = StatefulLuxLayer(model, ps, st)
+    @printf "[%s] warming up forward pass\n" string(now())
     logitcrossentropy(model_, x, ps, y)
-    @info "warming up backward pass"
+    @printf "[%s] warming up backward pass\n" string(now())
     Zygote.gradient(logitcrossentropy, model_, x, ps, y)
-    @info "warmup complete"
+    @printf "[%s] warmup complete\n" string(now())
 
     return model, ps, st
 end
@@ -122,7 +109,7 @@ classify(x) = argmax.(eachcol(x))
 function accuracy(model, data, ps, st)
     total_correct, total = 0, 0
     st = Lux.testmode(st)
-    model = Lux.Experimental.StatefulLuxLayer(model, ps, st)
+    model = StatefulLuxLayer(model, ps, st)
     for (x, y) in data
         target_class = classify(cdev(y))
         predicted_class = classify(cdev(model(x)))
@@ -132,51 +119,48 @@ function accuracy(model, data, ps, st)
     return total_correct / total
 end
 
-function train_model(solver, model_type; data_train=zip(x_train, y_train),
-        data_test=zip(x_test, y_test))
+function train_model(
+        solver, model_type; data_train=zip(x_train, y_train), data_test=zip(x_test, y_test))
     model, ps, st = construct_model(solver; model_type)
-    model_st = Lux.Experimental.StatefulLuxLayer(model, nothing, st)
+    model_st = StatefulLuxLayer(model, nothing, st)
 
-    @info "Training Model: $(model_type) with Solver: $(nameof(typeof(solver)))"
+    @printf "[%s] Training Model: %s with Solver: %s\n" string(now()) model_type nameof(typeof(solver))
 
     opt_st = Optimisers.setup(Adam(0.001), ps)
 
     acc = accuracy(model, data_test, ps, st) * 100
-    @info "Starting Accuracy: $(acc)"
+    @printf "[%s] Starting Accuracy: %.5f%%\n" string(now()) acc
 
-    @info "Pretrain with unrolling to a depth of 5"
+    @printf "[%s] Pretrain with unrolling to a depth of 5\n" string(now())
     st = Lux.update_state(st, :fixed_depth, Val(5))
-    model_st = Lux.Experimental.StatefulLuxLayer(model, ps, st)
+    model_st = StatefulLuxLayer(model, ps, st)
 
     for (i, (x, y)) in enumerate(data_train)
         res = Zygote.withgradient(logitcrossentropy, model_st, x, ps, y)
         Optimisers.update!(opt_st, ps, res.grad[3])
-        if i % 50 == 1
-            @info "Pretraining Batch: [$(i)/$(length(data_train))] Loss: $(res.val)"
-        end
+        i % 50 == 1 &&
+            @printf "[%s] Pretraining Batch: [%4d/%4d] Loss: %.5f\n" string(now()) i length(data_train) res.val
     end
 
     acc = accuracy(model, data_test, ps, model_st.st) * 100
-    @info "Pretraining complete. Accuracy: $(acc)"
+    @printf "[%s] Pretraining complete. Accuracy: %.5f%%\n" string(now()) acc
 
     st = Lux.update_state(st, :fixed_depth, Val(0))
-    model_st = Lux.Experimental.StatefulLuxLayer(model, ps, st)
+    model_st = StatefulLuxLayer(model, ps, st)
 
     for epoch in 1:3
         for (i, (x, y)) in enumerate(data_train)
             res = Zygote.withgradient(logitcrossentropy, model_st, x, ps, y)
             Optimisers.update!(opt_st, ps, res.grad[3])
-            if i % 50 == 1
-                @info "Epoch: [$(epoch)/3] Batch: [$(i)/$(length(data_train))] Loss: $(res.val)"
-            end
+            i % 50 == 1 &&
+                @printf "[%s] Epoch: [%d/%d] Batch: [%4d/%4d] Loss: %.5f\n" string(now()) epoch 3 i length(data_train) res.val
         end
 
         acc = accuracy(model, data_test, ps, model_st.st) * 100
-        @info "Epoch: [$(epoch)/3] Accuracy: $(acc)"
+        @printf "[%s] Epoch: [%d/%d] Accuracy: %.5f%%\n" string(now()) epoch 3 acc
     end
 
-    @info "Training complete."
-    println()
+    @printf "[%s] Training complete.\n" string(now())
 
     return model, ps, st
 end
@@ -188,9 +172,7 @@ and end up using solvers like `Broyden`, but we can simply slap in any of the fa
 from NonlinearSolve.jl. Here we will use Newton-Krylov Method:
 
 ```@example basic_mnist_deq
-with_logger(filtered_logger) do
-    train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq)
-end
+train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq);
 nothing # hide
 ```
 
@@ -198,9 +180,7 @@ We can also train a continuous DEQ by passing in an ODE solver. Here we will use
 which tend to be quite fast for continuous Neural Network problems.
 
 ```@example basic_mnist_deq
-with_logger(filtered_logger) do
-    train_model(VCAB3(), :deq)
-end
+train_model(VCAB3(), :deq);
 nothing # hide
 ```
 
