@@ -1,17 +1,12 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Training a Simple MNIST Classifier using Deep Equilibrium Models · Deep Equilibrium Networks</title><meta name="title" content="Training a Simple MNIST Classifier using Deep Equilibrium Models · Deep Equilibrium Networks"/><meta property="og:title" content="Training a Simple MNIST Classifier using Deep Equilibrium Models · Deep Equilibrium Networks"/><meta property="twitter:title" content="Training a Simple MNIST Classifier using Deep Equilibrium Models · Deep Equilibrium Networks"/><meta name="description" content="Documentation for Deep Equilibrium Networks."/><meta property="og:description" content="Documentation for Deep Equilibrium Networks."/><meta property="twitter:description" content="Documentation for Deep Equilibrium Networks."/><meta property="og:url" content="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/tutorials/basic_mnist_deq/"/><meta property="twitter:url" content="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/tutorials/basic_mnist_deq/"/><link rel="canonical" href="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/tutorials/basic_mnist_deq/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="Deep Equilibrium Networks logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Deep Equilibrium Networks</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li class="is-active"><a class="tocitem" href>Training a Simple MNIST Classifier using Deep Equilibrium Models</a></li><li><a class="tocitem" href="../reduced_dim_deq/">Modelling Equilibrium Models with Reduced State Size</a></li></ul></li><li><a class="tocitem" href="../../api/">API References</a></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Training a Simple MNIST Classifier using Deep Equilibrium Models</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Training a Simple MNIST Classifier using Deep Equilibrium Models</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/SciML/DeepEquilibriumNetworks.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/SciML/DeepEquilibriumNetworks.jl/blob/main/docs/src/tutorials/basic_mnist_deq.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Training-a-Simple-MNIST-Classifier-using-Deep-Equilibrium-Models"><a class="docs-heading-anchor" href="#Training-a-Simple-MNIST-Classifier-using-Deep-Equilibrium-Models">Training a Simple MNIST Classifier using Deep Equilibrium Models</a><a id="Training-a-Simple-MNIST-Classifier-using-Deep-Equilibrium-Models-1"></a><a class="docs-heading-anchor-permalink" href="#Training-a-Simple-MNIST-Classifier-using-Deep-Equilibrium-Models" title="Permalink"></a></h1><p>We will train a simple Deep Equilibrium Model on MNIST. First we load a few packages.</p><pre><code class="language-julia hljs">using DeepEquilibriumNetworks, SciMLSensitivity, Lux, NonlinearSolve, OrdinaryDiffEq,
-      Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve, LoggingExtras
+      Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve, Dates, Printf
 using MLDatasets: MNIST
 using MLDataUtils: LabelEnc, convertlabel, stratifiedobs, batchview
 
 CUDA.allowscalar(false)
 ENV[&quot;DATADEPS_ALWAYS_ACCEPT&quot;] = true</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><p>Setup device functions from Lux. See <a href="https://lux.csail.mit.edu/dev/manual/gpu_management">GPU Management</a> for more details.</p><pre><code class="language-julia hljs">const cdev = cpu_device()
-const gdev = gpu_device()</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(::LuxDeviceUtils.LuxCUDADevice{Nothing}) (generic function with 5 methods)</code></pre><p>SciMLBase introduced a warning instead of depwarn which pollutes the output. We can suppress it with the following logger</p><pre><code class="language-julia hljs">function remove_syms_warning(log_args)
-    return log_args.message !=
-           &quot;The use of keyword arguments `syms`, `paramsyms` and `indepsym` for `SciMLFunction`s is deprecated. Pass `sys = SymbolCache(syms, paramsyms, indepsym)` instead.&quot;
-end
-
-filtered_logger = ActiveFilteredLogger(remove_syms_warning, global_logger())</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">LoggingExtras.ActiveFilteredLogger{Logging.ConsoleLogger, typeof(Main.remove_syms_warning)}(Main.remove_syms_warning, Logging.ConsoleLogger(IOBuffer(data=UInt8[...], readable=false, writable=false, seekable=false, append=false, size=0, maxsize=0, ptr=1, mark=-1), Info, Logging.default_metafmt, true, 0, Dict{Any, Int64}()))</code></pre><p>We can now construct our dataloader.</p><pre><code class="language-julia hljs">function onehot(labels_raw)
+const gdev = gpu_device()</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(::LuxDeviceUtils.LuxCUDADevice{Nothing}) (generic function with 5 methods)</code></pre><p>We can now construct our dataloader.</p><pre><code class="language-julia hljs">function onehot(labels_raw)
     return convertlabel(LabelEnc.OneOfK, labels_raw, LabelEnc.NativeLabels(collect(0:9)))
 end
 
@@ -36,8 +31,7 @@ x_test, y_test = loadmnist(128, :test);</code></pre><pre class="documenter-examp
 
     # The input layer of the DEQ
     deq_model = Chain(
-        Parallel(+,
-            Conv((3, 3), 64 =&gt; 64, tanh; stride=1, pad=SamePad()),
+        Parallel(+, Conv((3, 3), 64 =&gt; 64, tanh; stride=1, pad=SamePad()),
             Conv((3, 3), 64 =&gt; 64, tanh; stride=1, pad=SamePad())),
         Conv((3, 3), 64 =&gt; 64, tanh; stride=1, pad=SamePad()))
 
@@ -49,11 +43,11 @@ x_test, y_test = loadmnist(128, :test);</code></pre><pre class="documenter-examp
         init = missing
     end
 
-    deq = DeepEquilibriumNetwork(deq_model, solver; init, verbose=false,
-        linsolve_kwargs=(; maxiters=10))
+    deq = DeepEquilibriumNetwork(
+        deq_model, solver; init, verbose=false, linsolve_kwargs=(; maxiters=10))
 
-    classifier = Chain(GroupNorm(64, 64, relu), GlobalMeanPool(), FlattenLayer(),
-        Dense(64, 10))
+    classifier = Chain(
+        GroupNorm(64, 64, relu), GlobalMeanPool(), FlattenLayer(), Dense(64, 10))
 
     model = Chain(; down, deq, classifier)
 
@@ -65,12 +59,12 @@ x_test, y_test = loadmnist(128, :test);</code></pre><pre class="documenter-examp
     x = randn(rng, Float32, 28, 28, 1, 128)
     y = onehot(rand(Random.default_rng(), 0:9, 128)) |&gt; gdev
 
-    model_ = Lux.Experimental.StatefulLuxLayer(model, ps, st)
-    @info &quot;warming up forward pass&quot;
+    model_ = StatefulLuxLayer(model, ps, st)
+    @printf &quot;[%s] warming up forward pass\n&quot; string(now())
     logitcrossentropy(model_, x, ps, y)
-    @info &quot;warming up backward pass&quot;
+    @printf &quot;[%s] warming up backward pass\n&quot; string(now())
     Zygote.gradient(logitcrossentropy, model_, x, ps, y)
-    @info &quot;warmup complete&quot;
+    @printf &quot;[%s] warmup complete\n&quot; string(now())
 
     return model, ps, st
 end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">construct_model (generic function with 1 method)</code></pre><p>Define some helper functions to train the model.</p><pre><code class="language-julia hljs">logitcrossentropy(ŷ, y) = mean(-sum(y .* logsoftmax(ŷ; dims=1); dims=1))
@@ -86,7 +80,7 @@ classify(x) = argmax.(eachcol(x))
 function accuracy(model, data, ps, st)
     total_correct, total = 0, 0
     st = Lux.testmode(st)
-    model = Lux.Experimental.StatefulLuxLayer(model, ps, st)
+    model = StatefulLuxLayer(model, ps, st)
     for (x, y) in data
         target_class = classify(cdev(y))
         predicted_class = classify(cdev(model(x)))
@@ -96,155 +90,148 @@ function accuracy(model, data, ps, st)
     return total_correct / total
 end
 
-function train_model(solver, model_type; data_train=zip(x_train, y_train),
-        data_test=zip(x_test, y_test))
+function train_model(
+        solver, model_type; data_train=zip(x_train, y_train), data_test=zip(x_test, y_test))
     model, ps, st = construct_model(solver; model_type)
-    model_st = Lux.Experimental.StatefulLuxLayer(model, nothing, st)
+    model_st = StatefulLuxLayer(model, nothing, st)
 
-    @info &quot;Training Model: $(model_type) with Solver: $(nameof(typeof(solver)))&quot;
+    @printf &quot;[%s] Training Model: %s with Solver: %s\n&quot; string(now()) model_type nameof(typeof(solver))
 
     opt_st = Optimisers.setup(Adam(0.001), ps)
 
     acc = accuracy(model, data_test, ps, st) * 100
-    @info &quot;Starting Accuracy: $(acc)&quot;
+    @printf &quot;[%s] Starting Accuracy: %.5f%%\n&quot; string(now()) acc
 
-    @info &quot;Pretrain with unrolling to a depth of 5&quot;
+    @printf &quot;[%s] Pretrain with unrolling to a depth of 5\n&quot; string(now())
     st = Lux.update_state(st, :fixed_depth, Val(5))
-    model_st = Lux.Experimental.StatefulLuxLayer(model, ps, st)
+    model_st = StatefulLuxLayer(model, ps, st)
 
     for (i, (x, y)) in enumerate(data_train)
         res = Zygote.withgradient(logitcrossentropy, model_st, x, ps, y)
         Optimisers.update!(opt_st, ps, res.grad[3])
-        if i % 50 == 1
-            @info &quot;Pretraining Batch: [$(i)/$(length(data_train))] Loss: $(res.val)&quot;
-        end
+        i % 50 == 1 &amp;&amp;
+            @printf &quot;[%s] Pretraining Batch: [%4d/%4d] Loss: %.5f\n&quot; string(now()) i length(data_train) res.val
     end
 
     acc = accuracy(model, data_test, ps, model_st.st) * 100
-    @info &quot;Pretraining complete. Accuracy: $(acc)&quot;
+    @printf &quot;[%s] Pretraining complete. Accuracy: %.5f%%\n&quot; string(now()) acc
 
     st = Lux.update_state(st, :fixed_depth, Val(0))
-    model_st = Lux.Experimental.StatefulLuxLayer(model, ps, st)
+    model_st = StatefulLuxLayer(model, ps, st)
 
     for epoch in 1:3
         for (i, (x, y)) in enumerate(data_train)
             res = Zygote.withgradient(logitcrossentropy, model_st, x, ps, y)
             Optimisers.update!(opt_st, ps, res.grad[3])
-            if i % 50 == 1
-                @info &quot;Epoch: [$(epoch)/3] Batch: [$(i)/$(length(data_train))] Loss: $(res.val)&quot;
-            end
+            i % 50 == 1 &amp;&amp;
+                @printf &quot;[%s] Epoch: [%d/%d] Batch: [%4d/%4d] Loss: %.5f\n&quot; string(now()) epoch 3 i length(data_train) res.val
         end
 
         acc = accuracy(model, data_test, ps, model_st.st) * 100
-        @info &quot;Epoch: [$(epoch)/3] Accuracy: $(acc)&quot;
+        @printf &quot;[%s] Epoch: [%d/%d] Accuracy: %.5f%%\n&quot; string(now()) epoch 3 acc
     end
 
-    @info &quot;Training complete.&quot;
-    println()
+    @printf &quot;[%s] Training complete.\n&quot; string(now())
 
     return model, ps, st
-end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">train_model (generic function with 1 method)</code></pre><p>Now we can train our model. First we will train a Discrete DEQ, which effectively means pass in a root finding algorithm. Typically most packages lack good nonlinear solvers, and end up using solvers like <code>Broyden</code>, but we can simply slap in any of the fancy solvers from NonlinearSolve.jl. Here we will use Newton-Krylov Method:</p><pre><code class="language-julia hljs">with_logger(filtered_logger) do
-    train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq)
-end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr36"><span class="sgr1">[ Info: </span></span>warming up forward pass
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>warming up backward pass
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>warmup complete
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Training Model: regdeq with Solver: GeneralizedFirstOrderAlgorithm
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Starting Accuracy: 8.483573717948719
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretrain with unrolling to a depth of 5
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [1/468] Loss: 3.064499795436859
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [51/468] Loss: 2.3007593769580126
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [101/468] Loss: 2.2411040547303855
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [151/468] Loss: 2.178759048692882
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [201/468] Loss: 2.0917145246639848
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [251/468] Loss: 2.0167650282382965
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [301/468] Loss: 1.6034325202926993
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [351/468] Loss: 1.4165080054663122
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [401/468] Loss: 1.2503756179939955
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [451/468] Loss: 0.8839522185735404
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining complete. Accuracy: 92.16746794871796
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [1/468] Loss: 0.7723807692527771
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [51/468] Loss: 0.6360969603992999
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [101/468] Loss: 0.49917542142793536
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [151/468] Loss: 0.3777865229640156
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [201/468] Loss: 0.38402983732521534
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [251/468] Loss: 0.3996629840694368
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [301/468] Loss: 0.29418133362196386
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [351/468] Loss: 0.37925563752651215
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [401/468] Loss: 0.2690733899362385
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [451/468] Loss: 0.27367217210121453
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Accuracy: 96.12379807692307
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [1/468] Loss: 0.2355215954594314
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [51/468] Loss: 0.16891483427025378
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [101/468] Loss: 0.18035600101575255
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [151/468] Loss: 0.1591530153527856
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [201/468] Loss: 0.20876555726863444
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [251/468] Loss: 0.19738511519972235
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [301/468] Loss: 0.11956204962916672
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [351/468] Loss: 0.18487543100491166
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [401/468] Loss: 0.1951791364699602
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [451/468] Loss: 0.17549559171311557
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Accuracy: 96.72475961538461
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [1/468] Loss: 0.13972054608166218
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [51/468] Loss: 0.0938621733803302
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [101/468] Loss: 0.11968469782732427
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [151/468] Loss: 0.11895175627432764
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [201/468] Loss: 0.12095514382235706
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [251/468] Loss: 0.13506088987924159
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [301/468] Loss: 0.09706228272989392
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [351/468] Loss: 0.1278561484068632
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [401/468] Loss: 0.1773004133719951
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [451/468] Loss: 0.12661652895621955
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Accuracy: 96.68469551282051
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Training complete.</code></pre><p>We can also train a continuous DEQ by passing in an ODE solver. Here we will use <code>VCAB3()</code> which tend to be quite fast for continuous Neural Network problems.</p><pre><code class="language-julia hljs">with_logger(filtered_logger) do
-    train_model(VCAB3(), :deq)
-end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr36"><span class="sgr1">[ Info: </span></span>warming up forward pass
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>warming up backward pass
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>warmup complete
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Training Model: deq with Solver: VCAB3
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Starting Accuracy: 8.914262820512821
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretrain with unrolling to a depth of 5
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [1/468] Loss: 4.271545916795731
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [51/468] Loss: 2.3165741590783
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [101/468] Loss: 2.2311345655471087
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [151/468] Loss: 2.153405662626028
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [201/468] Loss: 2.0494593335315585
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [251/468] Loss: 2.0111745768226683
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [301/468] Loss: 1.7865319550037384
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [351/468] Loss: 1.8157202429138124
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [401/468] Loss: 1.7673022309318185
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining Batch: [451/468] Loss: 1.619359309785068
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Pretraining complete. Accuracy: 70.3926282051282
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [1/468] Loss: 1.787918177433312
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [51/468] Loss: 1.4750000135973096
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [101/468] Loss: 1.2402340318076313
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [151/468] Loss: 1.089456245303154
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [201/468] Loss: 1.055022383108735
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [251/468] Loss: 0.9308524448424578
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [301/468] Loss: 0.768314897082746
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [351/468] Loss: 0.8080338258296251
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [401/468] Loss: 0.7113358387723565
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Batch: [451/468] Loss: 0.6451632096432149
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [1/3] Accuracy: 93.10897435897436
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [1/468] Loss: 0.5891431509517133
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [51/468] Loss: 0.5691275340504944
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [101/468] Loss: 0.48629248049110174
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [151/468] Loss: 0.4818923082202673
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [201/468] Loss: 0.8653399508912116
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [251/468] Loss: 0.6545941815711558
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [301/468] Loss: 0.5227608490968123
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [351/468] Loss: 0.5925725600682199
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [401/468] Loss: 0.501393991522491
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Batch: [451/468] Loss: 0.4545896779745817
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [2/3] Accuracy: 94.37099358974359
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [1/468] Loss: 0.4337649093940854
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [51/468] Loss: 0.4085465382086113
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [101/468] Loss: 0.33590383420232683
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [151/468] Loss: 0.32000380475074053
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [201/468] Loss: 0.3163620834238827
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [251/468] Loss: 0.3068916047923267
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [301/468] Loss: 0.27094389649573714
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [351/468] Loss: 0.30470260023139417
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [401/468] Loss: 0.3186539226444438
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Batch: [451/468] Loss: 0.28755476197693497
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Epoch: [3/3] Accuracy: 96.0536858974359
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Training complete.</code></pre><p>This code is setup to allow playing around with different DEQ models. Try modifying the <code>model_type</code> argument to <code>train_model</code> to <code>:skipdeq</code> or <code>:deq</code> to see how the model behaves. You can also try different solvers from NonlinearSolve.jl and OrdinaryDiffEq.jl! Even 3rd party solvers from Sundials.jl will work, just remember to use CPU for those.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../reduced_dim_deq/">Modelling Equilibrium Models with Reduced State Size »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.3.0 on <span class="colophon-date" title="Tuesday 2 April 2024 01:30">Tuesday 2 April 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">train_model (generic function with 1 method)</code></pre><p>Now we can train our model. First we will train a Discrete DEQ, which effectively means pass in a root finding algorithm. Typically most packages lack good nonlinear solvers, and end up using solvers like <code>Broyden</code>, but we can simply slap in any of the fancy solvers from NonlinearSolve.jl. Here we will use Newton-Krylov Method:</p><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[2024-04-27T04:15:54.843] warming up forward pass
+[2024-04-27T04:16:21.394] warming up backward pass
+[2024-04-27T04:17:50.910] warmup complete
+[2024-04-27T04:17:50.936] Training Model: regdeq with Solver: GeneralizedFirstOrderAlgorithm
+[2024-04-27T04:20:16.284] Starting Accuracy: 10.28646%
+[2024-04-27T04:20:16.517] Pretrain with unrolling to a depth of 5
+[2024-04-27T04:20:45.421] Pretraining Batch: [   1/ 468] Loss: 3.02291
+[2024-04-27T04:20:48.519] Pretraining Batch: [  51/ 468] Loss: 2.29943
+[2024-04-27T04:20:51.129] Pretraining Batch: [ 101/ 468] Loss: 2.24121
+[2024-04-27T04:20:53.737] Pretraining Batch: [ 151/ 468] Loss: 2.18239
+[2024-04-27T04:20:56.345] Pretraining Batch: [ 201/ 468] Loss: 2.10665
+[2024-04-27T04:20:58.947] Pretraining Batch: [ 251/ 468] Loss: 1.93962
+[2024-04-27T04:21:01.556] Pretraining Batch: [ 301/ 468] Loss: 1.59189
+[2024-04-27T04:21:04.159] Pretraining Batch: [ 351/ 468] Loss: 1.54388
+[2024-04-27T04:21:06.763] Pretraining Batch: [ 401/ 468] Loss: 1.49023
+[2024-04-27T04:21:09.367] Pretraining Batch: [ 451/ 468] Loss: 1.14897
+[2024-04-27T04:21:12.542] Pretraining complete. Accuracy: 87.54006%
+[2024-04-27T04:21:12.970] Epoch: [1/3] Batch: [   1/ 468] Loss: 1.00880
+[2024-04-27T04:21:23.559] Epoch: [1/3] Batch: [  51/ 468] Loss: 0.87243
+[2024-04-27T04:21:32.602] Epoch: [1/3] Batch: [ 101/ 468] Loss: 0.71668
+[2024-04-27T04:21:41.532] Epoch: [1/3] Batch: [ 151/ 468] Loss: 0.63784
+[2024-04-27T04:21:50.433] Epoch: [1/3] Batch: [ 201/ 468] Loss: 0.53570
+[2024-04-27T04:21:59.323] Epoch: [1/3] Batch: [ 251/ 468] Loss: 0.45113
+[2024-04-27T04:22:08.209] Epoch: [1/3] Batch: [ 301/ 468] Loss: 0.39785
+[2024-04-27T04:22:17.080] Epoch: [1/3] Batch: [ 351/ 468] Loss: 0.38987
+[2024-04-27T04:22:25.803] Epoch: [1/3] Batch: [ 401/ 468] Loss: 0.38196
+[2024-04-27T04:22:34.413] Epoch: [1/3] Batch: [ 451/ 468] Loss: 0.34621
+[2024-04-27T04:22:46.273] Epoch: [1/3] Accuracy: 96.97516%
+[2024-04-27T04:22:46.423] Epoch: [2/3] Batch: [   1/ 468] Loss: 0.21291
+[2024-04-27T04:22:54.186] Epoch: [2/3] Batch: [  51/ 468] Loss: 0.19932
+[2024-04-27T04:23:02.646] Epoch: [2/3] Batch: [ 101/ 468] Loss: 0.18988
+[2024-04-27T04:23:11.366] Epoch: [2/3] Batch: [ 151/ 468] Loss: 0.19180
+[2024-04-27T04:23:19.938] Epoch: [2/3] Batch: [ 201/ 468] Loss: 0.17858
+[2024-04-27T04:23:27.558] Epoch: [2/3] Batch: [ 251/ 468] Loss: 0.21905
+[2024-04-27T04:23:35.974] Epoch: [2/3] Batch: [ 301/ 468] Loss: 0.18269
+[2024-04-27T04:23:44.403] Epoch: [2/3] Batch: [ 351/ 468] Loss: 0.16874
+[2024-04-27T04:23:52.861] Epoch: [2/3] Batch: [ 401/ 468] Loss: 0.25283
+[2024-04-27T04:24:00.302] Epoch: [2/3] Batch: [ 451/ 468] Loss: 0.20321
+[2024-04-27T04:24:11.618] Epoch: [2/3] Accuracy: 97.24559%
+[2024-04-27T04:24:11.787] Epoch: [3/3] Batch: [   1/ 468] Loss: 0.12133
+[2024-04-27T04:24:20.009] Epoch: [3/3] Batch: [  51/ 468] Loss: 0.11322
+[2024-04-27T04:24:28.280] Epoch: [3/3] Batch: [ 101/ 468] Loss: 0.14441
+[2024-04-27T04:24:36.374] Epoch: [3/3] Batch: [ 151/ 468] Loss: 0.14577
+[2024-04-27T04:24:43.643] Epoch: [3/3] Batch: [ 201/ 468] Loss: 0.11423
+[2024-04-27T04:24:51.882] Epoch: [3/3] Batch: [ 251/ 468] Loss: 0.17153
+[2024-04-27T04:25:00.075] Epoch: [3/3] Batch: [ 301/ 468] Loss: 0.09599
+[2024-04-27T04:25:07.302] Epoch: [3/3] Batch: [ 351/ 468] Loss: 0.13615
+[2024-04-27T04:25:15.426] Epoch: [3/3] Batch: [ 401/ 468] Loss: 0.16427
+[2024-04-27T04:25:22.704] Epoch: [3/3] Batch: [ 451/ 468] Loss: 0.14418
+[2024-04-27T04:25:33.566] Epoch: [3/3] Accuracy: 97.67628%
+[2024-04-27T04:25:33.566] Training complete.</code></pre><p>We can also train a continuous DEQ by passing in an ODE solver. Here we will use <code>VCAB3()</code> which tend to be quite fast for continuous Neural Network problems.</p><pre><code class="language-julia hljs">train_model(VCAB3(), :deq);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[2024-04-27T04:25:34.084] warming up forward pass
+[2024-04-27T04:25:44.307] warming up backward pass
+[2024-04-27T04:26:07.895] warmup complete
+[2024-04-27T04:26:07.920] Training Model: deq with Solver: VCAB3
+[2024-04-27T04:26:34.966] Starting Accuracy: 10.31651%
+[2024-04-27T04:26:34.966] Pretrain with unrolling to a depth of 5
+[2024-04-27T04:26:49.254] Pretraining Batch: [   1/ 468] Loss: 4.09906
+[2024-04-27T04:26:51.708] Pretraining Batch: [  51/ 468] Loss: 2.33306
+[2024-04-27T04:26:54.052] Pretraining Batch: [ 101/ 468] Loss: 2.20802
+[2024-04-27T04:26:56.383] Pretraining Batch: [ 151/ 468] Loss: 2.13051
+[2024-04-27T04:26:58.720] Pretraining Batch: [ 201/ 468] Loss: 2.02870
+[2024-04-27T04:27:01.054] Pretraining Batch: [ 251/ 468] Loss: 1.98628
+[2024-04-27T04:27:03.390] Pretraining Batch: [ 301/ 468] Loss: 1.76944
+[2024-04-27T04:27:05.718] Pretraining Batch: [ 351/ 468] Loss: 1.78886
+[2024-04-27T04:27:08.065] Pretraining Batch: [ 401/ 468] Loss: 1.74182
+[2024-04-27T04:27:10.396] Pretraining Batch: [ 451/ 468] Loss: 1.55074
+[2024-04-27T04:27:13.161] Pretraining complete. Accuracy: 58.19311%
+[2024-04-27T04:27:13.503] Epoch: [1/3] Batch: [   1/ 468] Loss: 1.81920
+[2024-04-27T04:27:37.860] Epoch: [1/3] Batch: [  51/ 468] Loss: 1.44726
+[2024-04-27T04:28:01.363] Epoch: [1/3] Batch: [ 101/ 468] Loss: 1.25337
+[2024-04-27T04:28:26.769] Epoch: [1/3] Batch: [ 151/ 468] Loss: 1.22067
+[2024-04-27T04:28:51.975] Epoch: [1/3] Batch: [ 201/ 468] Loss: 1.15070
+[2024-04-27T04:29:17.577] Epoch: [1/3] Batch: [ 251/ 468] Loss: 1.07075
+[2024-04-27T04:29:43.121] Epoch: [1/3] Batch: [ 301/ 468] Loss: 0.84522
+[2024-04-27T04:30:08.372] Epoch: [1/3] Batch: [ 351/ 468] Loss: 0.93164
+[2024-04-27T04:30:34.206] Epoch: [1/3] Batch: [ 401/ 468] Loss: 0.83148
+[2024-04-27T04:31:00.720] Epoch: [1/3] Batch: [ 451/ 468] Loss: 0.69584
+[2024-04-27T04:31:36.740] Epoch: [1/3] Accuracy: 93.35938%
+[2024-04-27T04:31:37.771] Epoch: [2/3] Batch: [   1/ 468] Loss: 0.74532
+[2024-04-27T04:32:03.857] Epoch: [2/3] Batch: [  51/ 468] Loss: 0.60267
+[2024-04-27T04:32:29.696] Epoch: [2/3] Batch: [ 101/ 468] Loss: 0.51511
+[2024-04-27T04:32:56.369] Epoch: [2/3] Batch: [ 151/ 468] Loss: 0.50162
+[2024-04-27T04:33:22.199] Epoch: [2/3] Batch: [ 201/ 468] Loss: 0.47549
+[2024-04-27T04:33:49.197] Epoch: [2/3] Batch: [ 251/ 468] Loss: 1.18870
+[2024-04-27T04:34:15.404] Epoch: [2/3] Batch: [ 301/ 468] Loss: 0.74412
+[2024-04-27T04:34:42.250] Epoch: [2/3] Batch: [ 351/ 468] Loss: 0.74277
+[2024-04-27T04:35:08.295] Epoch: [2/3] Batch: [ 401/ 468] Loss: 0.63858
+[2024-04-27T04:35:34.504] Epoch: [2/3] Batch: [ 451/ 468] Loss: 0.57553
+[2024-04-27T04:36:11.755] Epoch: [2/3] Accuracy: 95.62300%
+[2024-04-27T04:36:12.058] Epoch: [3/3] Batch: [   1/ 468] Loss: 0.52920
+[2024-04-27T04:36:37.991] Epoch: [3/3] Batch: [  51/ 468] Loss: 0.45446
+[2024-04-27T04:37:03.900] Epoch: [3/3] Batch: [ 101/ 468] Loss: 0.39611
+[2024-04-27T04:37:30.415] Epoch: [3/3] Batch: [ 151/ 468] Loss: 0.38859
+[2024-04-27T04:37:56.148] Epoch: [3/3] Batch: [ 201/ 468] Loss: 0.35772
+[2024-04-27T04:38:21.829] Epoch: [3/3] Batch: [ 251/ 468] Loss: 0.34106
+[2024-04-27T04:38:48.548] Epoch: [3/3] Batch: [ 301/ 468] Loss: 0.33909
+[2024-04-27T04:39:13.823] Epoch: [3/3] Batch: [ 351/ 468] Loss: 0.34219
+[2024-04-27T04:39:39.763] Epoch: [3/3] Batch: [ 401/ 468] Loss: 0.33477
+[2024-04-27T04:40:06.300] Epoch: [3/3] Batch: [ 451/ 468] Loss: 0.33527
+[2024-04-27T04:40:42.888] Epoch: [3/3] Accuracy: 97.42588%
+[2024-04-27T04:40:42.888] Training complete.</code></pre><p>This code is setup to allow playing around with different DEQ models. Try modifying the <code>model_type</code> argument to <code>train_model</code> to <code>:skipdeq</code> or <code>:deq</code> to see how the model behaves. You can also try different solvers from NonlinearSolve.jl and OrdinaryDiffEq.jl! Even 3rd party solvers from Sundials.jl will work, just remember to use CPU for those.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../reduced_dim_deq/">Modelling Equilibrium Models with Reduced State Size »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.0 on <span class="colophon-date" title="Saturday 27 April 2024 04:44">Saturday 27 April 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
