@@ -20,7 +20,8 @@ const cdev = cpu_device()
 const gdev = gpu_device()
 ```
 
-We can now construct our dataloader.
+We can now construct our dataloader. We are using only limited part of the data for
+demonstration.
 
 ```@example basic_mnist_deq
 function onehot(labels_raw)
@@ -32,17 +33,17 @@ function loadmnist(batchsize, split)
     mnist = MNIST(; split)
     imgs, labels_raw = mnist.features, mnist.targets
     # Process images into (H,W,C,BS) batches
-    x_train = Float32.(reshape(imgs, size(imgs, 1), size(imgs, 2), 1, size(imgs, 3))) |>
-              gdev
+    x_train = Float32.(reshape(imgs, size(imgs, 1), size(imgs, 2), 1, size(imgs, 3)))[
+        :, :, 1:1, 1:128] |> gdev
     x_train = batchview(x_train, batchsize)
     # Onehot and batch the labels
-    y_train = onehot(labels_raw) |> gdev
+    y_train = onehot(labels_raw)[:, 1:128] |> gdev
     y_train = batchview(y_train, batchsize)
     return x_train, y_train
 end
 
-x_train, y_train = loadmnist(128, :train);
-x_test, y_test = loadmnist(128, :test);
+x_train, y_train = loadmnist(16, :train);
+x_test, y_test = loadmnist(16, :test);
 ```
 
 Construct the Lux Neural Network containing a DEQ layer.

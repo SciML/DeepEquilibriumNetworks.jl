@@ -3,7 +3,7 @@ module DeepEquilibriumNetworks
 import PrecompileTools: @recompile_invalidations
 
 @recompile_invalidations begin
-    using ADTypes: AutoFiniteDiff
+    using ADTypes: AutoFiniteDiff, AutoForwardDiff, AutoZygote
     using ChainRulesCore: ChainRulesCore
     using CommonSolve: solve
     using ConcreteStructs: @concrete
@@ -12,7 +12,8 @@ import PrecompileTools: @recompile_invalidations
     using FastClosures: @closure
     using Lux: Lux, BranchLayer, Chain, NoOpLayer, Parallel, RepeatedLayer,
                StatefulLuxLayer, WrappedFunction
-    using LuxCore: AbstractExplicitLayer, AbstractExplicitContainerLayer
+    using LuxCore: LuxCore, AbstractExplicitLayer, AbstractExplicitContainerLayer
+    using NNlib: ⊠
     using Random: Random, AbstractRNG, randn!
     using SciMLBase: SciMLBase, AbstractNonlinearAlgorithm, AbstractODEAlgorithm,
                      NonlinearSolution, ODESolution, ODEFunction, ODEProblem,

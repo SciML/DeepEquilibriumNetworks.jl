@@ -1,6 +1,6 @@
 @testsetup module SharedTestSetup
 
-using DeepEquilibriumNetworks, Functors, Lux, Random, StableRNGs, Zygote
+using DeepEquilibriumNetworks, Functors, Lux, Random, StableRNGs, Zygote, ForwardDiff
 import LuxTestUtils: @jet
 using LuxCUDA
 

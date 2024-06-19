@@ -64,11 +64,11 @@ const DEQ = DeepEquilibriumNetwork
 
 ConstructionBase.constructorof(::Type{<:DEQ{pType}}) where {pType} = DEQ{pType}
 
-function Lux.initialstates(rng::AbstractRNG, deq::DEQ)
-    rng = Lux.replicate(rng)
+function LuxCore.initialstates(rng::AbstractRNG, deq::DEQ)
+    rng = LuxCore.replicate(rng)
     randn(rng, 1)
-    return (; model=Lux.initialstates(rng, deq.model), fixed_depth=Val(0),
-        init=Lux.initialstates(rng, deq.init), solution=DeepEquilibriumSolution(), rng)
+    return (; model=LuxCore.initialstates(rng, deq.model), fixed_depth=Val(0),
+        init=LuxCore.initialstates(rng, deq.init), solution=DeepEquilibriumSolution(), rng)
 end
 
 (deq::DEQ)(x, ps, st::NamedTuple) = deq(x, ps, st, __check_unrolled_mode(st))
@@ -79,10 +79,10 @@ function (deq::DEQ)(x, ps, st::NamedTuple, ::Val{true})
     repeated_model = RepeatedLayer(deq.model; repeats=st.fixed_depth)
 
     z_star, st_ = repeated_model((z, x), ps.model, st.model)
-    model = StatefulLuxLayer(deq.model, ps.model, st_)
+    model = StatefulLuxLayer{true}(deq.model, ps.model, st_)
     resid = CRC.ignore_derivatives(z_star .- model((z_star, x)))
 
-    rng = Lux.replicate(st.rng)
+    rng = LuxCore.replicate(st.rng)
     jac_loss = __estimate_jacobian_trace(
         __getproperty(deq, Val(:jacobian_regularization)), model, z_star, x, rng)
 
@@ -97,7 +97,7 @@ end
 function (deq::DEQ{pType})(x, ps, st::NamedTuple, ::Val{false}) where {pType}
     z, st = __get_initial_condition(deq, x, ps, st)
 
-    model = StatefulLuxLayer(deq.model, ps.model, st.model)
+    model = StatefulLuxLayer{true}(deq.model, ps.model, st.model)
 
     dudt = @closure (u, p, t) -> begin
         # The type-assert is needed because of an upstream Lux issue with type stability of
@@ -113,7 +113,7 @@ function (deq::DEQ{pType})(x, ps, st::NamedTuple, ::Val{false}) where {pType}
         reltol=1e-3, termination_condition, maxiters=32, deq.kwargs...)
     z_star = __get_steady_state(sol)
 
-    rng = Lux.replicate(st.rng)
+    rng = LuxCore.replicate(st.rng)
     jac_loss = __estimate_jacobian_trace(
         __getproperty(deq, Val(:jacobian_regularization)), model, z_star, x, rng)
 
@@ -144,7 +144,8 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing]
     condition is set to `zero(x)`. If `missing`, the initial condition is set to
     `WrappedFunction(zero)`. In other cases the initial condition is set to
     `init(x, ps, st)`.
-  - `jacobian_regularization`: Must be one of `nothing`, `AutoFiniteDiff` or `AutoZygote`.
+  - `jacobian_regularization`: Must be one of `nothing`, `AutoForwardDiff`, `AutoFiniteDiff`
+    or `AutoZygote`.
   - `problem_type`: Provides a way to simulate a Vanilla Neural ODE by setting the
     `problem_type` to `ODEProblem`. By default, the problem type is set to
     `SteadyStateProblem`.
@@ -152,9 +153,7 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing]
 
 ## Example
 
-```julia
-julia> using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq
-
+```jldoctest
 julia> model = DeepEquilibriumNetwork(
            Parallel(+, Dense(2, 2; use_bias=false), Dense(2, 2; use_bias=false)),
            VCABM3(); verbose=false)
@@ -168,13 +167,12 @@ DeepEquilibriumNetwork(
 )         # Total: 8 parameters,
           #        plus 0 states.
 
-julia> rng = Random.default_rng()
-TaskLocalRNG()
+julia> rng = Xoshiro(0);
 
 julia> ps, st = Lux.setup(rng, model);
 
-julia> model(ones(Float32, 2, 1), ps, st);
-
+julia> size(first(model(ones(Float32, 2, 1), ps, st)))
+(2, 1)
 ```
 
 See also: [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref),
@@ -234,84 +232,27 @@ For keyword arguments, see [`DeepEquilibriumNetwork`](@ref).
 
 ## Example
 
-```julia
-julia> using DeepEquilibriumNetworks, Lux, Random, NonlinearSolve
-
+```jldoctest
 julia> main_layers = (
            Parallel(+, Dense(4 => 4, tanh; use_bias=false), Dense(4 => 4, tanh; use_bias=false)),
-           Dense(3 => 3, tanh), Dense(2 => 2, tanh), Dense(1 => 1, tanh))
-(Parallel(), Dense(3 => 3, tanh_fast), Dense(2 => 2, tanh_fast), Dense(1 => 1, tanh_fast))
+           Dense(3 => 3, tanh), Dense(2 => 2, tanh), Dense(1 => 1, tanh));
 
 julia> mapping_layers = [NoOpLayer() Dense(4 => 3, tanh) Dense(4 => 2, tanh) Dense(4 => 1, tanh);
                          Dense(3 => 4, tanh) NoOpLayer() Dense(3 => 2, tanh) Dense(3 => 1, tanh);
                          Dense(2 => 4, tanh) Dense(2 => 3, tanh) NoOpLayer() Dense(2 => 1, tanh);
-                         Dense(1 => 4, tanh) Dense(1 => 3, tanh) Dense(1 => 2, tanh) NoOpLayer()]
-4×4 Matrix{LuxCore.AbstractExplicitLayer}:
- NoOpLayer()               …  Dense(4 => 1, tanh_fast)
- Dense(3 => 4, tanh_fast)     Dense(3 => 1, tanh_fast)
- Dense(2 => 4, tanh_fast)     Dense(2 => 1, tanh_fast)
- Dense(1 => 4, tanh_fast)     NoOpLayer()
+                         Dense(1 => 4, tanh) Dense(1 => 3, tanh) Dense(1 => 2, tanh) NoOpLayer()];
 
 julia> model = MultiScaleDeepEquilibriumNetwork(
-           main_layers, mapping_layers, nothing, NewtonRaphson(), ((4,), (3,), (2,), (1,)))
-DeepEquilibriumNetwork(
-    model = MultiScaleInputLayer{scales = 4}(
-        model = Chain(
-            layer_1 = Parallel(
-                layer_1 = Parallel(
-                    +
-                    Dense(4 => 4, tanh_fast, bias=false),  # 16 parameters
-                    Dense(4 => 4, tanh_fast, bias=false),  # 16 parameters
-                ),
-                layer_2 = Dense(3 => 3, tanh_fast),  # 12 parameters
-                layer_3 = Dense(2 => 2, tanh_fast),  # 6 parameters
-                layer_4 = Dense(1 => 1, tanh_fast),  # 2 parameters
-            ),
-            layer_2 = BranchLayer(
-                layer_1 = Parallel(
-                    +
-                    NoOpLayer(),
-                    Dense(3 => 4, tanh_fast),  # 16 parameters
-                    Dense(2 => 4, tanh_fast),  # 12 parameters
-                    Dense(1 => 4, tanh_fast),  # 8 parameters
-                ),
-                layer_2 = Parallel(
-                    +
-                    Dense(4 => 3, tanh_fast),  # 15 parameters
-                    NoOpLayer(),
-                    Dense(2 => 3, tanh_fast),  # 9 parameters
-                    Dense(1 => 3, tanh_fast),  # 6 parameters
-                ),
-                layer_3 = Parallel(
-                    +
-                    Dense(4 => 2, tanh_fast),  # 10 parameters
-                    Dense(3 => 2, tanh_fast),  # 8 parameters
-                    NoOpLayer(),
-                    Dense(1 => 2, tanh_fast),  # 4 parameters
-                ),
-                layer_4 = Parallel(
-                    +
-                    Dense(4 => 1, tanh_fast),  # 5 parameters
-                    Dense(3 => 1, tanh_fast),  # 4 parameters
-                    Dense(2 => 1, tanh_fast),  # 3 parameters
-                    NoOpLayer(),
-                ),
-            ),
-        ),
-    ),
-    init = WrappedFunction(Base.Fix1{typeof(DeepEquilibriumNetworks.__zeros_init), Val{((4,), (3,), (2,), (1,))}}(DeepEquilibriumNetworks.__zeros_init, Val{((4,), (3,), (2,), (1,))}())),
-)         # Total: 152 parameters,
-          #        plus 0 states.
+           main_layers, mapping_layers, nothing, NewtonRaphson(), ((4,), (3,), (2,), (1,)));
 
-julia> rng = Random.default_rng()
-TaskLocalRNG()
+julia> rng = Xoshiro(0);
 
 julia> ps, st = Lux.setup(rng, model);
 
 julia> x = rand(rng, Float32, 4, 12);
 
-julia> model(x, ps, st);
-
+julia> size.(first(model(x, ps, st)))
+((4, 12), (3, 12), (2, 12), (1, 12))
 ```
 """
 function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
@@ -390,7 +331,9 @@ end
 function ConstructionBase.constructorof(::Type{<:MultiScaleInputLayer{N}}) where {N}
     return MultiScaleInputLayer{N}
 end
-Lux.display_name(::MultiScaleInputLayer{N}) where {N} = "MultiScaleInputLayer{scales = $N}"
+function LuxCore.display_name(::MultiScaleInputLayer{N}) where {N}
+    return "MultiScaleInputLayer{scales = $N}"
+end
 
 function MultiScaleInputLayer(model, split_idxs, scales::Val{S}) where {S}
     return MultiScaleInputLayer{length(S)}(model, split_idxs, scales)
@@ -401,7 +344,7 @@ end
     return quote
         u, x = z
         u_ = __split_and_reshape(u, m.split_idxs, m.scales)
-        u_res, st = Lux.apply(m.model, ($(inputs...),), ps, st)
+        u_res, st = LuxCore.apply(m.model, ($(inputs...),), ps, st)
         return __flatten_vcat(u_res), st
     end
 end

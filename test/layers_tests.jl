@@ -17,7 +17,7 @@ export loss_function, SOLVERS
 
 end
 
-@testitem "DEQ" setup=[SharedTestSetup, LayersTestSetup] begin
+@testitem "DEQ" setup=[SharedTestSetup, LayersTestSetup] timeout=10000 begin
     using ADTypes, Lux, NonlinearSolve, OrdinaryDiffEq, SciMLSensitivity, Zygote
 
     rng = __get_prng(0)
@@ -28,7 +28,7 @@ end
     x_sizes = [(2, 14), (3, 3, 1, 3)]
 
     model_type = (:deq, :skipdeq, :skipregdeq)
-    _jacobian_regularizations = (nothing, AutoZygote(), AutoFiniteDiff())
+    _jacobian_regularizations = (nothing, AutoZygote(), AutoForwardDiff(), AutoFiniteDiff())
 
     @testset "$mode" for (mode, aType, dev, ongpu) in MODES
         jacobian_regularizations = ongpu ? _jacobian_regularizations[1:(end - 1)] :
@@ -89,7 +89,7 @@ end
     end
 end
 
-@testitem "Multiscale DEQ" setup=[SharedTestSetup, LayersTestSetup] begin
+@testitem "Multiscale DEQ" setup=[SharedTestSetup, LayersTestSetup] timeout=10000 begin
     using ADTypes, Lux, NonlinearSolve, OrdinaryDiffEq, SciMLSensitivity, Zygote
 
     rng = __get_prng(0)

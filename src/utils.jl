@@ -95,9 +95,11 @@ end
 
 CRC.@non_differentiable __gaussian_like(::Any...)
 
+@inline __tupleify(x) = @closure(u->(u, x))
+
 # Jacobian Stabilization
 ## Don't remove `ad`. See https://github.com/ericphanson/ExplicitImports.jl/issues/33
-function __estimate_jacobian_trace(ad::AutoFiniteDiff, model, z, x, rng)
+function __estimate_jacobian_trace(ad::AutoFiniteDiff, model::StatefulLuxLayer, z, x, rng)
     __f = @closure u -> model((u, x))
     res = zero(eltype(x))
     ϵ = cbrt(eps(typeof(res)))
@@ -117,6 +119,22 @@ function __estimate_jacobian_trace(ad::AutoFiniteDiff, model, z, x, rng)
     end
 
     return res
+end
+
+function __estimate_jacobian_trace(ad::AutoZygote, model::StatefulLuxLayer, z, x, rng)
+    v = __gaussian_like(rng, x)
+    smodel = model ∘ __tupleify(x)
+    vjp = Lux.vector_jacobian_product(smodel, ad, z, v)
+    return sum(reshape(vjp, 1, :, size(vjp, ndims(vjp))) ⊠
+               reshape(v, :, 1, size(v, ndims(v))))
+end
+
+function __estimate_jacobian_trace(ad::AutoForwardDiff, model::StatefulLuxLayer, z, x, rng)
+    v = __gaussian_like(rng, x)
+    smodel = model ∘ __tupleify(x)
+    jvp = Lux.jacobian_vector_product(smodel, ad, z, v)
+    return sum(reshape(v, 1, :, size(v, ndims(v))) ⊠
+               reshape(jvp, :, 1, size(jvp, ndims(jvp))))
 end
 
 __estimate_jacobian_trace(::Nothing, model, z, x, rng) = zero(eltype(x))
