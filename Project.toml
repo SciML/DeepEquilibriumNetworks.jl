@@ -1,7 +1,7 @@
 name = "DeepEquilibriumNetworks"
 uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 authors = ["Avik Pal <avikpal@mit.edu>"]
-version = "2.1.1"
+version = "2.1.2"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
@@ -41,7 +41,7 @@ FastClosures = "0.3"
 ForwardDiff = "0.10.36"
 Functors = "0.4.10"
 LinearSolve = "2.21.2"
-Lux = "0.5.50"
+Lux = "0.5.56"
 LuxCUDA = "0.3.2"
 LuxCore = "0.1.14"
 LuxTestUtils = "0.1.15"

@@ -142,7 +142,7 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing]
 
   - `init`: Initial Condition for the rootfinding problem. If `nothing`, the initial
     condition is set to `zero(x)`. If `missing`, the initial condition is set to
-    `WrappedFunction(zero)`. In other cases the initial condition is set to
+    `WrappedFunction{:direct_call}(zero)`. In other cases the initial condition is set to
     `init(x, ps, st)`.
   - `jacobian_regularization`: Must be one of `nothing`, `AutoForwardDiff`, `AutoFiniteDiff`
     or `AutoZygote`.
@@ -160,8 +160,8 @@ julia> model = DeepEquilibriumNetwork(
 DeepEquilibriumNetwork(
     model = Parallel(
         +
-        Dense(2 => 2, bias=false),      # 4 parameters
-        Dense(2 => 2, bias=false),      # 4 parameters
+        layer_1 = Dense(2 => 2, bias=false),  # 4 parameters
+        layer_2 = Dense(2 => 2, bias=false),  # 4 parameters
     ),
     init = WrappedFunction(Base.Fix1{typeof(DeepEquilibriumNetworks.__zeros_init), Nothing}(DeepEquilibriumNetworks.__zeros_init, nothing)),
 )         # Total: 8 parameters,
@@ -184,7 +184,8 @@ function DeepEquilibriumNetwork(
     model isa AbstractExplicitLayer || (model = Lux.transform(model))
 
     if init === missing # Regular DEQ
-        init = WrappedFunction(Base.Fix1(__zeros_init, __getproperty(model, Val(:scales))))
+        init = WrappedFunction{:direct_call}(Base.Fix1(
+            __zeros_init, __getproperty(model, Val(:scales))))
     elseif init === nothing # SkipRegDEQ
         init = NoOpLayer()
     elseif !(init isa AbstractExplicitLayer)

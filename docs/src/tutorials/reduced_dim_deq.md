@@ -57,7 +57,7 @@ function construct_model(solver; model_type::Symbol=:regdeq)
     else
         # This should preferably done via `ChainRulesCore.@ignore_derivatives`. But here
         # we are only using Zygote so this is fine.
-        init = WrappedFunction(x -> Zygote.@ignore(fill!(
+        init = WrappedFunction{:direct_call}(x -> Zygote.@ignore(fill!(
             similar(x, 128, size(x, 2)), false)))
     end
 
