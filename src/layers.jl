@@ -156,16 +156,7 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing]
 ```jldoctest
 julia> model = DeepEquilibriumNetwork(
            Parallel(+, Dense(2, 2; use_bias=false), Dense(2, 2; use_bias=false)),
-           VCABM3(); verbose=false)
-DeepEquilibriumNetwork(
-    model = Parallel(
-        +
-        layer_1 = Dense(2 => 2, bias=false),  # 4 parameters
-        layer_2 = Dense(2 => 2, bias=false),  # 4 parameters
-    ),
-    init = WrappedFunction(Base.Fix1{typeof(DeepEquilibriumNetworks.__zeros_init), Nothing}(DeepEquilibriumNetworks.__zeros_init, nothing)),
-)         # Total: 8 parameters,
-          #        plus 0 states.
+           VCABM3(); verbose=false);
 
 julia> rng = Xoshiro(0);
 
