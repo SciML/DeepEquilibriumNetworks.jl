@@ -17,14 +17,14 @@ export loss_function, SOLVERS
 
 end
 
-@testitem "DEQ" setup=[SharedTestSetup, LayersTestSetup] timeout=10000 begin
+@testitem "DEQ" setup=[SharedTestSetup, LayersTestSetup] begin
     using ADTypes, Lux, NonlinearSolve, OrdinaryDiffEq, SciMLSensitivity, Zygote
 
-    rng = __get_prng(0)
+    rng = StableRNG(0)
 
-    base_models = [Parallel(+, __get_dense_layer(2 => 2), __get_dense_layer(2 => 2)),
-        Parallel(+, __get_conv_layer((1, 1), 1 => 1), __get_conv_layer((1, 1), 1 => 1))]
-    init_models = [__get_dense_layer(2 => 2), __get_conv_layer((1, 1), 1 => 1)]
+    base_models = [Parallel(+, dense_layer(2 => 2), dense_layer(2 => 2)),
+        Parallel(+, conv_layer((1, 1), 1 => 1), conv_layer((1, 1), 1 => 1))]
+    init_models = [dense_layer(2 => 2), conv_layer((1, 1), 1 => 1)]
     x_sizes = [(2, 14), (3, 3, 1, 3)]
 
     model_type = (:deq, :skipdeq, :skipregdeq)
@@ -34,7 +34,7 @@ end
         jacobian_regularizations = ongpu ? _jacobian_regularizations[1:(end - 1)] :
                                    _jacobian_regularizations
 
-        @testset "Solver: $(__nameof(solver)) | Model Type: $(mtype) | Jac. Reg: $(jacobian_regularization)" for solver in SOLVERS,
+        @testset "Solver: $(nameof(typeof(solver))) | Model Type: $(mtype) | Jac. Reg: $(jacobian_regularization)" for solver in SOLVERS,
             mtype in model_type,
             jacobian_regularization in jacobian_regularizations
 
@@ -65,8 +65,8 @@ end
 
                 _, gs_x, gs_ps, _ = Zygote.gradient(loss_function, model, x, ps, st)
 
-                @test __is_finite_gradient(gs_x)
-                @test __is_finite_gradient(gs_ps)
+                @test is_finite_gradient(gs_x)
+                @test is_finite_gradient(gs_ps)
 
                 ps, st = Lux.setup(rng, model) |> dev
                 st = Lux.update_state(st, :fixed_depth, Val(10))
@@ -82,28 +82,28 @@ end
 
                 _, gs_x, gs_ps, _ = Zygote.gradient(loss_function, model, x, ps, st)
 
-                @test __is_finite_gradient(gs_x)
-                @test __is_finite_gradient(gs_ps)
+                @test is_finite_gradient(gs_x)
+                @test is_finite_gradient(gs_ps)
             end
         end
     end
 end
 
-@testitem "Multiscale DEQ" setup=[SharedTestSetup, LayersTestSetup] timeout=10000 begin
+@testitem "Multiscale DEQ" setup=[SharedTestSetup, LayersTestSetup] begin
     using ADTypes, Lux, NonlinearSolve, OrdinaryDiffEq, SciMLSensitivity, Zygote
 
-    rng = __get_prng(0)
+    rng = StableRNG(0)
 
-    main_layers = [(Parallel(+, __get_dense_layer(4 => 4), __get_dense_layer(4 => 4)),
-        __get_dense_layer(3 => 3), __get_dense_layer(2 => 2), __get_dense_layer(1 => 1))]
+    main_layers = [(Parallel(+, dense_layer(4 => 4), dense_layer(4 => 4)),
+        dense_layer(3 => 3), dense_layer(2 => 2), dense_layer(1 => 1))]
 
-    mapping_layers = [[NoOpLayer() __get_dense_layer(4 => 3) __get_dense_layer(4 => 2) __get_dense_layer(4 => 1);
-                       __get_dense_layer(3 => 4) NoOpLayer() __get_dense_layer(3 => 2) __get_dense_layer(3 => 1);
-                       __get_dense_layer(2 => 4) __get_dense_layer(2 => 3) NoOpLayer() __get_dense_layer(2 => 1);
-                       __get_dense_layer(1 => 4) __get_dense_layer(1 => 3) __get_dense_layer(1 => 2) NoOpLayer()]]
+    mapping_layers = [[NoOpLayer() dense_layer(4 => 3) dense_layer(4 => 2) dense_layer(4 => 1);
+                       dense_layer(3 => 4) NoOpLayer() dense_layer(3 => 2) dense_layer(3 => 1);
+                       dense_layer(2 => 4) dense_layer(2 => 3) NoOpLayer() dense_layer(2 => 1);
+                       dense_layer(1 => 4) dense_layer(1 => 3) dense_layer(1 => 2) NoOpLayer()]]
 
-    init_layers = [(__get_dense_layer(4 => 4), __get_dense_layer(4 => 3),
-        __get_dense_layer(4 => 2), __get_dense_layer(4 => 1))]
+    init_layers = [(dense_layer(4 => 4), dense_layer(4 => 3),
+        dense_layer(4 => 2), dense_layer(4 => 1))]
 
     x_sizes = [(4, 3)]
     scales = [((4,), (3,), (2,), (1,))]
@@ -112,7 +112,7 @@ end
     jacobian_regularizations = (nothing,)
 
     @testset "$mode" for (mode, aType, dev, ongpu) in MODES
-        @testset "Solver: $(__nameof(solver))" for solver in SOLVERS,
+        @testset "Solver: $(nameof(typeof(solver)))" for solver in SOLVERS,
             mtype in model_type,
             jacobian_regularization in jacobian_regularizations
 
@@ -153,8 +153,8 @@ end
 
                 _, gs_x, gs_ps, _ = Zygote.gradient(loss_function, model, x, ps, st)
 
-                @test __is_finite_gradient(gs_x)
-                @test __is_finite_gradient(gs_ps)
+                @test is_finite_gradient(gs_x)
+                @test is_finite_gradient(gs_ps)
 
                 ps, st = Lux.setup(rng, model) |> dev
                 st = Lux.update_state(st, :fixed_depth, Val(10))
@@ -172,8 +172,8 @@ end
 
                 _, gs_x, gs_ps, _ = Zygote.gradient(loss_function, model, x, ps, st)
 
-                @test __is_finite_gradient(gs_x)
-                @test __is_finite_gradient(gs_ps)
+                @test is_finite_gradient(gs_x)
+                @test is_finite_gradient(gs_ps)
             end
         end
     end

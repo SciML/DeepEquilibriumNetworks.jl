@@ -4,12 +4,12 @@ on:
     branches:
       - main
     paths-ignore:
-      - 'docs/**'
+      - "docs/**"
   push:
     branches:
       - main
     paths-ignore:
-      - 'docs/**'
+      - "docs/**"
 concurrency:
   # Skip intermediate builds: always.
   # Cancel intermediate builds: only if it is a pull request build.
@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1'
+          - "1"
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
@@ -41,10 +41,7 @@ jobs:
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         env:
-          GROUP: "CPU"
-          JULIA_NUM_THREADS: 12
-          RETESTITEMS_NWORKERS: 4
-          RETESTITEMS_NWORKER_THREADS: 2
+          BACKEND_GROUP: "CPU"
       - uses: julia-actions/julia-processcoverage@v1
         with:
           directories: src,ext
