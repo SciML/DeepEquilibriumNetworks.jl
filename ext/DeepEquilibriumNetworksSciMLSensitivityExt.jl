@@ -15,6 +15,6 @@ using DeepEquilibriumNetworks: DEQs
     linsolve_kwargs = (; maxiters=10, abstol=1e-3, reltol=1e-3)
     return SteadyStateAdjoint(; linsolve, linsolve_kwargs, autojacvec=ZygoteVJP())
 end
-@inline DEQs.__default_sensealg(prob::ODEProblem) = GaussAdjoint(; autojacvec=ZygoteVJP())
+@inline DEQs.__default_sensealg(::ODEProblem) = GaussAdjoint(; autojacvec=ZygoteVJP())
 
 end

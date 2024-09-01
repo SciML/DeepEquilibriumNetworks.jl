@@ -98,8 +98,7 @@ CRC.@non_differentiable __gaussian_like(::Any...)
 @inline __tupleify(x) = @closure(u->(u, x))
 
 # Jacobian Stabilization
-## Don't remove `ad`. See https://github.com/ericphanson/ExplicitImports.jl/issues/33
-function __estimate_jacobian_trace(ad::AutoFiniteDiff, model::StatefulLuxLayer, z, x, rng)
+function __estimate_jacobian_trace(::AutoFiniteDiff, model::StatefulLuxLayer, z, x, rng)
     __f = @closure u -> model((u, x))
     res = zero(eltype(x))
     ϵ = cbrt(eps(typeof(res)))
