@@ -4,7 +4,7 @@ using DeepEquilibriumNetworks, Functors, Lux, Random, StableRNGs, Zygote, Forwar
 using LuxTestUtils
 using MLDataDevices, GPUArraysCore
 
-LuxTestUtils.jet_target_modules!(["Boltz", "Lux", "LuxLib"])
+LuxTestUtils.jet_target_modules!(["DeepEquilibriumNetworks", "Lux", "LuxLib"])
 
 const BACKEND_GROUP = lowercase(get(ENV, "BACKEND_GROUP", "all"))
 
