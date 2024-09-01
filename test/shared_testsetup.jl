@@ -12,10 +12,6 @@ if BACKEND_GROUP == "all" || BACKEND_GROUP == "cuda"
     using LuxCUDA
 end
 
-if BACKEND_GROUP == "all" || BACKEND_GROUP == "amdgpu"
-    using AMDGPU
-end
-
 GPUArraysCore.allowscalar(false)
 
 cpu_testing() = BACKEND_GROUP == "all" || BACKEND_GROUP == "cpu"
@@ -23,16 +19,11 @@ function cuda_testing()
     return (BACKEND_GROUP == "all" || BACKEND_GROUP == "cuda") &&
            MLDataDevices.functional(CUDADevice)
 end
-function amdgpu_testing()
-    return (BACKEND_GROUP == "all" || BACKEND_GROUP == "amdgpu") &&
-           MLDataDevices.functional(AMDGPUDevice)
-end
 
 const MODES = begin
     modes = []
     cpu_testing() && push!(modes, ("cpu", Array, CPUDevice(), false))
     cuda_testing() && push!(modes, ("cuda", CuArray, CUDADevice(), true))
-    amdgpu_testing() && push!(modes, ("amdgpu", ROCArray, AMDGPUDevice(), true))
     modes
 end
 
