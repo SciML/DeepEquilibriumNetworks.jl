@@ -55,8 +55,7 @@ end
                 x = randn(rng, Float32, x_size...) |> dev
                 z, st = model(x, ps, st)
 
-                opt_broken = solver isa SimpleLimitedMemoryBroyden
-                @jet model(x, ps, st) opt_broken=opt_broken
+                @jet model(x, ps, st) opt_broken=true
 
                 @test all(isfinite, z)
                 @test size(z) == size(x)
@@ -102,8 +101,8 @@ end
                        dense_layer(2 => 4) dense_layer(2 => 3) NoOpLayer() dense_layer(2 => 1);
                        dense_layer(1 => 4) dense_layer(1 => 3) dense_layer(1 => 2) NoOpLayer()]]
 
-    init_layers = [(dense_layer(4 => 4), dense_layer(4 => 3),
-        dense_layer(4 => 2), dense_layer(4 => 1))]
+    init_layers = [(
+        dense_layer(4 => 4), dense_layer(4 => 3), dense_layer(4 => 2), dense_layer(4 => 1))]
 
     x_sizes = [(4, 3)]
     scales = [((4,), (3,), (2,), (1,))]
@@ -141,8 +140,8 @@ end
                 z, st = model(x, ps, st)
                 z_ = DEQs.__flatten_vcat(z)
 
-                opt_broken = solver isa SimpleLimitedMemoryBroyden
-                @jet model(x, ps, st) opt_broken=opt_broken # Broken due to nfe dynamic dispatch
+                opt_broken = mtype !== :node
+                @jet model(x, ps, st) opt_broken=opt_broken
 
                 @test all(isfinite, z_)
                 @test size(z_) == (sum(prod, scale), size(x, ndims(x)))
