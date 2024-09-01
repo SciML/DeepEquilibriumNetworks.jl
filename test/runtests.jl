@@ -6,7 +6,6 @@ const BACKEND_GROUP = lowercase(get(ENV, "BACKEND_GROUP", "all"))
 const EXTRA_PKGS = String[]
 
 (BACKEND_GROUP == "all" || BACKEND_GROUP == "cuda") && push!(EXTRA_PKGS, "LuxCUDA")
-(BACKEND_GROUP == "all" || BACKEND_GROUP == "amdgpu") && push!(EXTRA_PKGS, "AMDGPU")
 
 if !isempty(EXTRA_PKGS)
     @info "Installing Extra Packages for testing" EXTRA_PKGS=EXTRA_PKGS
