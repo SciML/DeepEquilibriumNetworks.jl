@@ -134,32 +134,32 @@ function train_model(
     @printf &quot;[%s] Training complete.\n&quot; string(now())
 
     return model, ps, st
-end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">train_model (generic function with 1 method)</code></pre><p>Now we can train our model. First we will train a Discrete DEQ, which effectively means pass in a root finding algorithm. Typically most packages lack good nonlinear solvers, and end up using solvers like <code>Broyden</code>, but we can simply slap in any of the fancy solvers from NonlinearSolve.jl. Here we will use Newton-Krylov Method:</p><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[2024-09-02T23:45:29.635] warming up forward pass
-[2024-09-02T23:46:00.796] warming up backward pass
-[2024-09-02T23:47:07.796] warmup complete
-[2024-09-02T23:47:07.829] Training Model: regdeq with Solver: GeneralizedFirstOrderAlgorithm
-[2024-09-02T23:47:11.036] Starting Accuracy: 2.34375%
-[2024-09-02T23:47:11.256] Pretrain with unrolling to a depth of 5
-[2024-09-02T23:47:39.355] Pretraining Batch: [   1/   8] Loss: 3.21374
-[2024-09-02T23:47:40.251] Pretraining complete. Accuracy: 2.34375%
-[2024-09-02T23:47:40.746] Epoch: [1/3] Batch: [   1/   8] Loss: 3.39334
-[2024-09-02T23:47:43.956] Epoch: [1/3] Accuracy: 17.96875%
-[2024-09-02T23:47:44.029] Epoch: [2/3] Batch: [   1/   8] Loss: 3.25882
-[2024-09-02T23:47:46.565] Epoch: [2/3] Accuracy: 19.53125%
-[2024-09-02T23:47:46.638] Epoch: [3/3] Batch: [   1/   8] Loss: 3.27661
-[2024-09-02T23:47:59.254] Epoch: [3/3] Accuracy: 13.28125%
-[2024-09-02T23:47:59.255] Training complete.</code></pre><p>We can also train a continuous DEQ by passing in an ODE solver. Here we will use <code>VCAB3()</code> which tend to be quite fast for continuous Neural Network problems.</p><pre><code class="language-julia hljs">train_model(VCAB3(), :deq);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[2024-09-02T23:47:59.715] warming up forward pass
-[2024-09-02T23:48:22.260] warming up backward pass
-[2024-09-02T23:48:38.568] warmup complete
-[2024-09-02T23:48:38.600] Training Model: deq with Solver: VCAB3
-[2024-09-02T23:48:39.158] Starting Accuracy: 2.34375%
-[2024-09-02T23:48:39.158] Pretrain with unrolling to a depth of 5
-[2024-09-02T23:48:56.288] Pretraining Batch: [   1/   8] Loss: 4.00631
-[2024-09-02T23:48:56.569] Pretraining complete. Accuracy: 11.71875%
-[2024-09-02T23:48:56.704] Epoch: [1/3] Batch: [   1/   8] Loss: 5.60803
-[2024-09-02T23:48:59.242] Epoch: [1/3] Accuracy: 11.71875%
-[2024-09-02T23:48:59.296] Epoch: [2/3] Batch: [   1/   8] Loss: 6.14580
-[2024-09-02T23:49:00.748] Epoch: [2/3] Accuracy: 11.71875%
-[2024-09-02T23:49:00.803] Epoch: [3/3] Batch: [   1/   8] Loss: 6.42498
-[2024-09-02T23:49:03.115] Epoch: [3/3] Accuracy: 11.71875%
-[2024-09-02T23:49:03.115] Training complete.</code></pre><p>This code is setup to allow playing around with different DEQ models. Try modifying the <code>model_type</code> argument to <code>train_model</code> to <code>:skipdeq</code> or <code>:deq</code> to see how the model behaves. You can also try different solvers from NonlinearSolve.jl and OrdinaryDiffEq.jl! Even 3rd party solvers from Sundials.jl will work, just remember to use CPU for those.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../reduced_dim_deq/">Modelling Equilibrium Models with Reduced State Size »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.6.0 on <span class="colophon-date" title="Monday 2 September 2024 23:54">Monday 2 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">train_model (generic function with 1 method)</code></pre><p>Now we can train our model. First we will train a Discrete DEQ, which effectively means pass in a root finding algorithm. Typically most packages lack good nonlinear solvers, and end up using solvers like <code>Broyden</code>, but we can simply slap in any of the fancy solvers from NonlinearSolve.jl. Here we will use Newton-Krylov Method:</p><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[2024-09-03T01:29:24.667] warming up forward pass
+[2024-09-03T01:29:54.702] warming up backward pass
+[2024-09-03T01:31:01.677] warmup complete
+[2024-09-03T01:31:01.710] Training Model: regdeq with Solver: GeneralizedFirstOrderAlgorithm
+[2024-09-03T01:31:04.881] Starting Accuracy: 5.46875%
+[2024-09-03T01:31:05.103] Pretrain with unrolling to a depth of 5
+[2024-09-03T01:31:33.320] Pretraining Batch: [   1/   8] Loss: 3.23724
+[2024-09-03T01:31:34.239] Pretraining complete. Accuracy: 9.37500%
+[2024-09-03T01:31:34.718] Epoch: [1/3] Batch: [   1/   8] Loss: 3.38121
+[2024-09-03T01:31:36.571] Epoch: [1/3] Accuracy: 11.71875%
+[2024-09-03T01:31:36.677] Epoch: [2/3] Batch: [   1/   8] Loss: 3.35735
+[2024-09-03T01:31:37.807] Epoch: [2/3] Accuracy: 10.93750%
+[2024-09-03T01:31:37.888] Epoch: [3/3] Batch: [   1/   8] Loss: 3.39987
+[2024-09-03T01:31:39.092] Epoch: [3/3] Accuracy: 14.84375%
+[2024-09-03T01:31:39.093] Training complete.</code></pre><p>We can also train a continuous DEQ by passing in an ODE solver. Here we will use <code>VCAB3()</code> which tend to be quite fast for continuous Neural Network problems.</p><pre><code class="language-julia hljs">train_model(VCAB3(), :deq);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[2024-09-03T01:31:39.551] warming up forward pass
+[2024-09-03T01:32:02.728] warming up backward pass
+[2024-09-03T01:32:19.351] warmup complete
+[2024-09-03T01:32:19.382] Training Model: deq with Solver: VCAB3
+[2024-09-03T01:32:19.944] Starting Accuracy: 14.84375%
+[2024-09-03T01:32:19.944] Pretrain with unrolling to a depth of 5
+[2024-09-03T01:32:37.713] Pretraining Batch: [   1/   8] Loss: 4.03705
+[2024-09-03T01:32:37.986] Pretraining complete. Accuracy: 14.84375%
+[2024-09-03T01:32:38.124] Epoch: [1/3] Batch: [   1/   8] Loss: 5.41271
+[2024-09-03T01:32:38.977] Epoch: [1/3] Accuracy: 28.12500%
+[2024-09-03T01:32:39.032] Epoch: [2/3] Batch: [   1/   8] Loss: 6.38327
+[2024-09-03T01:32:39.866] Epoch: [2/3] Accuracy: 19.53125%
+[2024-09-03T01:32:39.929] Epoch: [3/3] Batch: [   1/   8] Loss: 6.79743
+[2024-09-03T01:32:41.683] Epoch: [3/3] Accuracy: 19.53125%
+[2024-09-03T01:32:41.683] Training complete.</code></pre><p>This code is setup to allow playing around with different DEQ models. Try modifying the <code>model_type</code> argument to <code>train_model</code> to <code>:skipdeq</code> or <code>:deq</code> to see how the model behaves. You can also try different solvers from NonlinearSolve.jl and OrdinaryDiffEq.jl! Even 3rd party solvers from Sundials.jl will work, just remember to use CPU for those.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../reduced_dim_deq/">Modelling Equilibrium Models with Reduced State Size »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.6.0 on <span class="colophon-date" title="Tuesday 3 September 2024 01:37">Tuesday 3 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
