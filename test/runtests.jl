@@ -2,7 +2,7 @@ using ReTestItems, Pkg, InteractiveUtils, Hwloc
 
 @info sprint(versioninfo)
 
-const BACKEND_GROUP = lowercase(get(ENV, "BACKEND_GROUP", "all"))
+const BACKEND_GROUP = lowercase(get(ENV, "BACKEND_GROUP", get(ENV, "GROUP", "all")))
 const EXTRA_PKGS = String[]
 
 (BACKEND_GROUP == "all" || BACKEND_GROUP == "cuda") && push!(EXTRA_PKGS, "LuxCUDA")

@@ -6,7 +6,7 @@ using MLDataDevices, GPUArraysCore
 
 LuxTestUtils.jet_target_modules!(["DeepEquilibriumNetworks", "Lux", "LuxLib"])
 
-const BACKEND_GROUP = lowercase(get(ENV, "BACKEND_GROUP", "all"))
+const BACKEND_GROUP = lowercase(get(ENV, "BACKEND_GROUP", get(ENV, "GROUP", "all")))
 
 if BACKEND_GROUP == "all" || BACKEND_GROUP == "cuda"
     using LuxCUDA
