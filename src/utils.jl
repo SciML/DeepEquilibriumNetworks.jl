@@ -1,4 +1,4 @@
-@generated function __split_and_reshape(
+@generated function split_and_reshape(
         x::AbstractMatrix, ::Val{idxs}, ::Val{shapes}) where {idxs, shapes}
     dims = [reshape((idxs[i] + 1):idxs[i + 1], shapes[i]...) for i in 1:(length(idxs) - 1)]
     varnames = map(_ -> gensym("x_view"), dims)
@@ -8,10 +8,10 @@
         return tuple($(varnames...))
     end
 end
-__split_and_reshape(x::AbstractMatrix, ::Nothing, ::Nothing) = x
-__split_and_reshape(x::AbstractArray, ::Nothing, ::Nothing) = x
+split_and_reshape(x::AbstractMatrix, ::Nothing, ::Nothing) = x
+split_and_reshape(x::AbstractArray, ::Nothing, ::Nothing) = x
 
-function __split_and_reshape(y::AbstractMatrix, x)
+function split_and_reshape(y::AbstractMatrix, x)
     szs = [prod(size(xᵢ)[1:(end - 1)]) for xᵢ in x]
     counters = vcat(0, cumsum(szs)[1:(end - 1)])
     # Make the data contiguous
@@ -19,87 +19,89 @@ function __split_and_reshape(y::AbstractMatrix, x)
         szs, counters, x)
 end
 
-@inline __flatten(x::AbstractVector) = reshape(x, length(x), 1)
-@inline __flatten(x::AbstractMatrix) = x
-@inline __flatten(x::AbstractArray) = reshape(x, :, size(x, ndims(x)))
+flatten(x::AbstractVector) = reshape(x, length(x), 1)
+flatten(x::AbstractMatrix) = x
+flatten(x::AbstractArray) = reshape(x, :, size(x, ndims(x)))
 
-@inline __flatten_vcat(x) = mapreduce(__flatten, vcat, x)
+flatten_vcat(x) = mapreduce(flatten, vcat, x)
 
-function CRC.rrule(::typeof(__flatten_vcat), x)
-    y = __flatten_vcat(x)
+function CRC.rrule(::typeof(flatten_vcat), x)
+    y = flatten_vcat(x)
     project_x = CRC.ProjectTo(x)
-    ∇__flatten_vcat = @closure ∂y -> begin
+    ∇flatten_vcat = @closure ∂y -> begin
         ∂y isa CRC.NoTangent && return (CRC.NoTangent(), CRC.NoTangent())
-        return CRC.NoTangent(), project_x(__split_and_reshape(∂y, x))
+        return CRC.NoTangent(), project_x(split_and_reshape(∂y, x))
     end
-    return y, ∇__flatten_vcat
+    return y, ∇flatten_vcat
 end
 
-@inline __check_unrolled_mode(::Val{d}) where {d} = Val(d ≥ 1)
-@inline __check_unrolled_mode(st::NamedTuple) = __check_unrolled_mode(st.fixed_depth)
+check_unrolled_mode(::Val{d}) where {d} = Val(d ≥ 1)
+check_unrolled_mode(st::NamedTuple) = check_unrolled_mode(st.fixed_depth)
 
-@inline __get_unrolled_depth(::Val{d}) where {d} = d
-@inline __get_unrolled_depth(st::NamedTuple) = __get_unrolled_depth(st.fixed_depth)
+get_unrolled_depth(::Val{d}) where {d} = d
+get_unrolled_depth(st::NamedTuple) = get_unrolled_depth(st.fixed_depth)
 
-CRC.@non_differentiable __check_unrolled_mode(::Any)
-CRC.@non_differentiable __get_unrolled_depth(::Any)
+CRC.@non_differentiable check_unrolled_mode(::Any)
+CRC.@non_differentiable get_unrolled_depth(::Any)
 
-@inline __get_nfe(sol::ODESolution) = __get_nfe(sol.stats)
-@inline function __get_nfe(sol::NonlinearSolution)
+get_nfe(sol::ODESolution) = get_nfe(sol.stats)
+function get_nfe(sol::NonlinearSolution)
     return ifelse(sol.stats === nothing,
-        ifelse(sol.original === nothing, -1, __get_nfe(sol.original)),
-        __get_nfe(sol.stats))
+        ifelse(sol.original === nothing, -1, get_nfe(sol.original)), get_nfe(sol.stats))
 end
-@inline __get_nfe(stats) = -1
-@inline __get_nfe(stats::Union{SciMLBase.NLStats, SciMLBase.DEStats}) = stats.nf
+get_nfe(stats) = -1
+get_nfe(stats::Union{SciMLBase.NLStats, SciMLBase.DEStats}) = stats.nf
 
-@inline __normalize_alg(deq::DEQ{pType}) where {pType} = __normalize_alg(pType, deq.solver)
-@inline __normalize_alg(::Type{<:SteadyStateProblem}, alg) = alg
-@inline __normalize_alg(::Type{<:SteadyStateProblem}, alg::AbstractODEAlgorithm) = DynamicSS(alg)
-@inline __normalize_alg(::Type{<:SteadyStateProblem}, alg::AbstractNonlinearAlgorithm) = SSRootfind(alg)
-@inline __normalize_alg(::Type{<:ODEProblem}, alg::AbstractODEAlgorithm) = alg
+problem_type_to_symbol(::Type{<:SteadyStateProblem{false}}) = static(:SteadyState)
+problem_type_to_symbol(::Type{<:ODEProblem{false}}) = static(:ODE)
 
-@inline __get_steady_state(sol::ODESolution) = last(sol.u)
-@inline __get_steady_state(sol::NonlinearSolution) = sol.u
-@inline __get_steady_state(sol::AbstractArray) = sol
+normalize_alg(deq::DEQ) = normalize_alg(deq.kind, deq.solver)
+normalize_alg(_, alg) = alg
+normalize_alg(::StaticSymbol{:SteadyState}, alg::AbstractODEAlgorithm) = DynamicSS(alg)
+function normalize_alg(::StaticSymbol{:SteadyState}, alg::AbstractNonlinearAlgorithm)
+    return SSRootfind(alg)
+end
+normalize_alg(::StaticSymbol{:ODE}, alg::AbstractODEAlgorithm) = alg
 
-@inline function __construct_prob(::Type{<:SteadyStateProblem{false}}, f, u₀, p)
+get_steady_state(sol::ODESolution) = last(sol.u)
+get_steady_state(sol::NonlinearSolution) = sol.u
+get_steady_state(sol::AbstractArray) = sol
+
+function construct_prob(::StaticSymbol{:SteadyState}, f, u₀, p)
     return SteadyStateProblem{false}(f, u₀, p)
 end
-@inline function __construct_prob(::Type{<:ODEProblem{false}}, f, u₀, p)
-    return ODEProblem{false}(f, u₀, (0.0f0, 1.0f0), p)
-end
+construct_prob(::StaticSymbol{:ODE}, f, u₀, p) = ODEProblem{false}(f, u₀, (0.0f0, 1.0f0), p)
 
-@inline function __zeros_init(::Val{scales}, x::AbstractArray) where {scales}
+function zeros_init(::Val{scales}, x::AbstractArray) where {scales}
     u₀ = similar(x, sum(prod, scales), size(x, ndims(x)))
     fill!(u₀, false)
     return u₀
 end
-@inline __zeros_init(::Nothing, x::AbstractArray) = zero(x)
+zeros_init(::Nothing, x::AbstractArray) = zero(x)
 
-CRC.@non_differentiable __zeros_init(::Any, ::Any)
+CRC.@non_differentiable zeros_init(::Any, ::Any)
 
 ## Don't rely on SciMLSensitivity's choice
-@inline __default_sensealg(prob) = nothing
+default_sensealg(prob) = nothing
 
-@inline function __gaussian_like(rng::AbstractRNG, x::AbstractArray)
+function randn_like(rng::AbstractRNG, x::AbstractArray)
     y = similar(x)::typeof(x)
     randn!(rng, y)
     return y
 end
 
-CRC.@non_differentiable __gaussian_like(::Any...)
+CRC.@non_differentiable randn_like(::Any...)
 
-@inline __tupleify(x) = @closure(u->(u, x))
+tupleify(x) = @closure(u->(u, x))
 
 # Jacobian Stabilization
-function __estimate_jacobian_trace(::AutoFiniteDiff, model::StatefulLuxLayer, z, x, rng)
+function estimate_jacobian_trace(::AutoFiniteDiff, model::StatefulLuxLayer, z, x, rng)
     __f = @closure u -> model((u, x))
     res = zero(eltype(x))
     ϵ = cbrt(eps(typeof(res)))
     ϵ⁻¹ = inv(ϵ)
     f₀ = __f(z)
-    v = __gaussian_like(rng, x)
+    v = randn_like(rng, x)
 
     for idx in eachindex(z)
         _z = z[idx]
@@ -115,20 +117,20 @@ function __estimate_jacobian_trace(::AutoFiniteDiff, model::StatefulLuxLayer, z,
     return res
 end
 
-function __estimate_jacobian_trace(ad::AutoZygote, model::StatefulLuxLayer, z, x, rng)
-    v = __gaussian_like(rng, x)
-    smodel = model ∘ __tupleify(x)
+function estimate_jacobian_trace(ad::AutoZygote, model::StatefulLuxLayer, z, x, rng)
+    v = randn_like(rng, x)
+    smodel = model ∘ tupleify(x)
     vjp = Lux.vector_jacobian_product(smodel, ad, z, v)
     return sum(reshape(vjp, 1, :, size(vjp, ndims(vjp))) ⊠
                reshape(v, :, 1, size(v, ndims(v))))
 end
 
-function __estimate_jacobian_trace(ad::AutoForwardDiff, model::StatefulLuxLayer, z, x, rng)
-    v = __gaussian_like(rng, x)
-    smodel = model ∘ __tupleify(x)
+function estimate_jacobian_trace(ad::AutoForwardDiff, model::StatefulLuxLayer, z, x, rng)
+    v = randn_like(rng, x)
+    smodel = model ∘ tupleify(x)
     jvp = Lux.jacobian_vector_product(smodel, ad, z, v)
     return sum(reshape(v, 1, :, size(v, ndims(v))) ⊠
                reshape(jvp, :, 1, size(jvp, ndims(jvp))))
 end
 
-__estimate_jacobian_trace(::Nothing, model, z, x, rng) = zero(eltype(x))
+estimate_jacobian_trace(::Nothing, model, z, x, rng) = zero(eltype(x))
