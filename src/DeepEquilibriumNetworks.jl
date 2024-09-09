@@ -7,9 +7,9 @@ using ConcreteStructs: @concrete
 using ConstructionBase: ConstructionBase
 using DiffEqBase: DiffEqBase, AbsNormTerminationMode
 using FastClosures: @closure
-using Lux: Lux, BranchLayer, Chain, NoOpLayer, Parallel, RepeatedLayer, StatefulLuxLayer,
-           WrappedFunction
-using LuxCore: LuxCore, AbstractExplicitLayer, AbstractExplicitContainerLayer
+using Lux: Lux, LuxOps, BranchLayer, Chain, NoOpLayer, Parallel, RepeatedLayer,
+           StatefulLuxLayer, WrappedFunction
+using LuxCore: LuxCore, AbstractLuxLayer, AbstractLuxContainerLayer, AbstractLuxWrapperLayer
 using NNlib: ⊠
 using Random: Random, AbstractRNG, randn!
 using SciMLBase: SciMLBase, AbstractNonlinearAlgorithm, AbstractODEAlgorithm,

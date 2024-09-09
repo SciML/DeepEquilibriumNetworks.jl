@@ -51,8 +51,7 @@ function Base.show(io::IO, sol::DeepEquilibriumSolution)
 end
 
 # Core Model
-@concrete struct DeepEquilibriumNetwork{pType} <:
-                 AbstractExplicitContainerLayer{(:model, :init)}
+@concrete struct DeepEquilibriumNetwork{pType} <: AbstractLuxContainerLayer{(:model, :init)}
     init
     model
     solver
@@ -84,12 +83,12 @@ function (deq::DEQ)(x, ps, st::NamedTuple, ::Val{true})
 
     rng = LuxCore.replicate(st.rng)
     jac_loss = __estimate_jacobian_trace(
-        __getproperty(deq, Val(:jacobian_regularization)), model, z_star, x, rng)
+        LuxOps.getproperty(deq, Val(:jacobian_regularization)), model, z_star, x, rng)
 
     solution = DeepEquilibriumSolution(
         z_star, z, resid, zero(eltype(x)), _unwrap_val(st.fixed_depth), jac_loss)
-    res = __split_and_reshape(z_star, __getproperty(deq.model, Val(:split_idxs)),
-        __getproperty(deq.model, Val(:scales)))
+    res = __split_and_reshape(z_star, LuxOps.getproperty(deq.model, Val(:split_idxs)),
+        LuxOps.getproperty(deq.model, Val(:scales)))
 
     return res, (; st..., model=model.st, solution, rng)
 end
@@ -115,12 +114,12 @@ function (deq::DEQ{pType})(x, ps, st::NamedTuple, ::Val{false}) where {pType}
 
     rng = LuxCore.replicate(st.rng)
     jac_loss = __estimate_jacobian_trace(
-        __getproperty(deq, Val(:jacobian_regularization)), model, z_star, x, rng)
+        LuxOps.getproperty(deq, Val(:jacobian_regularization)), model, z_star, x, rng)
 
     solution = DeepEquilibriumSolution(
-        z_star, z, __getproperty(sol, Val(:resid)), jac_loss, __get_nfe(sol), sol)
-    res = __split_and_reshape(z_star, __getproperty(deq.model, Val(:split_idxs)),
-        __getproperty(deq.model, Val(:scales)))
+        z_star, z, LuxOps.getproperty(sol, Val(:resid)), jac_loss, __get_nfe(sol), sol)
+    res = __split_and_reshape(z_star, LuxOps.getproperty(deq.model, Val(:split_idxs)),
+        LuxOps.getproperty(deq.model, Val(:scales)))
 
     return res, (; st..., model=model.st, solution, rng)
 end
@@ -172,15 +171,13 @@ See also: [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwo
 function DeepEquilibriumNetwork(
         model, solver; init=missing, jacobian_regularization=nothing,
         problem_type::Type{pType}=SteadyStateProblem{false}, kwargs...) where {pType}
-    model isa AbstractExplicitLayer || (model = Lux.transform(model))
-
     if init === missing # Regular DEQ
         init = WrappedFunction{:direct_call}(Base.Fix1(
-            __zeros_init, __getproperty(model, Val(:scales))))
+            __zeros_init, LuxOps.getproperty(model, Val(:scales))))
     elseif init === nothing # SkipRegDEQ
         init = NoOpLayer()
-    elseif !(init isa AbstractExplicitLayer)
-        init = Lux.transform(init)
+    elseif !(init isa AbstractLuxLayer)
+        error("init::$(typeof(init)) is not a valid input for DeepEquilibriumNetwork.")
     end
     return DeepEquilibriumNetwork{pType}(
         init, model, solver, jacobian_regularization, kwargs)
@@ -302,7 +299,7 @@ end
 ## Generate Initial Condition
 @inline function __get_initial_condition(
         deq::DEQ{pType, NoOpLayer}, x, ps, st) where {pType}
-    zₓ = __zeros_init(__getproperty(deq.model, Val(:scales)), x)
+    zₓ = __zeros_init(LuxOps.getproperty(deq.model, Val(:scales)), x)
     z, st_ = deq.model((zₓ, x), ps.model, st.model)
     return z, (; st..., model=st_)
 end
@@ -313,9 +310,8 @@ end
 end
 
 # Other Layers
-@concrete struct MultiScaleInputLayer{N, M <: AbstractExplicitLayer} <:
-                 AbstractExplicitContainerLayer{(:model,)}
-    model::M
+@concrete struct MultiScaleInputLayer{N} <: AbstractLuxWrapperLayer{:model}
+    model <: AbstractLuxLayer
     split_idxs
     scales
 end
