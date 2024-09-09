@@ -57,7 +57,7 @@ function construct_model(solver; model_type::Symbol=:regdeq)
     else
         # This should preferably done via `ChainRulesCore.@ignore_derivatives`. But here
         # we are only using Zygote so this is fine.
-        init = WrappedFunction{:direct_call}(x -> Zygote.@ignore(fill!(
+        init = WrappedFunction(x -> Zygote.@ignore(fill!(
             similar(x, 128, size(x, 2)), false)))
     end
 
@@ -76,7 +76,7 @@ function construct_model(solver; model_type::Symbol=:regdeq)
     x = randn(rng, Float32, 28, 28, 1, 128)
     y = onehot(rand(Random.default_rng(), 0:9, 128)) |> gdev
 
-    model_ = StatefulLuxLayer(model, ps, st)
+    model_ = StatefulLuxLayer{true}(model, ps, st)
     @printf "[%s] warming up forward pass\n" string(now())
     logitcrossentropy(model_, x, ps, y)
     @printf "[%s] warming up backward pass\n" string(now())
@@ -103,7 +103,7 @@ classify(x) = argmax.(eachcol(x))
 function accuracy(model, data, ps, st)
     total_correct, total = 0, 0
     st = Lux.testmode(st)
-    model = StatefulLuxLayer(model, ps, st)
+    model = StatefulLuxLayer{true}(model, ps, st)
     for (x, y) in data
         target_class = classify(cdev(y))
         predicted_class = classify(cdev(model(x)))
@@ -116,7 +116,7 @@ end
 function train_model(
         solver, model_type; data_train=zip(x_train, y_train), data_test=zip(x_test, y_test))
     model, ps, st = construct_model(solver; model_type)
-    model_st = StatefulLuxLayer(model, nothing, st)
+    model_st = StatefulLuxLayer{true}(model, nothing, st)
 
     @printf "[%s] Training Model: %s with Solver: %s\n" string(now()) model_type nameof(typeof(solver))
 
@@ -127,7 +127,7 @@ function train_model(
 
     @printf "[%s] Pretrain with unrolling to a depth of 5\n" string(now())
     st = Lux.update_state(st, :fixed_depth, Val(5))
-    model_st = StatefulLuxLayer(model, ps, st)
+    model_st = StatefulLuxLayer{true}(model, ps, st)
 
     for (i, (x, y)) in enumerate(data_train)
         res = Zygote.withgradient(logitcrossentropy, model_st, x, ps, y)
@@ -140,7 +140,7 @@ function train_model(
     @printf "[%s] Pretraining complete. Accuracy: %.5f%%\n" string(now()) acc
 
     st = Lux.update_state(st, :fixed_depth, Val(0))
-    model_st = StatefulLuxLayer(model, ps, st)
+    model_st = StatefulLuxLayer{true}(model, ps, st)
 
     for epoch in 1:3
         for (i, (x, y)) in enumerate(data_train)
