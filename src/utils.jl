@@ -44,11 +44,6 @@ end
 CRC.@non_differentiable __check_unrolled_mode(::Any)
 CRC.@non_differentiable __get_unrolled_depth(::Any)
 
-@inline @generated function __getproperty(obj, ::Val{field}) where {field}
-    hasfield(obj, field) && return :(obj.$field)
-    return :(nothing)
-end
-
 @inline __get_nfe(sol::ODESolution) = __get_nfe(sol.stats)
 @inline function __get_nfe(sol::NonlinearSolution)
     return ifelse(sol.stats === nothing,

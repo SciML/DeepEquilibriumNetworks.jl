@@ -1,7 +1,7 @@
 name = "DeepEquilibriumNetworks"
 uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 authors = ["Avik Pal <avikpal@mit.edu>"]
-version = "2.2.0"
+version = "2.3.0"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
@@ -43,8 +43,8 @@ GPUArraysCore = "0.1.6"
 Hwloc = "3"
 InteractiveUtils = "<0.0.1, 1"
 LinearSolve = "2.21.2"
-Lux = "0.5.56"
-LuxCore = "0.1.14"
+Lux = "1"
+LuxCore = "1"
 LuxTestUtils = "1"
 MLDataDevices = "1"
 NLsolve = "4.5.1"
