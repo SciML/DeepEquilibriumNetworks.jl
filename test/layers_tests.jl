@@ -138,7 +138,7 @@ end
 
                 x = randn(rng, Float32, x_size...) |> dev
                 z, st = model(x, ps, st)
-                z_ = DEQs.__flatten_vcat(z)
+                z_ = DEQs.flatten_vcat(z)
 
                 opt_broken = mtype !== :node
                 @jet model(x, ps, st) opt_broken=opt_broken
@@ -160,7 +160,7 @@ end
                 @test st.solution == DeepEquilibriumSolution()
 
                 z, st = model(x, ps, st)
-                z_ = DEQs.__flatten_vcat(z)
+                z_ = DEQs.flatten_vcat(z)
                 opt_broken = jacobian_regularization isa AutoZygote
                 @jet model(x, ps, st) opt_broken=opt_broken
 

@@ -51,17 +51,16 @@ function Base.show(io::IO, sol::DeepEquilibriumSolution)
 end
 
 # Core Model
-@concrete struct DeepEquilibriumNetwork{pType} <: AbstractLuxContainerLayer{(:model, :init)}
+@concrete struct DeepEquilibriumNetwork <: AbstractLuxContainerLayer{(:model, :init)}
     init
     model
     solver
     jacobian_regularization
     kwargs
+    kind <: StaticSymbol
 end
 
 const DEQ = DeepEquilibriumNetwork
-
-ConstructionBase.constructorof(::Type{<:DEQ{pType}}) where {pType} = DEQ{pType}
 
 function LuxCore.initialstates(rng::AbstractRNG, deq::DEQ)
     rng = LuxCore.replicate(rng)
@@ -70,11 +69,11 @@ function LuxCore.initialstates(rng::AbstractRNG, deq::DEQ)
         init=LuxCore.initialstates(rng, deq.init), solution=DeepEquilibriumSolution(), rng)
 end
 
-(deq::DEQ)(x, ps, st::NamedTuple) = deq(x, ps, st, __check_unrolled_mode(st))
+(deq::DEQ)(x, ps, st::NamedTuple) = deq(x, ps, st, check_unrolled_mode(st))
 
 ## Pretraining
 function (deq::DEQ)(x, ps, st::NamedTuple, ::Val{true})
-    z, st = __get_initial_condition(deq, x, ps, st)
+    z, st = get_initial_condition(deq, x, ps, st)
     repeated_model = RepeatedLayer(deq.model; repeats=st.fixed_depth)
 
     z_star, st_ = repeated_model((z, x), ps.model, st.model)
@@ -82,19 +81,19 @@ function (deq::DEQ)(x, ps, st::NamedTuple, ::Val{true})
     resid = CRC.ignore_derivatives(z_star .- model((z_star, x)))
 
     rng = LuxCore.replicate(st.rng)
-    jac_loss = __estimate_jacobian_trace(
+    jac_loss = estimate_jacobian_trace(
         LuxOps.getproperty(deq, Val(:jacobian_regularization)), model, z_star, x, rng)
 
     solution = DeepEquilibriumSolution(
         z_star, z, resid, zero(eltype(x)), _unwrap_val(st.fixed_depth), jac_loss)
-    res = __split_and_reshape(z_star, LuxOps.getproperty(deq.model, Val(:split_idxs)),
+    res = split_and_reshape(z_star, LuxOps.getproperty(deq.model, Val(:split_idxs)),
         LuxOps.getproperty(deq.model, Val(:scales)))
 
     return res, (; st..., model=model.st, solution, rng)
 end
 
-function (deq::DEQ{pType})(x, ps, st::NamedTuple, ::Val{false}) where {pType}
-    z, st = __get_initial_condition(deq, x, ps, st)
+function (deq::DEQ)(x, ps, st::NamedTuple, ::Val{false})
+    z, st = get_initial_condition(deq, x, ps, st)
 
     model = StatefulLuxLayer{true}(deq.model, ps.model, st.model)
 
@@ -105,20 +104,20 @@ function (deq::DEQ{pType})(x, ps, st::NamedTuple, ::Val{false}) where {pType}
         return y .- u
     end
 
-    prob = __construct_prob(pType, ODEFunction{false}(dudt), z, (; ps=ps.model, x))
-    alg = __normalize_alg(deq)
+    prob = construct_prob(deq.kind, ODEFunction{false}(dudt), z, (; ps=ps.model, x))
+    alg = normalize_alg(deq)
     termination_condition = AbsNormTerminationMode(Base.Fix1(maximum, abs))
-    sol = solve(prob, alg; sensealg=__default_sensealg(prob), abstol=1e-3,
+    sol = solve(prob, alg; sensealg=default_sensealg(prob), abstol=1e-3,
         reltol=1e-3, termination_condition, maxiters=32, deq.kwargs...)
-    z_star = __get_steady_state(sol)
+    z_star = get_steady_state(sol)
 
     rng = LuxCore.replicate(st.rng)
-    jac_loss = __estimate_jacobian_trace(
+    jac_loss = estimate_jacobian_trace(
         LuxOps.getproperty(deq, Val(:jacobian_regularization)), model, z_star, x, rng)
 
     solution = DeepEquilibriumSolution(
-        z_star, z, LuxOps.getproperty(sol, Val(:resid)), jac_loss, __get_nfe(sol), sol)
-    res = __split_and_reshape(z_star, LuxOps.getproperty(deq.model, Val(:split_idxs)),
+        z_star, z, LuxOps.getproperty(sol, Val(:resid)), jac_loss, get_nfe(sol), sol)
+    res = split_and_reshape(z_star, LuxOps.getproperty(deq.model, Val(:split_idxs)),
         LuxOps.getproperty(deq.model, Val(:scales)))
 
     return res, (; st..., model=model.st, solution, rng)
@@ -127,7 +126,7 @@ end
 ## Constructors
 """
     DeepEquilibriumNetwork(model, solver; init = missing, jacobian_regularization=nothing,
-        problem_type::Type{pType}=SteadyStateProblem{false}, kwargs...)
+        problem_type::Type=SteadyStateProblem{false}, kwargs...)
 
 Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing](@cite).
 
@@ -141,7 +140,7 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing]
 
   - `init`: Initial Condition for the rootfinding problem. If `nothing`, the initial
     condition is set to `zero(x)`. If `missing`, the initial condition is set to
-    `WrappedFunction{:direct_call}(zero)`. In other cases the initial condition is set to
+    `WrappedFunction(zero)`. In other cases the initial condition is set to
     `init(x, ps, st)`.
   - `jacobian_regularization`: Must be one of `nothing`, `AutoForwardDiff`, `AutoFiniteDiff`
     or `AutoZygote`.
@@ -170,17 +169,17 @@ See also: [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwo
 """
 function DeepEquilibriumNetwork(
         model, solver; init=missing, jacobian_regularization=nothing,
-        problem_type::Type{pType}=SteadyStateProblem{false}, kwargs...) where {pType}
+        problem_type::Type=SteadyStateProblem{false}, kwargs...)
     if init === missing # Regular DEQ
-        init = WrappedFunction{:direct_call}(Base.Fix1(
-            __zeros_init, LuxOps.getproperty(model, Val(:scales))))
+        init = WrappedFunction(Base.Fix1(
+            zeros_init, LuxOps.getproperty(model, Val(:scales))))
     elseif init === nothing # SkipRegDEQ
         init = NoOpLayer()
     elseif !(init isa AbstractLuxLayer)
         error("init::$(typeof(init)) is not a valid input for DeepEquilibriumNetwork.")
     end
-    return DeepEquilibriumNetwork{pType}(
-        init, model, solver, jacobian_regularization, kwargs)
+    return DeepEquilibriumNetwork(init, model, solver, jacobian_regularization,
+        kwargs, problem_type_to_symbol(problem_type))
 end
 
 """
@@ -274,7 +273,7 @@ If `init` is not passed, it creates a MultiScale Regularized Deep Equilibrium Ne
 """
 function MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
         post_fuse_layer::Union{Nothing, Tuple}, init::Tuple, solver, scales; kwargs...)
-    init = Chain(Parallel(nothing, init...), __flatten_vcat)
+    init = Chain(Parallel(nothing, init...), flatten_vcat)
     return MultiScaleDeepEquilibriumNetwork(
         main_layers, mapping_layers, post_fuse_layer, solver, scales; init, kwargs...)
 end
@@ -297,42 +296,35 @@ function MultiScaleNeuralODE(args...; kwargs...)
 end
 
 ## Generate Initial Condition
-@inline function __get_initial_condition(
-        deq::DEQ{pType, NoOpLayer}, x, ps, st) where {pType}
-    zₓ = __zeros_init(LuxOps.getproperty(deq.model, Val(:scales)), x)
+function get_initial_condition(deq::DEQ{NoOpLayer}, x, ps, st)
+    zₓ = zeros_init(LuxOps.getproperty(deq.model, Val(:scales)), x)
     z, st_ = deq.model((zₓ, x), ps.model, st.model)
     return z, (; st..., model=st_)
 end
 
-@inline function __get_initial_condition(deq::DEQ, x, ps, st)
+function get_initial_condition(deq::DEQ, x, ps, st)
     z, st_ = deq.init(x, ps.init, st.init)
     return z, (; st..., init=st_)
 end
 
 # Other Layers
-@concrete struct MultiScaleInputLayer{N} <: AbstractLuxWrapperLayer{:model}
+@concrete struct MultiScaleInputLayer <: AbstractLuxWrapperLayer{:model}
+    n <: StaticInt
     model <: AbstractLuxLayer
     split_idxs
     scales
 end
 
-function ConstructionBase.constructorof(::Type{<:MultiScaleInputLayer{N}}) where {N}
-    return MultiScaleInputLayer{N}
-end
-function LuxCore.display_name(::MultiScaleInputLayer{N}) where {N}
-    return "MultiScaleInputLayer{scales = $N}"
-end
-
 function MultiScaleInputLayer(model, split_idxs, scales::Val{S}) where {S}
-    return MultiScaleInputLayer{length(S)}(model, split_idxs, scales)
+    return MultiScaleInputLayer(static(length(S)), model, split_idxs, scales)
 end
 
 @generated function (m::MultiScaleInputLayer{N})(z, ps, st) where {N}
-    inputs = (:((u_[1], x)), (:(u_[$i]) for i in 2:N)...)
+    inputs = (:((u_[1], x)), (:(u_[$i]) for i in 2:known(N))...)
     return quote
         u, x = z
-        u_ = __split_and_reshape(u, m.split_idxs, m.scales)
+        u_ = split_and_reshape(u, m.split_idxs, m.scales)
         u_res, st = LuxCore.apply(m.model, ($(inputs...),), ps, st)
-        return __flatten_vcat(u_res), st
+        return flatten_vcat(u_res), st
     end
 end
