@@ -2,7 +2,7 @@
 
 julia_version = "1.10.5"
 manifest_format = "2.0"
-project_hash = "9c0302375ef5560fbba2e558dccc9de480575d26"
+project_hash = "f5c2bd83f7304b84428f607b5521481a6f091895"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "99a6f5d0ce1c7c6afdb759daa30226f71c54f6b0"
@@ -452,7 +452,7 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
 [[deps.DeepEquilibriumNetworks]]
 deps = ["ADTypes", "ChainRulesCore", "CommonSolve", "ConcreteStructs", "DiffEqBase", "FastClosures", "Lux", "LuxCore", "NNlib", "Random", "SciMLBase", "SciMLSensitivity", "Static", "SteadyStateDiffEq"]
-path = "/var/lib/buildkite-agent/builds/gpuci-3/julialang/deepequilibriumnetworks"
+path = "/var/lib/buildkite-agent/builds/gpuci-8/julialang/deepequilibriumnetworks"
 uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 version = "2.3.0"
 

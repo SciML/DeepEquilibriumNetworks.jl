@@ -131,92 +131,92 @@ function train_model(solver, model_type)
     @printf &quot;[%s] Training complete.\n&quot; string(now())
 
     return model, ps, tstate.states
-end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">train_model (generic function with 1 method)</code></pre><p>Now we can train our model. First we will train a Discrete DEQ, which effectively means pass in a root finding algorithm. Typically most packages lack good nonlinear solvers, and end up using solvers like <code>Broyden</code>, but we can simply slap in any of the fancy solvers from NonlinearSolve.jl. Here we will use Newton-Krylov Method:</p><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[2024-09-10T14:41:59.472] warming up forward pass
-[2024-09-10T14:42:29.859] warming up backward pass
-[2024-09-10T14:43:26.844] warmup complete
-[2024-09-10T14:43:29.239] Training Model: regdeq with Solver: GeneralizedFirstOrderAlgorithm
-[2024-09-10T14:43:29.454] Pretrain with unrolling to a depth of 5
-[2024-09-10T14:44:07.013] Pretraining Batch: [   1/  63] Loss: 2.32237
-[2024-09-10T14:44:07.757] Pretraining Batch: [  11/  63] Loss: 2.21933
-[2024-09-10T14:44:07.945] Pretraining Batch: [  21/  63] Loss: 2.26567
-[2024-09-10T14:44:08.099] Pretraining Batch: [  31/  63] Loss: 2.20909
-[2024-09-10T14:44:08.275] Pretraining Batch: [  41/  63] Loss: 2.18467
-[2024-09-10T14:44:08.432] Pretraining Batch: [  51/  63] Loss: 2.20485
-[2024-09-10T14:44:08.591] Pretraining Batch: [  61/  63] Loss: 2.15857
-[2024-09-10T14:44:08.757] Pretraining Batch: [   1/  63] Loss: 2.15881
-[2024-09-10T14:44:08.933] Pretraining Batch: [  11/  63] Loss: 2.18472
-[2024-09-10T14:44:09.088] Pretraining Batch: [  21/  63] Loss: 2.14932
-[2024-09-10T14:44:09.267] Pretraining Batch: [  31/  63] Loss: 2.09032
-[2024-09-10T14:44:09.436] Pretraining Batch: [  41/  63] Loss: 2.16206
-[2024-09-10T14:44:09.592] Pretraining Batch: [  51/  63] Loss: 2.10401
-[2024-09-10T14:44:09.756] Pretraining Batch: [  61/  63] Loss: 2.05335
-[2024-09-10T14:44:17.744] Pretraining complete. Accuracy: 63.00000%
-[2024-09-10T14:44:21.241] Epoch: [1/3] Batch: [   1/  63] Loss: 2.00730
-[2024-09-10T14:44:22.038] Epoch: [1/3] Batch: [  11/  63] Loss: 2.05102
-[2024-09-10T14:44:22.333] Epoch: [1/3] Batch: [  21/  63] Loss: 2.06890
-[2024-09-10T14:44:22.629] Epoch: [1/3] Batch: [  31/  63] Loss: 2.07585
-[2024-09-10T14:44:22.927] Epoch: [1/3] Batch: [  41/  63] Loss: 2.02080
-[2024-09-10T14:44:23.292] Epoch: [1/3] Batch: [  51/  63] Loss: 2.04836
-[2024-09-10T14:44:23.689] Epoch: [1/3] Batch: [  61/  63] Loss: 1.99990
-[2024-09-10T14:44:24.359] Epoch: [1/3] Accuracy: 71.40000%
-[2024-09-10T14:44:24.634] Epoch: [2/3] Batch: [   1/  63] Loss: 2.04745
-[2024-09-10T14:44:25.034] Epoch: [2/3] Batch: [  11/  63] Loss: 2.08962
-[2024-09-10T14:44:25.439] Epoch: [2/3] Batch: [  21/  63] Loss: 1.95964
-[2024-09-10T14:44:25.877] Epoch: [2/3] Batch: [  31/  63] Loss: 2.03791
-[2024-09-10T14:44:26.306] Epoch: [2/3] Batch: [  41/  63] Loss: 2.10067
-[2024-09-10T14:44:26.739] Epoch: [2/3] Batch: [  51/  63] Loss: 2.00895
-[2024-09-10T14:44:27.183] Epoch: [2/3] Batch: [  61/  63] Loss: 2.04890
-[2024-09-10T14:44:27.796] Epoch: [2/3] Accuracy: 77.60000%
-[2024-09-10T14:44:27.838] Epoch: [3/3] Batch: [   1/  63] Loss: 1.94037
-[2024-09-10T14:44:28.312] Epoch: [3/3] Batch: [  11/  63] Loss: 1.97653
-[2024-09-10T14:44:28.783] Epoch: [3/3] Batch: [  21/  63] Loss: 1.96409
-[2024-09-10T14:44:29.273] Epoch: [3/3] Batch: [  31/  63] Loss: 1.98106
-[2024-09-10T14:44:29.797] Epoch: [3/3] Batch: [  41/  63] Loss: 1.98299
-[2024-09-10T14:44:30.360] Epoch: [3/3] Batch: [  51/  63] Loss: 1.84913
-[2024-09-10T14:44:30.921] Epoch: [3/3] Batch: [  61/  63] Loss: 1.96678
-[2024-09-10T14:44:31.681] Epoch: [3/3] Accuracy: 72.40000%
-[2024-09-10T14:44:31.681] Training complete.</code></pre><p>We can also train a continuous DEQ by passing in an ODE solver. Here we will use <code>VCAB3()</code> which tend to be quite fast for continuous Neural Network problems.</p><pre><code class="language-julia hljs">train_model(VCAB3(), :deq);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[2024-09-10T14:44:32.030] warming up forward pass
-[2024-09-10T14:44:55.088] warming up backward pass
-[2024-09-10T14:45:08.851] warmup complete
-[2024-09-10T14:45:10.139] Training Model: deq with Solver: VCAB3
-[2024-09-10T14:45:10.139] Pretrain with unrolling to a depth of 5
-[2024-09-10T14:45:43.175] Pretraining Batch: [   1/  63] Loss: 2.22803
-[2024-09-10T14:45:43.405] Pretraining Batch: [  11/  63] Loss: 2.38468
-[2024-09-10T14:45:43.580] Pretraining Batch: [  21/  63] Loss: 2.22136
-[2024-09-10T14:45:43.722] Pretraining Batch: [  31/  63] Loss: 2.30526
-[2024-09-10T14:45:44.046] Pretraining Batch: [  41/  63] Loss: 2.23974
-[2024-09-10T14:45:44.189] Pretraining Batch: [  51/  63] Loss: 2.19206
-[2024-09-10T14:45:45.147] Pretraining Batch: [  61/  63] Loss: 2.17627
-[2024-09-10T14:45:45.187] Pretraining Batch: [   1/  63] Loss: 2.15558
-[2024-09-10T14:45:45.328] Pretraining Batch: [  11/  63] Loss: 2.12676
-[2024-09-10T14:45:45.469] Pretraining Batch: [  21/  63] Loss: 2.12180
-[2024-09-10T14:45:46.287] Pretraining Batch: [  31/  63] Loss: 2.17274
-[2024-09-10T14:45:46.429] Pretraining Batch: [  41/  63] Loss: 2.14098
-[2024-09-10T14:45:46.569] Pretraining Batch: [  51/  63] Loss: 2.13758
-[2024-09-10T14:45:47.557] Pretraining Batch: [  61/  63] Loss: 2.12768
-[2024-09-10T14:45:47.816] Pretraining complete. Accuracy: 73.40000%
-[2024-09-10T14:45:50.169] Epoch: [1/3] Batch: [   1/  63] Loss: 2.14707
-[2024-09-10T14:45:52.216] Epoch: [1/3] Batch: [  11/  63] Loss: 2.15576
-[2024-09-10T14:45:53.299] Epoch: [1/3] Batch: [  21/  63] Loss: 2.09982
-[2024-09-10T14:45:53.766] Epoch: [1/3] Batch: [  31/  63] Loss: 2.09394
-[2024-09-10T14:45:55.699] Epoch: [1/3] Batch: [  41/  63] Loss: 2.10970
-[2024-09-10T14:45:56.947] Epoch: [1/3] Batch: [  51/  63] Loss: 1.95499
-[2024-09-10T14:45:58.910] Epoch: [1/3] Batch: [  61/  63] Loss: 1.97171
-[2024-09-10T14:46:00.131] Epoch: [1/3] Accuracy: 76.00000%
-[2024-09-10T14:46:00.170] Epoch: [2/3] Batch: [   1/  63] Loss: 2.08346
-[2024-09-10T14:46:02.131] Epoch: [2/3] Batch: [  11/  63] Loss: 2.10255
-[2024-09-10T14:46:03.434] Epoch: [2/3] Batch: [  21/  63] Loss: 2.04345
-[2024-09-10T14:46:05.396] Epoch: [2/3] Batch: [  31/  63] Loss: 2.02791
-[2024-09-10T14:46:06.534] Epoch: [2/3] Batch: [  41/  63] Loss: 2.06108
-[2024-09-10T14:46:08.504] Epoch: [2/3] Batch: [  51/  63] Loss: 2.02143
-[2024-09-10T14:46:09.793] Epoch: [2/3] Batch: [  61/  63] Loss: 2.07247
-[2024-09-10T14:46:11.861] Epoch: [2/3] Accuracy: 76.40000%
-[2024-09-10T14:46:11.904] Epoch: [3/3] Batch: [   1/  63] Loss: 1.92858
-[2024-09-10T14:46:13.031] Epoch: [3/3] Batch: [  11/  63] Loss: 1.96007
-[2024-09-10T14:46:15.043] Epoch: [3/3] Batch: [  21/  63] Loss: 1.97947
-[2024-09-10T14:46:16.345] Epoch: [3/3] Batch: [  31/  63] Loss: 1.98490
-[2024-09-10T14:46:18.412] Epoch: [3/3] Batch: [  41/  63] Loss: 1.97616
-[2024-09-10T14:46:19.608] Epoch: [3/3] Batch: [  51/  63] Loss: 2.00642
-[2024-09-10T14:46:21.678] Epoch: [3/3] Batch: [  61/  63] Loss: 1.97757
-[2024-09-10T14:46:23.726] Epoch: [3/3] Accuracy: 82.40000%
-[2024-09-10T14:46:23.726] Training complete.</code></pre><p>This code is setup to allow playing around with different DEQ models. Try modifying the <code>model_type</code> argument to <code>train_model</code> to <code>:skipdeq</code> or <code>:deq</code> to see how the model behaves. You can also try different solvers from NonlinearSolve.jl and OrdinaryDiffEq.jl! Even 3rd party solvers from Sundials.jl will work, just remember to use CPU for those.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../reduced_dim_deq/">Modelling Equilibrium Models with Reduced State Size »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Tuesday 10 September 2024 14:49">Tuesday 10 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">train_model (generic function with 1 method)</code></pre><p>Now we can train our model. First we will train a Discrete DEQ, which effectively means pass in a root finding algorithm. Typically most packages lack good nonlinear solvers, and end up using solvers like <code>Broyden</code>, but we can simply slap in any of the fancy solvers from NonlinearSolve.jl. Here we will use Newton-Krylov Method:</p><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[2024-09-10T17:02:21.748] warming up forward pass
+[2024-09-10T17:02:52.789] warming up backward pass
+[2024-09-10T17:03:49.972] warmup complete
+[2024-09-10T17:04:01.670] Training Model: regdeq with Solver: GeneralizedFirstOrderAlgorithm
+[2024-09-10T17:04:01.890] Pretrain with unrolling to a depth of 5
+[2024-09-10T17:04:41.392] Pretraining Batch: [   1/  63] Loss: 2.42075
+[2024-09-10T17:04:42.163] Pretraining Batch: [  11/  63] Loss: 2.25252
+[2024-09-10T17:04:42.370] Pretraining Batch: [  21/  63] Loss: 2.26633
+[2024-09-10T17:04:42.522] Pretraining Batch: [  31/  63] Loss: 2.22182
+[2024-09-10T17:04:42.695] Pretraining Batch: [  41/  63] Loss: 2.18202
+[2024-09-10T17:04:42.847] Pretraining Batch: [  51/  63] Loss: 2.21296
+[2024-09-10T17:04:43.005] Pretraining Batch: [  61/  63] Loss: 2.17524
+[2024-09-10T17:04:43.145] Pretraining Batch: [   1/  63] Loss: 2.19428
+[2024-09-10T17:04:43.311] Pretraining Batch: [  11/  63] Loss: 2.18396
+[2024-09-10T17:04:43.464] Pretraining Batch: [  21/  63] Loss: 2.12992
+[2024-09-10T17:04:43.624] Pretraining Batch: [  31/  63] Loss: 2.09644
+[2024-09-10T17:04:43.775] Pretraining Batch: [  41/  63] Loss: 2.17158
+[2024-09-10T17:04:43.939] Pretraining Batch: [  51/  63] Loss: 2.09548
+[2024-09-10T17:04:44.103] Pretraining Batch: [  61/  63] Loss: 2.06094
+[2024-09-10T17:04:52.234] Pretraining complete. Accuracy: 61.40000%
+[2024-09-10T17:04:55.808] Epoch: [1/3] Batch: [   1/  63] Loss: 2.00531
+[2024-09-10T17:04:56.585] Epoch: [1/3] Batch: [  11/  63] Loss: 2.04499
+[2024-09-10T17:04:56.899] Epoch: [1/3] Batch: [  21/  63] Loss: 2.06858
+[2024-09-10T17:04:57.222] Epoch: [1/3] Batch: [  31/  63] Loss: 2.06007
+[2024-09-10T17:04:57.585] Epoch: [1/3] Batch: [  41/  63] Loss: 2.03002
+[2024-09-10T17:04:57.973] Epoch: [1/3] Batch: [  51/  63] Loss: 2.06060
+[2024-09-10T17:04:58.355] Epoch: [1/3] Batch: [  61/  63] Loss: 2.00955
+[2024-09-10T17:04:59.028] Epoch: [1/3] Accuracy: 74.20000%
+[2024-09-10T17:04:59.287] Epoch: [2/3] Batch: [   1/  63] Loss: 2.04246
+[2024-09-10T17:04:59.701] Epoch: [2/3] Batch: [  11/  63] Loss: 2.01019
+[2024-09-10T17:05:00.102] Epoch: [2/3] Batch: [  21/  63] Loss: 2.02647
+[2024-09-10T17:05:00.513] Epoch: [2/3] Batch: [  31/  63] Loss: 1.94890
+[2024-09-10T17:05:00.938] Epoch: [2/3] Batch: [  41/  63] Loss: 2.03082
+[2024-09-10T17:05:01.372] Epoch: [2/3] Batch: [  51/  63] Loss: 2.00058
+[2024-09-10T17:05:01.857] Epoch: [2/3] Batch: [  61/  63] Loss: 2.02615
+[2024-09-10T17:05:02.442] Epoch: [2/3] Accuracy: 86.60000%
+[2024-09-10T17:05:02.482] Epoch: [3/3] Batch: [   1/  63] Loss: 1.96082
+[2024-09-10T17:05:02.944] Epoch: [3/3] Batch: [  11/  63] Loss: 1.98047
+[2024-09-10T17:05:03.424] Epoch: [3/3] Batch: [  21/  63] Loss: 1.94809
+[2024-09-10T17:05:03.934] Epoch: [3/3] Batch: [  31/  63] Loss: 1.92195
+[2024-09-10T17:05:04.449] Epoch: [3/3] Batch: [  41/  63] Loss: 1.96319
+[2024-09-10T17:05:04.959] Epoch: [3/3] Batch: [  51/  63] Loss: 1.85095
+[2024-09-10T17:05:05.487] Epoch: [3/3] Batch: [  61/  63] Loss: 1.94159
+[2024-09-10T17:05:06.173] Epoch: [3/3] Accuracy: 81.80000%
+[2024-09-10T17:05:06.174] Training complete.</code></pre><p>We can also train a continuous DEQ by passing in an ODE solver. Here we will use <code>VCAB3()</code> which tend to be quite fast for continuous Neural Network problems.</p><pre><code class="language-julia hljs">train_model(VCAB3(), :deq);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[2024-09-10T17:05:06.512] warming up forward pass
+[2024-09-10T17:05:29.635] warming up backward pass
+[2024-09-10T17:05:44.286] warmup complete
+[2024-09-10T17:05:45.607] Training Model: deq with Solver: VCAB3
+[2024-09-10T17:05:45.607] Pretrain with unrolling to a depth of 5
+[2024-09-10T17:06:19.916] Pretraining Batch: [   1/  63] Loss: 2.53248
+[2024-09-10T17:06:20.123] Pretraining Batch: [  11/  63] Loss: 2.17404
+[2024-09-10T17:06:20.314] Pretraining Batch: [  21/  63] Loss: 2.22009
+[2024-09-10T17:06:20.453] Pretraining Batch: [  31/  63] Loss: 2.23450
+[2024-09-10T17:06:20.798] Pretraining Batch: [  41/  63] Loss: 2.23254
+[2024-09-10T17:06:20.939] Pretraining Batch: [  51/  63] Loss: 2.14816
+[2024-09-10T17:06:21.926] Pretraining Batch: [  61/  63] Loss: 2.15143
+[2024-09-10T17:06:21.964] Pretraining Batch: [   1/  63] Loss: 2.13541
+[2024-09-10T17:06:22.104] Pretraining Batch: [  11/  63] Loss: 2.17516
+[2024-09-10T17:06:22.246] Pretraining Batch: [  21/  63] Loss: 2.13371
+[2024-09-10T17:06:23.082] Pretraining Batch: [  31/  63] Loss: 2.15059
+[2024-09-10T17:06:23.222] Pretraining Batch: [  41/  63] Loss: 2.12192
+[2024-09-10T17:06:23.360] Pretraining Batch: [  51/  63] Loss: 2.14898
+[2024-09-10T17:06:23.501] Pretraining Batch: [  61/  63] Loss: 2.06319
+[2024-09-10T17:06:24.637] Pretraining complete. Accuracy: 36.80000%
+[2024-09-10T17:06:27.033] Epoch: [1/3] Batch: [   1/  63] Loss: 2.07308
+[2024-09-10T17:06:29.143] Epoch: [1/3] Batch: [  11/  63] Loss: 2.05224
+[2024-09-10T17:06:30.237] Epoch: [1/3] Batch: [  21/  63] Loss: 2.13373
+[2024-09-10T17:06:31.498] Epoch: [1/3] Batch: [  31/  63] Loss: 2.13402
+[2024-09-10T17:06:33.448] Epoch: [1/3] Batch: [  41/  63] Loss: 2.04663
+[2024-09-10T17:06:34.540] Epoch: [1/3] Batch: [  51/  63] Loss: 2.05440
+[2024-09-10T17:06:36.495] Epoch: [1/3] Batch: [  61/  63] Loss: 2.00123
+[2024-09-10T17:06:37.901] Epoch: [1/3] Accuracy: 58.00000%
+[2024-09-10T17:06:37.939] Epoch: [2/3] Batch: [   1/  63] Loss: 2.02378
+[2024-09-10T17:06:39.878] Epoch: [2/3] Batch: [  11/  63] Loss: 1.99998
+[2024-09-10T17:06:40.993] Epoch: [2/3] Batch: [  21/  63] Loss: 2.02948
+[2024-09-10T17:06:42.958] Epoch: [2/3] Batch: [  31/  63] Loss: 1.97420
+[2024-09-10T17:06:44.310] Epoch: [2/3] Batch: [  41/  63] Loss: 2.02195
+[2024-09-10T17:06:46.325] Epoch: [2/3] Batch: [  51/  63] Loss: 2.05557
+[2024-09-10T17:06:47.442] Epoch: [2/3] Batch: [  61/  63] Loss: 2.01564
+[2024-09-10T17:06:49.516] Epoch: [2/3] Accuracy: 62.40000%
+[2024-09-10T17:06:49.558] Epoch: [3/3] Batch: [   1/  63] Loss: 2.02594
+[2024-09-10T17:06:50.882] Epoch: [3/3] Batch: [  11/  63] Loss: 2.01903
+[2024-09-10T17:06:52.983] Epoch: [3/3] Batch: [  21/  63] Loss: 2.08356
+[2024-09-10T17:06:55.023] Epoch: [3/3] Batch: [  31/  63] Loss: 1.90432
+[2024-09-10T17:06:56.230] Epoch: [3/3] Batch: [  41/  63] Loss: 1.93841
+[2024-09-10T17:06:58.325] Epoch: [3/3] Batch: [  51/  63] Loss: 1.99004
+[2024-09-10T17:06:59.692] Epoch: [3/3] Batch: [  61/  63] Loss: 1.95368
+[2024-09-10T17:07:00.917] Epoch: [3/3] Accuracy: 70.40000%
+[2024-09-10T17:07:00.917] Training complete.</code></pre><p>This code is setup to allow playing around with different DEQ models. Try modifying the <code>model_type</code> argument to <code>train_model</code> to <code>:skipdeq</code> or <code>:deq</code> to see how the model behaves. You can also try different solvers from NonlinearSolve.jl and OrdinaryDiffEq.jl! Even 3rd party solvers from Sundials.jl will work, just remember to use CPU for those.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../reduced_dim_deq/">Modelling Equilibrium Models with Reduced State Size »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Tuesday 10 September 2024 17:10">Tuesday 10 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
