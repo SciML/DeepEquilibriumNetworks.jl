@@ -7,9 +7,6 @@ steps:
           test_args: "--quickfail"
       - JuliaCI/julia-coverage#v1:
           codecov: true
-          dirs:
-            - src
-            - ext
     agents:
       queue: "juliagpu"
       cuda: "*"
@@ -28,9 +25,6 @@ steps:
           version: "1"
       - JuliaCI/julia-coverage#v1:
           codecov: true
-          dirs:
-            - src
-            - ext
     command: |
       julia --project --code-coverage=user --color=yes --threads=3 -e '
         println("--- :julia: Instantiating project")
