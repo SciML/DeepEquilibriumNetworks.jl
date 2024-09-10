@@ -46,14 +46,16 @@ function construct_model(solver; model_type::Symbol=:regdeq)
     # The input layer of the DEQ
     deq_model = Chain(
         Parallel(+,
-            Dense(128 => 64, tanh; use_bias=false, init_weight=truncated_normal(std=0.01)),   # Reduced dim of `128`
-            Dense(512 => 64, tanh; use_bias=false, init_weight=truncated_normal(std=0.01))),  # Original dim of `512`
-        Dense(64 => 64, tanh; use_bias=false, init_weight=truncated_normal(std=0.01)),
-        Dense(64 => 128; use_bias=false, init_weight=truncated_normal(std=0.01)))       # Return the reduced dim of `128`
+            Dense(
+                128 => 64, tanh; use_bias=false, init_weight=truncated_normal(; std=0.01)),   # Reduced dim of `128`
+            Dense(
+                512 => 64, tanh; use_bias=false, init_weight=truncated_normal(; std=0.01))),  # Original dim of `512`
+        Dense(64 => 64, tanh; use_bias=false, init_weight=truncated_normal(; std=0.01)),
+        Dense(64 => 128; use_bias=false, init_weight=truncated_normal(; std=0.01)))       # Return the reduced dim of `128`
 
     if model_type === :skipdeq
-        init = Dense(512 => 128, tanh;
-            use_bias=false, init_weight=truncated_normal(std=0.01))
+        init = Dense(
+            512 => 128, tanh; use_bias=false, init_weight=truncated_normal(; std=0.01))
     elseif model_type === :regdeq
         error(":regdeq is not supported for reduced dim models")
     else
