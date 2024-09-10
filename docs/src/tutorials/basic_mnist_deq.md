@@ -55,11 +55,11 @@ function construct_model(solver; model_type::Symbol=:deq)
     deq_model = Chain(
         Parallel(+,
             Conv((3, 3), 64 => 64, tanh; stride=1, pad=SamePad(),
-                init_weight=truncated_normal(std=0.01), use_bias=false),
+                init_weight=truncated_normal(; std=0.01), use_bias=false),
             Conv((3, 3), 64 => 64, tanh; stride=1, pad=SamePad(),
-                init_weight=truncated_normal(std=0.01), use_bias=false)),
+                init_weight=truncated_normal(; std=0.01), use_bias=false)),
         Conv((3, 3), 64 => 64, tanh; stride=1, pad=SamePad(),
-            init_weight=truncated_normal(std=0.01), use_bias=false))
+            init_weight=truncated_normal(; std=0.01), use_bias=false))
 
     if model_type === :skipdeq
         init = Conv((3, 3), 64 => 64, gelu; stride=1, pad=SamePad())
