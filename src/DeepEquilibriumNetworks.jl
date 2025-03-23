@@ -4,7 +4,8 @@ using ADTypes: AutoFiniteDiff, AutoForwardDiff, AutoZygote
 using ChainRulesCore: ChainRulesCore
 using CommonSolve: solve
 using ConcreteStructs: @concrete
-using DiffEqBase: DiffEqBase, AbsNormTerminationMode
+using DiffEqBase
+using NonlinearSolveBase: AbsNormTerminationMode
 using FastClosures: @closure
 using Random: Random, AbstractRNG, randn!
 using SciMLBase: SciMLBase, AbstractNonlinearAlgorithm, AbstractODEAlgorithm,
