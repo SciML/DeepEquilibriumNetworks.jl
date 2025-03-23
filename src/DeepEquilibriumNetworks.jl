@@ -2,9 +2,9 @@ module DeepEquilibriumNetworks
 
 using ADTypes: AutoFiniteDiff, AutoForwardDiff, AutoZygote
 using ChainRulesCore: ChainRulesCore
-using CommonSolve: solve
+using CommonSolve: solve, init
 using ConcreteStructs: @concrete
-using DiffEqBase
+using DiffEqBase: DiffEqBase
 using NonlinearSolveBase: AbsNormTerminationMode
 using FastClosures: @closure
 using Random: Random, AbstractRNG, randn!
