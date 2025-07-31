@@ -46,23 +46,22 @@ function construct_model(solver; model_type::Symbol=:regdeq)
     # The input layer of the DEQ
     deq_model = Chain(
         Parallel(+,
-            Dense(
-                128 => 64, tanh; use_bias=false, init_weight=truncated_normal(; std=0.01)),   # Reduced dim of `128`
-            Dense(
-                512 => 64, tanh; use_bias=false, init_weight=truncated_normal(; std=0.01))),  # Original dim of `512`
+            Dense(128 => 64, tanh; use_bias=false, init_weight=truncated_normal(;
+                std=0.01)),   # Reduced dim of `128`
+            Dense(512 => 64, tanh; use_bias=false, init_weight=truncated_normal(;
+                std=0.01))),  # Original dim of `512`
         Dense(64 => 64, tanh; use_bias=false, init_weight=truncated_normal(; std=0.01)),
         Dense(64 => 128; use_bias=false, init_weight=truncated_normal(; std=0.01)))       # Return the reduced dim of `128`
 
     if model_type === :skipdeq
-        init = Dense(
-            512 => 128, tanh; use_bias=false, init_weight=truncated_normal(; std=0.01))
+        init = Dense(512 => 128, tanh; use_bias=false, init_weight=truncated_normal(;
+            std=0.01))
     elseif model_type === :regdeq
         error(":regdeq is not supported for reduced dim models")
     else
         # This should preferably done via `ChainRulesCore.@ignore_derivatives`. But here
         # we are only using Zygote so this is fine.
-        init = WrappedFunction(x -> Zygote.@ignore(fill!(
-            similar(x, 128, size(x, 2)), false)))
+        init = WrappedFunction(x -> Zygote.@ignore(fill!(similar(x, 128, size(x, 2)), false)))
     end
 
     deq = DeepEquilibriumNetwork(deq_model, solver; init, verbose=false,
@@ -128,8 +127,9 @@ function train_model(solver, model_type)
     @set! tstate.states = Lux.update_state(tstate.states, :fixed_depth, Val(5))
 
     for _ in 1:2, (i, (x, y)) in enumerate(train_dataloader)
-        _, loss, _, tstate = Training.single_train_step!(
-            AutoZygote(), loss_function, (x, y), tstate)
+
+        _, loss,
+        _, tstate = Training.single_train_step!(AutoZygote(), loss_function, (x, y), tstate)
         if i % 10 == 1
             @printf "[%s] Pretraining Batch: [%4d/%4d] Loss: %.5f\n" string(now()) i length(train_dataloader) loss
         end
@@ -142,8 +142,9 @@ function train_model(solver, model_type)
 
     for epoch in 1:3
         for (i, (x, y)) in enumerate(train_dataloader)
-            _, loss, _, tstate = Training.single_train_step!(
-                AutoZygote(), loss_function, (x, y), tstate)
+            _, loss,
+            _,
+            tstate = Training.single_train_step!(AutoZygote(), loss_function, (x, y), tstate)
             if i % 10 == 1
                 @printf "[%s] Epoch: [%d/%d] Batch: [%4d/%4d] Loss: %.5f\n" string(now()) epoch 3 i length(train_dataloader) loss
             end

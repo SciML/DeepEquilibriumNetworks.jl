@@ -39,12 +39,12 @@ end
 
 function Base.show(io::IO, sol::DeepEquilibriumSolution)
     println(io, "DeepEquilibriumSolution")
-    println(io, " * Initial Guess: ",
-        sprint(print, sol.u0; context=(:compact => true, :limit => true)))
-    println(io, " * Steady State: ",
-        sprint(print, sol.z_star; context=(:compact => true, :limit => true)))
-    println(io, " * Residual: ",
-        sprint(print, sol.residual; context=(:compact => true, :limit => true)))
+    println(io, " * Initial Guess: ", sprint(print, sol.u0; context=(
+        :compact => true, :limit => true)))
+    println(io, " * Steady State: ", sprint(print, sol.z_star; context=(
+        :compact => true, :limit => true)))
+    println(io, " * Residual: ", sprint(print, sol.residual; context=(
+        :compact => true, :limit => true)))
     println(io, " * Jacobian Loss: ",
         sprint(print, sol.jacobian_loss; context=(:compact => true, :limit => true)))
     print(io, " * NFE: ", sol.nfe)
@@ -171,8 +171,7 @@ function DeepEquilibriumNetwork(
         model, solver; init=missing, jacobian_regularization=nothing,
         problem_type::Type=SteadyStateProblem{false}, kwargs...)
     if init === missing # Regular DEQ
-        init = WrappedFunction(Base.Fix1(
-            zeros_init, LuxOps.getproperty(model, Val(:scales))))
+        init = WrappedFunction(Base.Fix1(zeros_init, LuxOps.getproperty(model, Val(:scales))))
     elseif init === nothing # SkipRegDEQ
         init = NoOpLayer()
     elseif !(init isa AbstractLuxLayer)
@@ -254,8 +253,7 @@ function MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Ma
     if post_fuse_layer === nothing
         model = MultiScaleInputLayer(Chain(l1, l2), split_idxs, scales)
     else
-        model = MultiScaleInputLayer(
-            Chain(l1, l2, Parallel(nothing, post_fuse_layer...)), split_idxs, scales)
+        model = MultiScaleInputLayer(Chain(l1, l2, Parallel(nothing, post_fuse_layer...)), split_idxs, scales)
     end
 
     return DeepEquilibriumNetwork(model, solver; kwargs...)
@@ -291,8 +289,7 @@ Same arguments as [`MultiScaleDeepEquilibriumNetwork`](@ref) but sets `problem_t
 `ODEProblem{false}`.
 """
 function MultiScaleNeuralODE(args...; kwargs...)
-    return MultiScaleDeepEquilibriumNetwork(
-        args...; kwargs..., problem_type=ODEProblem{false})
+    return MultiScaleDeepEquilibriumNetwork(args...; kwargs..., problem_type=ODEProblem{false})
 end
 
 ## Generate Initial Condition

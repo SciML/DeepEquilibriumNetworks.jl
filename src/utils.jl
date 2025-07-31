@@ -1,5 +1,5 @@
-@generated function split_and_reshape(
-        x::AbstractMatrix, ::Val{idxs}, ::Val{shapes}) where {idxs, shapes}
+@generated function split_and_reshape(x::AbstractMatrix, ::Val{idxs}, ::Val{shapes}) where {
+        idxs, shapes}
     dims = [reshape((idxs[i] + 1):idxs[i + 1], shapes[i]...) for i in 1:(length(idxs) - 1)]
     varnames = map(_ -> gensym("x_view"), dims)
     calls = [:($(varnames[i]) = x[$(dims[i]), :]) for i in eachindex(dims)]
@@ -15,8 +15,7 @@ function split_and_reshape(y::AbstractMatrix, x)
     szs = [prod(size(xᵢ)[1:(end - 1)]) for xᵢ in x]
     counters = vcat(0, cumsum(szs)[1:(end - 1)])
     # Make the data contiguous
-    return map((sz, c, xᵢ) -> copy(reshape(view(y, (c + 1):(c + sz), :), size(xᵢ))),
-        szs, counters, x)
+    return map((sz, c, xᵢ) -> copy(reshape(view(y, (c + 1):(c + sz), :), size(xᵢ))), szs, counters, x)
 end
 
 flatten(x::AbstractVector) = reshape(x, length(x), 1)

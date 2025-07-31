@@ -48,8 +48,8 @@ Construct the Lux Neural Network containing a DEQ layer.
 
 ```@example basic_mnist_deq
 function construct_model(solver; model_type::Symbol=:deq)
-    down = Chain(Conv((3, 3), 1 => 64, gelu; stride=1), GroupNorm(64, 64),
-        Conv((4, 4), 64 => 64; stride=2, pad=1))
+    down = Chain(
+        Conv((3, 3), 1 => 64, gelu; stride=1), GroupNorm(64, 64), Conv((4, 4), 64 => 64; stride=2, pad=1))
 
     # The input layer of the DEQ
     deq_model = Chain(
@@ -72,8 +72,7 @@ function construct_model(solver; model_type::Symbol=:deq)
     deq = DeepEquilibriumNetwork(deq_model, solver; init, verbose=false,
         linsolve_kwargs=(; maxiters=10), maxiters=10)
 
-    classifier = Chain(
-        GroupNorm(64, 64, relu), GlobalMeanPool(), FlattenLayer(), Dense(64, 10))
+    classifier = Chain(GroupNorm(64, 64, relu), GlobalMeanPool(), FlattenLayer(), Dense(64, 10))
 
     model = Chain(; down, deq, classifier)
 
@@ -133,8 +132,9 @@ function train_model(solver, model_type)
     @set! tstate.states = Lux.update_state(tstate.states, :fixed_depth, Val(5))
 
     for _ in 1:2, (i, (x, y)) in enumerate(train_dataloader)
-        _, loss, _, tstate = Training.single_train_step!(
-            AutoZygote(), loss_function, (x, y), tstate)
+
+        _, loss,
+        _, tstate = Training.single_train_step!(AutoZygote(), loss_function, (x, y), tstate)
         if i % 10 == 1
             @printf "[%s] Pretraining Batch: [%4d/%4d] Loss: %.5f\n" string(now()) i length(train_dataloader) loss
         end
@@ -147,8 +147,9 @@ function train_model(solver, model_type)
 
     for epoch in 1:3
         for (i, (x, y)) in enumerate(train_dataloader)
-            _, loss, _, tstate = Training.single_train_step!(
-                AutoZygote(), loss_function, (x, y), tstate)
+            _, loss,
+            _,
+            tstate = Training.single_train_step!(AutoZygote(), loss_function, (x, y), tstate)
             if i % 10 == 1
                 @printf "[%s] Epoch: [%d/%d] Batch: [%4d/%4d] Loss: %.5f\n" string(now()) epoch 3 i length(train_dataloader) loss
             end
