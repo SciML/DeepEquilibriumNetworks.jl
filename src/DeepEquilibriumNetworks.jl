@@ -26,6 +26,7 @@ const DEQs = DeepEquilibriumNetworks
 
 include("layers.jl")
 include("utils.jl")
+include("precompilation.jl")
 
 # Exports
 export DEQs, DeepEquilibriumSolution, DeepEquilibriumNetwork, SkipDeepEquilibriumNetwork,
