@@ -1,5 +1,6 @@
 @generated function split_and_reshape(x::AbstractMatrix, ::Val{idxs}, ::Val{shapes}) where {
-        idxs, shapes}
+        idxs, shapes,
+    }
     dims = [reshape((idxs[i] + 1):idxs[i + 1], shapes[i]...) for i in 1:(length(idxs) - 1)]
     varnames = map(_ -> gensym("x_view"), dims)
     calls = [:($(varnames[i]) = x[$(dims[i]), :]) for i in eachindex(dims)]
@@ -45,8 +46,10 @@ CRC.@non_differentiable get_unrolled_depth(::Any)
 
 get_nfe(sol::ODESolution) = get_nfe(sol.stats)
 function get_nfe(sol::NonlinearSolution)
-    return ifelse(sol.stats === nothing,
-        ifelse(sol.original === nothing, -1, get_nfe(sol.original)), get_nfe(sol.stats))
+    return ifelse(
+        sol.stats === nothing,
+        ifelse(sol.original === nothing, -1, get_nfe(sol.original)), get_nfe(sol.stats)
+    )
 end
 get_nfe(stats) = -1
 get_nfe(stats::Union{SciMLBase.NLStats, SciMLBase.DEStats}) = stats.nf
@@ -84,10 +87,11 @@ CRC.@non_differentiable zeros_init(::Any, ::Any)
 function default_sensealg(::SteadyStateProblem)
     # Ideally we should use GMRES here, but it is not very robust
     return SteadyStateAdjoint(;
-        linsolve=nothing, linsolve_kwargs=(; maxiters=10, abstol=1e-3, reltol=1e-3),
-        autojacvec=ZygoteVJP())
+        linsolve = nothing, linsolve_kwargs = (; maxiters = 10, abstol = 1.0e-3, reltol = 1.0e-3),
+        autojacvec = ZygoteVJP()
+    )
 end
-default_sensealg(::ODEProblem) = GaussAdjoint(; autojacvec=ZygoteVJP())
+default_sensealg(::ODEProblem) = GaussAdjoint(; autojacvec = ZygoteVJP())
 
 function randn_like(rng::AbstractRNG, x::AbstractArray)
     y = similar(x)::typeof(x)
@@ -97,7 +101,7 @@ end
 
 CRC.@non_differentiable randn_like(::Any...)
 
-tupleify(x) = @closure(u->(u, x))
+tupleify(x) = @closure(u -> (u, x))
 
 # Jacobian Stabilization
 function estimate_jacobian_trace(::AutoFiniteDiff, model::StatefulLuxLayer, z, x, rng)
@@ -126,16 +130,20 @@ function estimate_jacobian_trace(ad::AutoZygote, model::StatefulLuxLayer, z, x, 
     v = randn_like(rng, x)
     smodel = model ∘ tupleify(x)
     vjp = Lux.vector_jacobian_product(smodel, ad, z, v)
-    return sum(reshape(vjp, 1, :, size(vjp, ndims(vjp))) ⊠
-               reshape(v, :, 1, size(v, ndims(v))))
+    return sum(
+        reshape(vjp, 1, :, size(vjp, ndims(vjp))) ⊠
+            reshape(v, :, 1, size(v, ndims(v)))
+    )
 end
 
 function estimate_jacobian_trace(ad::AutoForwardDiff, model::StatefulLuxLayer, z, x, rng)
     v = randn_like(rng, x)
     smodel = model ∘ tupleify(x)
     jvp = Lux.jacobian_vector_product(smodel, ad, z, v)
-    return sum(reshape(v, 1, :, size(v, ndims(v))) ⊠
-               reshape(jvp, :, 1, size(jvp, ndims(jvp))))
+    return sum(
+        reshape(v, 1, :, size(v, ndims(v))) ⊠
+            reshape(jvp, :, 1, size(jvp, ndims(jvp)))
+    )
 end
 
 estimate_jacobian_trace(::Nothing, model, z, x, rng) = zero(eltype(x))

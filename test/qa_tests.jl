@@ -1,8 +1,8 @@
 @testitem "Aqua" begin
     using Aqua
 
-    Aqua.test_all(DeepEquilibriumNetworks; ambiguities=false)
-    Aqua.test_ambiguities(DeepEquilibriumNetworks; recursive=false)
+    Aqua.test_all(DeepEquilibriumNetworks; ambiguities = false)
+    Aqua.test_ambiguities(DeepEquilibriumNetworks; recursive = false)
 end
 
 @testitem "ExplicitImports" begin
@@ -22,6 +22,6 @@ end
         using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq, NonlinearSolve
     end
 
-    DocMeta.setdocmeta!(DeepEquilibriumNetworks, :DocTestSetup, doctestexpr; recursive=true)
-    doctest(DeepEquilibriumNetworks; manual=false)
+    DocMeta.setdocmeta!(DeepEquilibriumNetworks, :DocTestSetup, doctestexpr; recursive = true)
+    doctest(DeepEquilibriumNetworks; manual = false)
 end

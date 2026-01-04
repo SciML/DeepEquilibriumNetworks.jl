@@ -11,9 +11,9 @@ using PrecompileTools: @compile_workload, @setup_workload
         # Create a small model for precompilation
         # Using SSRootfind which is already imported from SteadyStateDiffEq
         model = DEQ(
-            Parallel(+, Lux.Dense(2, 2; use_bias=false), Lux.Dense(2, 2; use_bias=false)),
+            Parallel(+, Lux.Dense(2, 2; use_bias = false), Lux.Dense(2, 2; use_bias = false)),
             SSRootfind();
-            verbose=false
+            verbose = false
         )
 
         # Initialize parameters and state (very common operation)
