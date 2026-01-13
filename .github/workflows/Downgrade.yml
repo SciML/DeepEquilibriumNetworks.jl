@@ -12,6 +12,7 @@ on:
       - 'docs/**'
 jobs:
   test:
+    if: false  # Disabled: waiting on SciML ecosystem updates. See #193 for details.
     runs-on: ubuntu-latest
     strategy:
       matrix:
