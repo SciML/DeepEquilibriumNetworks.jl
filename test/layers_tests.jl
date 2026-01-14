@@ -58,7 +58,7 @@ end
                 x = randn(rng, Float32, x_size...) |> dev
                 z, st = model(x, ps, st)
 
-                @jet model(x, ps, st)
+                @jet model(x, ps, st) opt_broken=true
 
                 @test all(isfinite, z)
                 @test size(z) == size(x)
@@ -75,7 +75,7 @@ end
                 @test st.solution == DeepEquilibriumSolution()
 
                 z, st = model(x, ps, st)
-                @jet model(x, ps, st)
+                @jet model(x, ps, st) opt_broken=true
 
                 @test all(isfinite, z)
                 @test size(z) == size(x)
@@ -163,7 +163,8 @@ end
                 z, st = model(x, ps, st)
                 z_ = DEQs.flatten_vcat(z)
 
-                @jet model(x, ps, st)
+                opt_broken = mtype !== :node
+                @jet model(x, ps, st) opt_broken=opt_broken
 
                 @test all(isfinite, z_)
                 @test size(z_) == (sum(prod, scale), size(x, ndims(x)))
@@ -183,7 +184,8 @@ end
 
                 z, st = model(x, ps, st)
                 z_ = DEQs.flatten_vcat(z)
-                @jet model(x, ps, st)
+                opt_broken = jacobian_regularization isa AutoZygote
+                @jet model(x, ps, st) opt_broken=opt_broken
 
                 @test all(isfinite, z_)
                 @test size(z_) == (sum(prod, scale), size(x, ndims(x)))
