@@ -39,7 +39,7 @@ using PrecompileTools: @compile_workload, @setup_workload
         _ = split_and_reshape(x, nothing, nothing)
 
         # Precompile with fixed depth (unrolled mode)
-        st_unrolled = Lux.update_state(st, :fixed_depth, Val(2))
+        st_unrolled = LuxCore.update_state(st, :fixed_depth, Val(2))
         _ = check_unrolled_mode(st_unrolled)
     end
 end
