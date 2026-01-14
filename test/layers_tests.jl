@@ -15,7 +15,10 @@ SOLVERS = (
     SimpleLimitedMemoryBroyden(),
 )
 
-export loss_function, SOLVERS
+# JET tests pass on Julia 1.11+ but fail on LTS (1.10)
+const JET_OPT_BROKEN = VERSION < v"1.11"
+
+export loss_function, SOLVERS, JET_OPT_BROKEN
 
 end
 
@@ -58,7 +61,7 @@ end
                 x = randn(rng, Float32, x_size...) |> dev
                 z, st = model(x, ps, st)
 
-                opt_broken = jacobian_regularization isa AutoZygote
+                opt_broken = JET_OPT_BROKEN || jacobian_regularization isa AutoZygote
                 @jet model(x, ps, st) opt_broken = opt_broken
 
                 @test all(isfinite, z)
@@ -76,7 +79,7 @@ end
                 @test st.solution == DeepEquilibriumSolution()
 
                 z, st = model(x, ps, st)
-                opt_broken = jacobian_regularization isa AutoZygote
+                opt_broken = JET_OPT_BROKEN || jacobian_regularization isa AutoZygote
                 @jet model(x, ps, st) opt_broken = opt_broken
 
                 @test all(isfinite, z)
@@ -165,7 +168,7 @@ end
                 z, st = model(x, ps, st)
                 z_ = DEQs.flatten_vcat(z)
 
-                @jet model(x, ps, st)
+                @jet model(x, ps, st) opt_broken = JET_OPT_BROKEN
 
                 @test all(isfinite, z_)
                 @test size(z_) == (sum(prod, scale), size(x, ndims(x)))
@@ -185,7 +188,7 @@ end
 
                 z, st = model(x, ps, st)
                 z_ = DEQs.flatten_vcat(z)
-                @jet model(x, ps, st)
+                @jet model(x, ps, st) opt_broken = JET_OPT_BROKEN
 
                 @test all(isfinite, z_)
                 @test size(z_) == (sum(prod, scale), size(x, ndims(x)))
