@@ -168,7 +168,7 @@ end
                 z, st = model(x, ps, st)
                 z_ = DEQs.flatten_vcat(z)
 
-                @jet model(x, ps, st) opt_broken = JET_OPT_BROKEN
+                @jet model(x, ps, st)
 
                 @test all(isfinite, z_)
                 @test size(z_) == (sum(prod, scale), size(x, ndims(x)))
@@ -188,7 +188,7 @@ end
 
                 z, st = model(x, ps, st)
                 z_ = DEQs.flatten_vcat(z)
-                @jet model(x, ps, st) opt_broken = JET_OPT_BROKEN
+                @jet model(x, ps, st)
 
                 @test all(isfinite, z_)
                 @test size(z_) == (sum(prod, scale), size(x, ndims(x)))
