@@ -185,9 +185,11 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing]
 ## Example
 
 ```jldoctest
+julia> using DeepEquilibriumNetworks, Lux, SteadyStateDiffEq, Random
+
 julia> model = DeepEquilibriumNetwork(
            Parallel(+, Dense(2, 2; use_bias=false), Dense(2, 2; use_bias=false)),
-           VCABM3(); verbose=false);
+           SSRootfind(); verbose=false);
 
 julia> rng = Xoshiro(0);
 
