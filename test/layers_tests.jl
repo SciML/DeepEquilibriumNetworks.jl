@@ -58,7 +58,8 @@ end
                 x = randn(rng, Float32, x_size...) |> dev
                 z, st = model(x, ps, st)
 
-                @jet model(x, ps, st) opt_broken = true
+                opt_broken = jacobian_regularization isa AutoZygote
+                @jet model(x, ps, st) opt_broken = opt_broken
 
                 @test all(isfinite, z)
                 @test size(z) == size(x)
@@ -75,7 +76,8 @@ end
                 @test st.solution == DeepEquilibriumSolution()
 
                 z, st = model(x, ps, st)
-                @jet model(x, ps, st) opt_broken = true
+                opt_broken = jacobian_regularization isa AutoZygote
+                @jet model(x, ps, st) opt_broken = opt_broken
 
                 @test all(isfinite, z)
                 @test size(z) == size(x)
