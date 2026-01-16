@@ -1,11 +1,13 @@
-@testitem "Aqua" begin
+const QA_GROUP = lowercase(get(ENV, "BACKEND_GROUP", get(ENV, "GROUP", "all")))
+
+@testitem "Aqua" tags=[:qa] skip=(QA_GROUP != "qa") begin
     using Aqua
 
     Aqua.test_all(DeepEquilibriumNetworks; ambiguities = false)
     Aqua.test_ambiguities(DeepEquilibriumNetworks; recursive = false)
 end
 
-@testitem "ExplicitImports" begin
+@testitem "ExplicitImports" tags=[:qa] skip=(QA_GROUP != "qa") begin
     import SciMLSensitivity
 
     using ExplicitImports
@@ -15,7 +17,7 @@ end
     @test check_all_qualified_accesses_via_owners(DeepEquilibriumNetworks) === nothing
 end
 
-@testitem "Doctests" begin
+@testitem "Doctests" tags=[:qa] skip=(QA_GROUP != "qa") begin
     using Documenter
 
     doctestexpr = quote
