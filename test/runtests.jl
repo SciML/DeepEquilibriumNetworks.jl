@@ -1,34 +1,17 @@
-using ReTestItems, Pkg, InteractiveUtils, Hwloc
+using Pkg
+using SafeTestsets, Test
 
-@info sprint(versioninfo)
+const GROUP = uppercase(get(ENV, "GROUP", "CPU"))
 
-const BACKEND_GROUP = lowercase(get(ENV, "BACKEND_GROUP", get(ENV, "GROUP", "all")))
-const EXTRA_PKGS = String[]
+@info "Running tests for GROUP: $GROUP"
 
-(BACKEND_GROUP == "all" || BACKEND_GROUP == "cuda") && push!(EXTRA_PKGS, "LuxCUDA")
+@time begin
+    if GROUP == "CPU" || GROUP == "ALL"
+        @time @safetestset "Utils Tests" include("utils_tests.jl")
+        @time @safetestset "Layers Tests" include("layers_tests.jl")
+    end
 
-if !isempty(EXTRA_PKGS)
-    @info "Installing Extra Packages for testing" EXTRA_PKGS = EXTRA_PKGS
-    Pkg.add(EXTRA_PKGS)
-    Pkg.update()
-    Base.retry_load_extensions()
-    Pkg.instantiate()
+    if GROUP == "QA"
+        @time @safetestset "Quality Assurance Tests" include("qa_tests.jl")
+    end
 end
-
-using DeepEquilibriumNetworks
-
-const RETESTITEMS_NWORKERS = parse(
-    Int, get(ENV, "RETESTITEMS_NWORKERS", string(min(Hwloc.num_physical_cores(), 16)))
-)
-const RETESTITEMS_NWORKER_THREADS = parse(
-    Int,
-    get(
-        ENV, "RETESTITEMS_NWORKER_THREADS",
-        string(max(Hwloc.num_virtual_cores() ÷ RETESTITEMS_NWORKERS, 1))
-    )
-)
-
-ReTestItems.runtests(
-    DeepEquilibriumNetworks; nworkers = RETESTITEMS_NWORKERS,
-    nworker_threads = RETESTITEMS_NWORKER_THREADS, testitem_timeout = 12000
-)

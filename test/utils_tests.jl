@@ -1,4 +1,8 @@
-@testitem "split_and_reshape" setup = [SharedTestSetup] begin
+include("shared_testsetup.jl")
+
+using SciMLBase
+
+@testset "split_and_reshape" begin
     for (mode, aType, dev, ongpu) in MODES
         x1 = ones(Float32, 4, 4) |> aType
         x2 = fill(0.5f0, 2, 4) |> aType
@@ -17,21 +21,19 @@
     end
 end
 
-@testitem "unrolled_mode check" setup = [SharedTestSetup] begin
-    using SciMLBase
-
+@testset "unrolled_mode check" begin
     @test SciMLBase._unwrap_val(DEQs.check_unrolled_mode(Val(10)))
     @test !SciMLBase._unwrap_val(DEQs.check_unrolled_mode(Val(0)))
-    @test SciMLBase._unwrap_val(DEQs.check_unrolled_mode((; fixed_depth = Val(10))))
-    @test !SciMLBase._unwrap_val(DEQs.check_unrolled_mode((; fixed_depth = Val(0))))
+    @test SciMLBase._unwrap_val(DEQs.check_unrolled_mode((; fixed_depth=Val(10))))
+    @test !SciMLBase._unwrap_val(DEQs.check_unrolled_mode((; fixed_depth=Val(0))))
 end
 
-@testitem "get unrolled_mode" setup = [SharedTestSetup] begin
+@testset "get unrolled_mode" begin
     @test DEQs.get_unrolled_depth(Val(10)) == 10
-    @test DEQs.get_unrolled_depth((; fixed_depth = Val(10))) == 10
+    @test DEQs.get_unrolled_depth((; fixed_depth=Val(10))) == 10
 end
 
-@testitem "deep equilibrium solution" setup = [SharedTestSetup] begin
+@testset "deep equilibrium solution" begin
     sol = @test_nowarn DeepEquilibriumSolution(
         randn(10), randn(10), randn(10), 0.4, 10, nothing
     )

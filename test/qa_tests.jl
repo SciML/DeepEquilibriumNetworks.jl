@@ -1,13 +1,13 @@
-const QA_GROUP = lowercase(get(ENV, "BACKEND_GROUP", get(ENV, "GROUP", "all")))
+using DeepEquilibriumNetworks, Test
 
-@testitem "Aqua" tags=[:qa] skip=(QA_GROUP != "qa") begin
+@testset "Aqua" begin
     using Aqua
 
-    Aqua.test_all(DeepEquilibriumNetworks; ambiguities = false)
-    Aqua.test_ambiguities(DeepEquilibriumNetworks; recursive = false)
+    Aqua.test_all(DeepEquilibriumNetworks; ambiguities=false)
+    Aqua.test_ambiguities(DeepEquilibriumNetworks; recursive=false)
 end
 
-@testitem "ExplicitImports" tags=[:qa] skip=(QA_GROUP != "qa") begin
+@testset "ExplicitImports" begin
     import SciMLSensitivity
 
     using ExplicitImports
@@ -17,13 +17,13 @@ end
     @test check_all_qualified_accesses_via_owners(DeepEquilibriumNetworks) === nothing
 end
 
-@testitem "Doctests" tags=[:qa] skip=(QA_GROUP != "qa") begin
+@testset "Doctests" begin
     using Documenter
 
     doctestexpr = quote
         using DeepEquilibriumNetworks, Lux, Random, OrdinaryDiffEq, NonlinearSolve
     end
 
-    DocMeta.setdocmeta!(DeepEquilibriumNetworks, :DocTestSetup, doctestexpr; recursive = true)
-    doctest(DeepEquilibriumNetworks; manual = false)
+    DocMeta.setdocmeta!(DeepEquilibriumNetworks, :DocTestSetup, doctestexpr; recursive=true)
+    doctest(DeepEquilibriumNetworks; manual=false)
 end
