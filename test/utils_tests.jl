@@ -24,13 +24,13 @@ end
 @testset "unrolled_mode check" begin
     @test SciMLBase._unwrap_val(DEQs.check_unrolled_mode(Val(10)))
     @test !SciMLBase._unwrap_val(DEQs.check_unrolled_mode(Val(0)))
-    @test SciMLBase._unwrap_val(DEQs.check_unrolled_mode((; fixed_depth=Val(10))))
-    @test !SciMLBase._unwrap_val(DEQs.check_unrolled_mode((; fixed_depth=Val(0))))
+    @test SciMLBase._unwrap_val(DEQs.check_unrolled_mode((; fixed_depth = Val(10))))
+    @test !SciMLBase._unwrap_val(DEQs.check_unrolled_mode((; fixed_depth = Val(0))))
 end
 
 @testset "get unrolled_mode" begin
     @test DEQs.get_unrolled_depth(Val(10)) == 10
-    @test DEQs.get_unrolled_depth((; fixed_depth=Val(10))) == 10
+    @test DEQs.get_unrolled_depth((; fixed_depth = Val(10))) == 10
 end
 
 @testset "deep equilibrium solution" begin

@@ -17,7 +17,7 @@ GPUArraysCore.allowscalar(false)
 cpu_testing() = BACKEND_GROUP == "all" || BACKEND_GROUP == "cpu"
 function cuda_testing()
     return (BACKEND_GROUP == "all" || BACKEND_GROUP == "cuda") &&
-           MLDataDevices.functional(CUDADevice)
+        MLDataDevices.functional(CUDADevice)
 end
 
 const MODES = begin
@@ -33,10 +33,10 @@ is_finite_gradient(gs) = all(is_finite_gradient, fleaves(gs))
 
 function dense_layer(args...; kwargs...)
     init_weight(rng::AbstractRNG, dims...) = randn(rng, Float32, dims) .* 0.001f0
-    return Dense(args...; init_weight, use_bias=false, kwargs...)
+    return Dense(args...; init_weight, use_bias = false, kwargs...)
 end
 
 function conv_layer(args...; kwargs...)
     init_weight(rng::AbstractRNG, dims...) = randn(rng, Float32, dims) .* 0.001f0
-    return Conv(args...; init_weight, use_bias=false, kwargs...)
+    return Conv(args...; init_weight, use_bias = false, kwargs...)
 end

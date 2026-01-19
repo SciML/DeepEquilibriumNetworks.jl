@@ -11,7 +11,7 @@ function loss_function(model, x, ps, st)
 end
 
 const SOLVERS = (
-    VCAB3(), Tsit5(), NewtonRaphson(; autodiff=AutoForwardDiff(; chunksize=12)),
+    VCAB3(), Tsit5(), NewtonRaphson(; autodiff = AutoForwardDiff(; chunksize = 12)),
     SimpleLimitedMemoryBroyden(),
 )
 
@@ -30,14 +30,14 @@ const SOLVERS = (
 
     @testset "$mode" for (mode, aType, dev, ongpu) in MODES
         jacobian_regularizations = ongpu ? _jacobian_regularizations[1:(end - 1)] :
-                                   _jacobian_regularizations
+            _jacobian_regularizations
 
         @testset "Solver: $(nameof(typeof(solver))) | Model Type: $(mtype) | Jac. Reg: $(jacobian_regularization)" for solver in
-                                                                                                                       SOLVERS,
-            mtype in model_type, jacobian_regularization in jacobian_regularizations
+                SOLVERS,
+                mtype in model_type, jacobian_regularization in jacobian_regularizations
 
             @testset "x_size: $(x_size)" for (base_model, init_model, x_size) in
-                                             zip(base_models, init_models, x_sizes)
+                zip(base_models, init_models, x_sizes)
                 model = if mtype === :deq
                     DeepEquilibriumNetwork(base_model, solver; jacobian_regularization)
                 elseif mtype === :skipdeq
@@ -115,13 +115,13 @@ end
 
     @testset "$mode" for (mode, aType, dev, ongpu) in MODES
         @testset "Solver: $(nameof(typeof(solver)))" for solver in SOLVERS,
-            mtype in model_type, jacobian_regularization in jacobian_regularizations
+                mtype in model_type, jacobian_regularization in jacobian_regularizations
 
             @testset "x_size: $(x_size)" for (
-                main_layer, mapping_layer, init_layer, x_size, scale,
-            ) in zip(
-                main_layers, mapping_layers, init_layers, x_sizes, scales
-            )
+                    main_layer, mapping_layer, init_layer, x_size, scale,
+                ) in zip(
+                    main_layers, mapping_layers, init_layers, x_sizes, scales
+                )
                 model = if mtype === :deq
                     MultiScaleDeepEquilibriumNetwork(
                         main_layer, mapping_layer, nothing,
