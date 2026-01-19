@@ -29,3 +29,11 @@ jobs:
       group: "CPU"
       julia-version: "${{ matrix.version }}"
     secrets: "inherit"
+
+  qa:
+    name: "QA"
+    uses: "SciML/.github/.github/workflows/tests.yml@v1"
+    with:
+      group: "QA"
+      julia-version: "1"
+    secrets: "inherit"
