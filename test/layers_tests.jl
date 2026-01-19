@@ -1,6 +1,6 @@
-@testsetup module LayersTestSetup
+include("shared_testsetup.jl")
 
-using NonlinearSolve, OrdinaryDiffEq
+using ADTypes, NonlinearSolve, OrdinaryDiffEq, SciMLSensitivity
 
 function loss_function(model, x, ps, st)
     y, st = model(x, ps, st)
@@ -10,18 +10,12 @@ function loss_function(model, x, ps, st)
     return l1 + l2 + l3
 end
 
-SOLVERS = (
+const SOLVERS = (
     VCAB3(), Tsit5(), NewtonRaphson(; autodiff = AutoForwardDiff(; chunksize = 12)),
     SimpleLimitedMemoryBroyden(),
 )
 
-export loss_function, SOLVERS
-
-end
-
-@testitem "DEQ" setup = [SharedTestSetup, LayersTestSetup] begin
-    using ADTypes, Lux, NonlinearSolve, OrdinaryDiffEq, SciMLSensitivity, Zygote
-
+@testset "DEQ" begin
     rng = StableRNG(0)
 
     base_models = [
@@ -58,9 +52,6 @@ end
                 x = randn(rng, Float32, x_size...) |> dev
                 z, st = model(x, ps, st)
 
-                # JET tests skipped due to inconsistent results across environments
-                # @jet model(x, ps, st)
-
                 @test all(isfinite, z)
                 @test size(z) == size(x)
                 @test st.solution isa DeepEquilibriumSolution
@@ -76,8 +67,6 @@ end
                 @test st.solution == DeepEquilibriumSolution()
 
                 z, st = model(x, ps, st)
-                # JET tests skipped due to inconsistent results across environments
-                # @jet model(x, ps, st)
 
                 @test all(isfinite, z)
                 @test size(z) == size(x)
@@ -93,9 +82,7 @@ end
     end
 end
 
-@testitem "Multiscale DEQ" setup = [SharedTestSetup, LayersTestSetup] begin
-    using ADTypes, Lux, NonlinearSolve, OrdinaryDiffEq, SciMLSensitivity, Zygote
-
+@testset "Multiscale DEQ" begin
     rng = StableRNG(0)
 
     main_layers = [
@@ -107,9 +94,9 @@ end
 
     mapping_layers = [
         [
-            NoOpLayer() dense_layer(4 => 3) dense_layer(4 => 2) dense_layer(4 => 1);
-            dense_layer(3 => 4) NoOpLayer() dense_layer(3 => 2) dense_layer(3 => 1);
-            dense_layer(2 => 4) dense_layer(2 => 3) NoOpLayer() dense_layer(2 => 1);
+            NoOpLayer() dense_layer(4 => 3) dense_layer(4 => 2) dense_layer(4 => 1)
+            dense_layer(3 => 4) NoOpLayer() dense_layer(3 => 2) dense_layer(3 => 1)
+            dense_layer(2 => 4) dense_layer(2 => 3) NoOpLayer() dense_layer(2 => 1)
             dense_layer(1 => 4) dense_layer(1 => 3) dense_layer(1 => 2) NoOpLayer()
         ],
     ]
@@ -165,9 +152,6 @@ end
                 z, st = model(x, ps, st)
                 z_ = DEQs.flatten_vcat(z)
 
-                # JET tests skipped due to inconsistent results across environments
-                # @jet model(x, ps, st)
-
                 @test all(isfinite, z_)
                 @test size(z_) == (sum(prod, scale), size(x, ndims(x)))
                 @test st.solution isa DeepEquilibriumSolution
@@ -186,8 +170,6 @@ end
 
                 z, st = model(x, ps, st)
                 z_ = DEQs.flatten_vcat(z)
-                # JET tests skipped due to inconsistent results across environments
-                # @jet model(x, ps, st)
 
                 @test all(isfinite, z_)
                 @test size(z_) == (sum(prod, scale), size(x, ndims(x)))

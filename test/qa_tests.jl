@@ -1,11 +1,13 @@
-@testitem "Aqua" begin
+using DeepEquilibriumNetworks, Test
+
+@testset "Aqua" begin
     using Aqua
 
     Aqua.test_all(DeepEquilibriumNetworks; ambiguities = false)
     Aqua.test_ambiguities(DeepEquilibriumNetworks; recursive = false)
 end
 
-@testitem "ExplicitImports" begin
+@testset "ExplicitImports" begin
     import SciMLSensitivity
 
     using ExplicitImports
@@ -15,7 +17,7 @@ end
     @test check_all_qualified_accesses_via_owners(DeepEquilibriumNetworks) === nothing
 end
 
-@testitem "Doctests" begin
+@testset "Doctests" begin
     using Documenter
 
     doctestexpr = quote
