@@ -1,4 +1,6 @@
 [deps]
+CUDA_Driver_jll = "4ee394cb-3365-5eb0-8335-949819d2adfc"
+CUDA_Runtime_jll = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DeepEquilibriumNetworks = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
