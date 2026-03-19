@@ -14,6 +14,7 @@ makedocs(;
     clean = true,
     doctest = false,  # Tested in CI
     linkcheck = true,
+    warnonly = [:example_block],
     format = Documenter.HTML(;
         assets = ["assets/favicon.ico"],
         canonical = "https://docs.sciml.ai/DeepEquilibriumNetworks/stable/"
