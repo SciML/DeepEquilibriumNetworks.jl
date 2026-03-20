@@ -62,6 +62,8 @@ julia = "1.10"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+CUDA_Driver_jll = "4ee394cb-3365-5eb0-8335-949819d2adfc"
+CUDA_Runtime_jll = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 ExplicitImports = "7d51a73a-1435-4ff3-83d9-f097790105c7"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
@@ -82,4 +84,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Aqua", "Documenter", "ExplicitImports", "ForwardDiff", "Functors", "GPUArraysCore", "InteractiveUtils", "LuxCUDA", "LuxTestUtils", "MLDataDevices", "NLsolve", "NonlinearSolve", "OrdinaryDiffEq", "Pkg", "SafeTestsets", "SciMLSensitivity", "StableRNGs", "Test", "Zygote"]
+test = ["Aqua", "CUDA_Driver_jll", "CUDA_Runtime_jll", "Documenter", "ExplicitImports", "ForwardDiff", "Functors", "GPUArraysCore", "InteractiveUtils", "LuxCUDA", "LuxTestUtils", "MLDataDevices", "NLsolve", "NonlinearSolve", "OrdinaryDiffEq", "Pkg", "SafeTestsets", "SciMLSensitivity", "StableRNGs", "Test", "Zygote"]
