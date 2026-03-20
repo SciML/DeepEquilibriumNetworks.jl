@@ -26,6 +26,8 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: "1"
+      - name: Check GPU status
+        run: nvidia-smi
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         env:
