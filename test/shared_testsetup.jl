@@ -40,3 +40,19 @@ function conv_layer(args...; kwargs...)
     init_weight(rng::AbstractRNG, dims...) = randn(rng, Float32, dims) .* 0.001f0
     return Conv(args...; init_weight, use_bias = false, kwargs...)
 end
+
+# V100 GPUs have cuDNN issues with CUDA 12.x (CUDNN_STATUS_EXECUTION_FAILED_CUDART)
+function cudnn_conv_works()
+    if !cuda_testing()
+        return true
+    end
+    try
+        using CUDA
+        cap = CUDA.capability(CUDA.device())
+        # V100 is compute capability 7.0 — cuDNN Conv fails on it with CUDA 12.x
+        return cap >= v"7.5"
+    catch
+        return true
+    end
+end
+const CONV_WORKS = cudnn_conv_works()

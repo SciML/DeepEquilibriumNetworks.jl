@@ -38,6 +38,12 @@ const SOLVERS = (
 
             @testset "x_size: $(x_size)" for (base_model, init_model, x_size) in
                 zip(base_models, init_models, x_sizes)
+                # Skip Conv tests on V100 GPUs (cuDNN CUDNN_STATUS_EXECUTION_FAILED_CUDART)
+                if length(x_size) == 4 && ongpu && !CONV_WORKS
+                    @test_broken false
+                    continue
+                end
+
                 model = if mtype === :deq
                     DeepEquilibriumNetwork(base_model, solver; jacobian_regularization)
                 elseif mtype === :skipdeq
