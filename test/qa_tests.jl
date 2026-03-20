@@ -3,7 +3,13 @@ using DeepEquilibriumNetworks, Test
 @testset "Aqua" begin
     using Aqua
 
-    Aqua.test_all(DeepEquilibriumNetworks; ambiguities = false)
+    # treat_as_own: Adjoint convert method is a workaround for LinearSolve.jl bug
+    # (missing convert(Adjoint{T,S}, ::S) in LinearAlgebra)
+    using LinearAlgebra: Adjoint
+    Aqua.test_all(
+        DeepEquilibriumNetworks;
+        ambiguities = false, piracies = (; treat_as_own = [Adjoint])
+    )
     Aqua.test_ambiguities(DeepEquilibriumNetworks; recursive = false)
 end
 
