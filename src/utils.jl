@@ -84,16 +84,21 @@ zeros_init(::Nothing, x::AbstractArray) = zero(x)
 CRC.@non_differentiable zeros_init(::Any, ::Any)
 
 ## Don't rely on SciMLSensitivity's choice
-function default_sensealg(prob::SteadyStateProblem)
-    # Use DefaultLinearSolver for CPU arrays. For GPU arrays, use KrylovJL_GMRES to avoid
-    # LinearSolve.DefaultLinearSolver bug with Adjoint GPU arrays in _copy_A_for_safety
-    linsolve = prob.u0 isa Array ? nothing : KrylovJL_GMRES()
+function default_sensealg(::SteadyStateProblem)
     return SteadyStateAdjoint(;
-        linsolve, linsolve_kwargs = (; maxiters = 10, abstol = 1.0e-3, reltol = 1.0e-3),
+        linsolve = nothing, linsolve_kwargs = (; maxiters = 10, abstol = 1.0e-3, reltol = 1.0e-3),
         autojacvec = ZygoteVJP()
     )
 end
 default_sensealg(::ODEProblem) = GaussAdjoint(; autojacvec = ZygoteVJP())
+
+# Workaround for LinearSolve.jl DefaultLinearSolver bug: _copy_A_for_safety calls copy()
+# on an Adjoint matrix, which unwraps it to a plain array. Then setproperty! fails because
+# convert(Adjoint{T,S}, ::S) is not defined. The constructor Adjoint{T,S}(::Any) exists
+# (LinearAlgebra adjtrans.jl:33) but convert doesn't use it. This adds the missing method.
+function Base.convert(::Type{LinearAlgebra.Adjoint{T, S}}, x::S) where {T, S <: AbstractArray{T}}
+    return LinearAlgebra.Adjoint{T, S}(x)
+end
 
 function randn_like(rng::AbstractRNG, x::AbstractArray)
     y = similar(x)::typeof(x)
