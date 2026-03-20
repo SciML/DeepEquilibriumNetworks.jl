@@ -19,7 +19,7 @@ concurrency:
 jobs:
   cuda-tests:
     name: "CUDA GPU Tests"
-    runs-on: [self-hosted, Linux, X64, gpu]
+    runs-on: [self-hosted, Linux, X64, gpu-t4]
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v6
@@ -39,7 +39,7 @@ jobs:
 
   gpu-docs:
     name: "Documentation"
-    runs-on: [self-hosted, Linux, X64, gpu]
+    runs-on: [self-hosted, Linux, X64, gpu-t4]
     timeout-minutes: 240
     if: github.event_name == 'push' || !github.event.pull_request.draft
     steps:

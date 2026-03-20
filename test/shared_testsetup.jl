@@ -42,17 +42,20 @@ function conv_layer(args...; kwargs...)
 end
 
 # V100 GPUs have cuDNN issues with CUDA 12.x (CUDNN_STATUS_EXECUTION_FAILED_CUDART)
-function cudnn_conv_works()
-    if !cuda_testing()
-        return true
-    end
+# Probe whether cuDNN Conv actually works on the current GPU
+const CONV_WORKS = if cuda_testing()
     try
-        using CUDA
-        cap = CUDA.capability(CUDA.device())
-        # V100 is compute capability 7.0 — cuDNN Conv fails on it with CUDA 12.x
-        return cap >= v"7.5"
+        _rng = Random.default_rng()
+        _model = Conv((1, 1), 1 => 1)
+        _ps, _st = Lux.setup(_rng, _model)
+        _dev = MLDataDevices.gpu_device()
+        _ps, _st = _dev(_ps), _dev(_st)
+        _x = _dev(randn(Float32, 2, 2, 1, 1))
+        _model(_x, _ps, _st)
+        true
     catch
-        return true
+        false
     end
+else
+    true
 end
-const CONV_WORKS = cudnn_conv_works()
