@@ -11,6 +11,7 @@ using Random: Random, AbstractRNG, randn!
 using SciMLBase: SciMLBase, AbstractNonlinearAlgorithm, AbstractODEAlgorithm,
     NonlinearSolution, ODESolution, ODEFunction, ODEProblem,
     SteadyStateProblem, _unwrap_val
+using LinearSolve: KrylovJL_GMRES
 using SciMLSensitivity: SteadyStateAdjoint, GaussAdjoint, ZygoteVJP
 using Static: StaticSymbol, StaticInt, known, static
 

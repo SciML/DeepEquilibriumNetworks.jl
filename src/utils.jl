@@ -84,10 +84,12 @@ zeros_init(::Nothing, x::AbstractArray) = zero(x)
 CRC.@non_differentiable zeros_init(::Any, ::Any)
 
 ## Don't rely on SciMLSensitivity's choice
-function default_sensealg(::SteadyStateProblem)
-    # Ideally we should use GMRES here, but it is not very robust
+function default_sensealg(prob::SteadyStateProblem)
+    # Use DefaultLinearSolver for CPU arrays. For GPU arrays, use KrylovJL_GMRES to avoid
+    # LinearSolve.DefaultLinearSolver bug with Adjoint GPU arrays in _copy_A_for_safety
+    linsolve = prob.u0 isa Array ? nothing : KrylovJL_GMRES()
     return SteadyStateAdjoint(;
-        linsolve = nothing, linsolve_kwargs = (; maxiters = 10, abstol = 1.0e-3, reltol = 1.0e-3),
+        linsolve, linsolve_kwargs = (; maxiters = 10, abstol = 1.0e-3, reltol = 1.0e-3),
         autojacvec = ZygoteVJP()
     )
 end
