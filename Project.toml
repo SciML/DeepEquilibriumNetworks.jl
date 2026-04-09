@@ -1,7 +1,7 @@
 name = "DeepEquilibriumNetworks"
 uuid = "6748aba7-0e9b-415e-a410-ae3cc0ecb334"
 authors = ["Avik Pal <avikpal@mit.edu>"]
-version = "2.6.0"
+version = "2.7.0"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
@@ -48,7 +48,7 @@ OrdinaryDiffEq = "6.74"
 Pkg = "1.10"
 PrecompileTools = "1"
 Random = "1.10"
-SciMLBase = "2"
+SciMLBase = "2, 3"
 SciMLSensitivity = "7.43"
 StableRNGs = "1"
 Static = "1"
