@@ -13,10 +13,10 @@ on:
 
 jobs:
   downgrade:
-    if: false  # Disabled: waiting on SciML ecosystem updates. See #193 for details.
     name: "Downgrade"
     uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
     with:
       julia-version: "1.10"
       skip: "Pkg,TOML"
+      allow-reresolve: false
     secrets: "inherit"
