@@ -1,6 +1,8 @@
 include("shared_testsetup.jl")
 
 using ADTypes, NonlinearSolve, OrdinaryDiffEq, SciMLSensitivity
+using OrdinaryDiffEqAdamsBashforthMoulton: VCAB3
+using SciMLBase: SciMLBase
 
 function loss_function(model, x, ps, st)
     y, st = model(x, ps, st)
