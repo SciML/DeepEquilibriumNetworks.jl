@@ -1,17 +1,20 @@
 using Pkg
 using SafeTestsets, Test
 
-const GROUP = uppercase(get(ENV, "GROUP", "CPU"))
+const GROUP = uppercase(get(ENV, "GROUP", "CORE"))
 
 @info "Running tests for GROUP: $GROUP"
 
 @time begin
-    if GROUP == "CPU" || GROUP == "ALL"
+    if GROUP == "CORE" || GROUP == "CPU" || GROUP == "ALL"
         @time @safetestset "Utils Tests" include("utils_tests.jl")
         @time @safetestset "Layers Tests" include("layers_tests.jl")
     end
 
     if GROUP == "QA"
-        @time @safetestset "Quality Assurance Tests" include("qa_tests.jl")
+        Pkg.activate(joinpath(@__DIR__, "qa"))
+        Pkg.develop(PackageSpec(path = dirname(@__DIR__)))
+        Pkg.instantiate()
+        @time @safetestset "Quality Assurance Tests" include(joinpath("qa", "qa.jl"))
     end
 end
