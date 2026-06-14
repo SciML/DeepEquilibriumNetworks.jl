@@ -1,24 +1,27 @@
-using Pkg
-using SafeTestsets, Test
+using SciMLTesting
+using SafeTestsets
 
-const GROUP = uppercase(get(ENV, "GROUP", "CORE"))
-
-@info "Running tests for GROUP: $GROUP"
-
-# GPU is the self-hosted CUDA runner cell of test/test_groups.toml: the same
-# functional suite, with shared_testsetup.jl's backend switched to CUDA.
-GROUP == "GPU" && (ENV["BACKEND_GROUP"] = "CUDA")
-
-@time begin
-    if GROUP == "CORE" || GROUP == "CPU" || GROUP == "ALL" || GROUP == "GPU"
-        @time @safetestset "Utils Tests" include("utils_tests.jl")
-        @time @safetestset "Layers Tests" include("layers_tests.jl")
-    end
-
-    if GROUP == "QA"
-        Pkg.activate(joinpath(@__DIR__, "qa"))
-        Pkg.develop(PackageSpec(path = dirname(@__DIR__)))
-        Pkg.instantiate()
-        @time @safetestset "Quality Assurance Tests" include(joinpath("qa", "qa.jl"))
-    end
+# DEQ's GROUP semantics are backend/capability-based, not folder-partitioned: the
+# GPU group runs the *same* Core test files (utils_tests.jl + layers_tests.jl)
+# with shared_testsetup.jl's backend switched to CUDA via BACKEND_GROUP, so it
+# cannot be expressed as a separate folder of files. Hence explicit-args run_tests.
+function core_body()
+    @safetestset "Utils Tests" include("utils_tests.jl")
+    @safetestset "Layers Tests" include("layers_tests.jl")
 end
+
+run_tests(;
+    core = core_body,
+    groups = Dict(
+        # GPU is the self-hosted CUDA runner lane: the same Core suite with the
+        # backend switched to CUDA.
+        "GPU" => () -> begin
+            ENV["BACKEND_GROUP"] = "CUDA"
+            core_body()
+        end,
+    ),
+    qa = (; env = joinpath(@__DIR__, "qa"), body = joinpath(@__DIR__, "qa", "qa.jl")),
+    # Curated "All": run only Core. GPU (self-hosted CUDA lane) and QA stay
+    # selectable by name but out of the aggregate.
+    all = ["Core"],
+)
