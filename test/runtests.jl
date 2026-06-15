@@ -7,7 +7,7 @@ using SafeTestsets
 # cannot be expressed as a separate folder of files. Hence explicit-args run_tests.
 function core_body()
     @safetestset "Utils Tests" include("utils_tests.jl")
-    @safetestset "Layers Tests" include("layers_tests.jl")
+    return @safetestset "Layers Tests" include("layers_tests.jl")
 end
 
 run_tests(;
