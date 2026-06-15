@@ -14,7 +14,7 @@ end
 
 GPUArraysCore.allowscalar(false)
 
-cpu_testing() = BACKEND_GROUP == "all" || BACKEND_GROUP == "cpu"
+cpu_testing() = BACKEND_GROUP == "all" || BACKEND_GROUP == "cpu" || BACKEND_GROUP == "core"
 function cuda_testing()
     return (BACKEND_GROUP == "all" || BACKEND_GROUP == "cuda") &&
         MLDataDevices.functional(CUDADevice)
