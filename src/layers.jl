@@ -128,7 +128,11 @@ function (deq::DEQ)(x, ps, st::NamedTuple, ::Val{false})
         # The type-assert is needed because of an upstream Lux issue with type stability of
         # conv with Dual numbers
         y = model((u, p.x), p.ps)::typeof(u)
-        return y .- u
+        # Subtract in flattened space: the matrix-free SteadyStateAdjoint VJP seeds the
+        # residual pullback with a flat cotangent (it builds the operator from `vec(y)`),
+        # which Zygote's `ProjectTo` rejects when broadcasting against a multi-dim `u`
+        # (e.g. a conv state). `vec`/`reshape` round-trip is a no-op on the value.
+        return reshape(vec(y) .- vec(u), size(u))
     end
 
     prob = construct_prob(deq.kind, ODEFunction{false}(dudt), z, (; ps = ps.model, x))
