@@ -5,6 +5,7 @@ We will train a simple Deep Equilibrium Model on MNIST. First we load a few pack
 ```@example basic_mnist_deq
 using DeepEquilibriumNetworks, SciMLSensitivity, Lux, NonlinearSolve, OrdinaryDiffEq,
       Random, Optimisers, Zygote, LinearSolve, Dates, Printf, Setfield, OneHotArrays
+using OrdinaryDiffEqAdamsBashforthMoulton: VCAB3
 using MLDatasets: MNIST
 using MLUtils: DataLoader, splitobs
 using LuxCUDA # For NVIDIA GPU support
