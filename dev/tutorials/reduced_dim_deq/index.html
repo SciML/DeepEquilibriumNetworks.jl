@@ -33,23 +33,22 @@ end</code></pre><pre class="documenter-example-output"><code class="nohighlight 
     # The input layer of the DEQ
     deq_model = Chain(
         Parallel(+,
-            Dense(
-                128 =&gt; 64, tanh; use_bias=false, init_weight=truncated_normal(; std=0.01)),   # Reduced dim of `128`
-            Dense(
-                512 =&gt; 64, tanh; use_bias=false, init_weight=truncated_normal(; std=0.01))),  # Original dim of `512`
+            Dense(128 =&gt; 64, tanh; use_bias=false, init_weight=truncated_normal(;
+                std=0.01)),   # Reduced dim of `128`
+            Dense(512 =&gt; 64, tanh; use_bias=false, init_weight=truncated_normal(;
+                std=0.01))),  # Original dim of `512`
         Dense(64 =&gt; 64, tanh; use_bias=false, init_weight=truncated_normal(; std=0.01)),
         Dense(64 =&gt; 128; use_bias=false, init_weight=truncated_normal(; std=0.01)))       # Return the reduced dim of `128`
 
     if model_type === :skipdeq
-        init = Dense(
-            512 =&gt; 128, tanh; use_bias=false, init_weight=truncated_normal(; std=0.01))
+        init = Dense(512 =&gt; 128, tanh; use_bias=false, init_weight=truncated_normal(;
+            std=0.01))
     elseif model_type === :regdeq
         error(&quot;:regdeq is not supported for reduced dim models&quot;)
     else
         # This should preferably done via `ChainRulesCore.@ignore_derivatives`. But here
         # we are only using Zygote so this is fine.
-        init = WrappedFunction(x -&gt; Zygote.@ignore(fill!(
-            similar(x, 128, size(x, 2)), false)))
+        init = WrappedFunction(x -&gt; Zygote.@ignore(fill!(similar(x, 128, size(x, 2)), false)))
     end
 
     deq = DeepEquilibriumNetwork(deq_model, solver; init, verbose=false,
@@ -109,8 +108,9 @@ function train_model(solver, model_type)
     @set! tstate.states = Lux.update_state(tstate.states, :fixed_depth, Val(5))
 
     for _ in 1:2, (i, (x, y)) in enumerate(train_dataloader)
-        _, loss, _, tstate = Training.single_train_step!(
-            AutoZygote(), loss_function, (x, y), tstate)
+
+        _, loss,
+        _, tstate = Training.single_train_step!(AutoZygote(), loss_function, (x, y), tstate)
         if i % 10 == 1
             @printf &quot;[%s] Pretraining Batch: [%4d/%4d] Loss: %.5f\n&quot; string(now()) i length(train_dataloader) loss
         end
@@ -123,8 +123,9 @@ function train_model(solver, model_type)
 
     for epoch in 1:3
         for (i, (x, y)) in enumerate(train_dataloader)
-            _, loss, _, tstate = Training.single_train_step!(
-                AutoZygote(), loss_function, (x, y), tstate)
+            _, loss,
+            _,
+            tstate = Training.single_train_step!(AutoZygote(), loss_function, (x, y), tstate)
             if i % 10 == 1
                 @printf &quot;[%s] Epoch: [%d/%d] Batch: [%4d/%4d] Loss: %.5f\n&quot; string(now()) epoch 3 i length(train_dataloader) loss
             end
@@ -137,92 +138,96 @@ function train_model(solver, model_type)
     @printf &quot;[%s] Training complete.\n&quot; string(now())
 
     return model, ps, tstate.states
-end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">train_model (generic function with 1 method)</code></pre><p>Now we can train our model. We can&#39;t use <code>:regdeq</code> here currently, but we will support this in the future.</p><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :skipdeq)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[2024-09-10T17:07:02.084] warming up forward pass
-[2024-09-10T17:07:09.359] warming up backward pass
-[2024-09-10T17:07:41.087] warmup complete
-[2024-09-10T17:07:42.531] Training Model: skipdeq with Solver: GeneralizedFirstOrderAlgorithm
-[2024-09-10T17:07:42.531] Pretrain with unrolling to a depth of 5
-[2024-09-10T17:08:44.039] Pretraining Batch: [   1/  63] Loss: 2.29567
-[2024-09-10T17:08:44.074] Pretraining Batch: [  11/  63] Loss: 2.29412
-[2024-09-10T17:08:44.107] Pretraining Batch: [  21/  63] Loss: 2.15275
-[2024-09-10T17:08:44.140] Pretraining Batch: [  31/  63] Loss: 2.08518
-[2024-09-10T17:08:44.173] Pretraining Batch: [  41/  63] Loss: 1.60935
-[2024-09-10T17:08:44.205] Pretraining Batch: [  51/  63] Loss: 1.52030
-[2024-09-10T17:08:44.238] Pretraining Batch: [  61/  63] Loss: 1.54317
-[2024-09-10T17:08:44.249] Pretraining Batch: [   1/  63] Loss: 1.33805
-[2024-09-10T17:08:44.282] Pretraining Batch: [  11/  63] Loss: 1.67373
-[2024-09-10T17:08:44.315] Pretraining Batch: [  21/  63] Loss: 1.40876
-[2024-09-10T17:08:44.349] Pretraining Batch: [  31/  63] Loss: 1.24748
-[2024-09-10T17:08:44.383] Pretraining Batch: [  41/  63] Loss: 0.89204
-[2024-09-10T17:08:44.417] Pretraining Batch: [  51/  63] Loss: 1.16815
-[2024-09-10T17:08:44.451] Pretraining Batch: [  61/  63] Loss: 0.97810
-[2024-09-10T17:08:44.940] Pretraining complete. Accuracy: 63.00000%
-[2024-09-10T17:08:46.883] Epoch: [1/3] Batch: [   1/  63] Loss: 1.29054
-[2024-09-10T17:08:46.990] Epoch: [1/3] Batch: [  11/  63] Loss: 1.03526
-[2024-09-10T17:08:47.108] Epoch: [1/3] Batch: [  21/  63] Loss: 0.97615
-[2024-09-10T17:08:47.252] Epoch: [1/3] Batch: [  31/  63] Loss: 1.08918
-[2024-09-10T17:08:47.388] Epoch: [1/3] Batch: [  41/  63] Loss: 0.81719
-[2024-09-10T17:08:47.519] Epoch: [1/3] Batch: [  51/  63] Loss: 0.65479
-[2024-09-10T17:08:47.655] Epoch: [1/3] Batch: [  61/  63] Loss: 0.88301
-[2024-09-10T17:08:48.093] Epoch: [1/3] Accuracy: 69.40000%
-[2024-09-10T17:08:48.107] Epoch: [2/3] Batch: [   1/  63] Loss: 0.70414
-[2024-09-10T17:08:48.241] Epoch: [2/3] Batch: [  11/  63] Loss: 0.99730
-[2024-09-10T17:08:48.387] Epoch: [2/3] Batch: [  21/  63] Loss: 0.77190
-[2024-09-10T17:08:48.529] Epoch: [2/3] Batch: [  31/  63] Loss: 0.54059
-[2024-09-10T17:08:48.671] Epoch: [2/3] Batch: [  41/  63] Loss: 0.60561
-[2024-09-10T17:08:48.814] Epoch: [2/3] Batch: [  51/  63] Loss: 0.41440
-[2024-09-10T17:08:48.955] Epoch: [2/3] Batch: [  61/  63] Loss: 0.65514
-[2024-09-10T17:08:49.121] Epoch: [2/3] Accuracy: 78.40000%
-[2024-09-10T17:08:49.136] Epoch: [3/3] Batch: [   1/  63] Loss: 0.35704
-[2024-09-10T17:08:49.273] Epoch: [3/3] Batch: [  11/  63] Loss: 0.38354
-[2024-09-10T17:08:49.415] Epoch: [3/3] Batch: [  21/  63] Loss: 0.70121
-[2024-09-10T17:08:49.559] Epoch: [3/3] Batch: [  31/  63] Loss: 0.33693
-[2024-09-10T17:08:49.700] Epoch: [3/3] Batch: [  41/  63] Loss: 0.36984
-[2024-09-10T17:08:49.839] Epoch: [3/3] Batch: [  51/  63] Loss: 0.53535
-[2024-09-10T17:08:49.981] Epoch: [3/3] Batch: [  61/  63] Loss: 0.29085
-[2024-09-10T17:08:50.132] Epoch: [3/3] Accuracy: 85.60000%
-[2024-09-10T17:08:50.132] Training complete.</code></pre><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :deq)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[2024-09-10T17:08:50.450] warming up forward pass
-[2024-09-10T17:08:50.599] warming up backward pass
-[2024-09-10T17:08:58.879] warmup complete
-[2024-09-10T17:09:00.205] Training Model: deq with Solver: GeneralizedFirstOrderAlgorithm
-[2024-09-10T17:09:00.205] Pretrain with unrolling to a depth of 5
-[2024-09-10T17:09:54.821] Pretraining Batch: [   1/  63] Loss: 2.30717
-[2024-09-10T17:09:54.854] Pretraining Batch: [  11/  63] Loss: 2.28074
-[2024-09-10T17:09:54.886] Pretraining Batch: [  21/  63] Loss: 2.16493
-[2024-09-10T17:09:54.917] Pretraining Batch: [  31/  63] Loss: 1.88609
-[2024-09-10T17:09:54.947] Pretraining Batch: [  41/  63] Loss: 1.73695
-[2024-09-10T17:09:54.978] Pretraining Batch: [  51/  63] Loss: 1.62721
-[2024-09-10T17:09:55.009] Pretraining Batch: [  61/  63] Loss: 1.22730
-[2024-09-10T17:09:55.018] Pretraining Batch: [   1/  63] Loss: 1.43074
-[2024-09-10T17:09:55.049] Pretraining Batch: [  11/  63] Loss: 1.31279
-[2024-09-10T17:09:55.080] Pretraining Batch: [  21/  63] Loss: 1.37096
-[2024-09-10T17:09:55.112] Pretraining Batch: [  31/  63] Loss: 1.25390
-[2024-09-10T17:09:55.142] Pretraining Batch: [  41/  63] Loss: 0.48196
-[2024-09-10T17:09:55.173] Pretraining Batch: [  51/  63] Loss: 1.06383
-[2024-09-10T17:09:55.204] Pretraining Batch: [  61/  63] Loss: 0.58507
-[2024-09-10T17:09:55.334] Pretraining complete. Accuracy: 82.00000%
-[2024-09-10T17:09:56.593] Epoch: [1/3] Batch: [   1/  63] Loss: 0.71791
-[2024-09-10T17:09:56.705] Epoch: [1/3] Batch: [  11/  63] Loss: 0.57352
-[2024-09-10T17:09:56.825] Epoch: [1/3] Batch: [  21/  63] Loss: 0.60163
-[2024-09-10T17:09:56.944] Epoch: [1/3] Batch: [  31/  63] Loss: 0.49171
-[2024-09-10T17:09:57.064] Epoch: [1/3] Batch: [  41/  63] Loss: 0.47504
-[2024-09-10T17:09:57.183] Epoch: [1/3] Batch: [  51/  63] Loss: 0.59566
-[2024-09-10T17:09:57.303] Epoch: [1/3] Batch: [  61/  63] Loss: 0.40391
-[2024-09-10T17:09:57.478] Epoch: [1/3] Accuracy: 83.60000%
-[2024-09-10T17:09:57.491] Epoch: [2/3] Batch: [   1/  63] Loss: 0.30122
-[2024-09-10T17:09:57.613] Epoch: [2/3] Batch: [  11/  63] Loss: 0.77343
-[2024-09-10T17:09:57.731] Epoch: [2/3] Batch: [  21/  63] Loss: 0.35490
-[2024-09-10T17:09:58.002] Epoch: [2/3] Batch: [  31/  63] Loss: 0.49812
-[2024-09-10T17:09:58.124] Epoch: [2/3] Batch: [  41/  63] Loss: 0.19764
-[2024-09-10T17:09:58.246] Epoch: [2/3] Batch: [  51/  63] Loss: 0.38171
-[2024-09-10T17:09:58.365] Epoch: [2/3] Batch: [  61/  63] Loss: 0.29050
-[2024-09-10T17:09:58.489] Epoch: [2/3] Accuracy: 86.20000%
-[2024-09-10T17:09:58.502] Epoch: [3/3] Batch: [   1/  63] Loss: 0.45327
-[2024-09-10T17:09:58.619] Epoch: [3/3] Batch: [  11/  63] Loss: 0.28231
-[2024-09-10T17:09:58.735] Epoch: [3/3] Batch: [  21/  63] Loss: 0.28942
-[2024-09-10T17:09:58.853] Epoch: [3/3] Batch: [  31/  63] Loss: 0.28557
-[2024-09-10T17:09:58.970] Epoch: [3/3] Batch: [  41/  63] Loss: 0.29017
-[2024-09-10T17:09:59.090] Epoch: [3/3] Batch: [  51/  63] Loss: 0.18252
-[2024-09-10T17:09:59.211] Epoch: [3/3] Batch: [  61/  63] Loss: 0.47422
-[2024-09-10T17:09:59.341] Epoch: [3/3] Accuracy: 88.20000%
-[2024-09-10T17:09:59.341] Training complete.</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../basic_mnist_deq/">« Training a Simple MNIST Classifier using Deep Equilibrium Models</a><a class="docs-footer-nextpage" href="../../api/">API References »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Tuesday 10 September 2024 17:10">Tuesday 10 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">train_model (generic function with 1 method)</code></pre><p>Now we can train our model. We can&#39;t use <code>:regdeq</code> here currently, but we will support this in the future.</p><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :skipdeq)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr33"><span class="sgr1">┌ Warning: </span></span>`replicate` doesn&#39;t work for `TaskLocalRNG`. Returning the same `TaskLocalRNG`.
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ LuxCore ~/.julia/packages/LuxCore/kQC9S/src/LuxCore.jl:18</span>
+[2026-06-17T13:31:48.315] warming up forward pass
+[2026-06-17T13:31:50.892] warming up backward pass
+[2026-06-17T13:32:24.515] warmup complete
+[2026-06-17T13:32:28.540] Training Model: skipdeq with Solver: GeneralizedFirstOrderAlgorithm
+[2026-06-17T13:32:28.540] Pretrain with unrolling to a depth of 5
+[2026-06-17T13:32:44.678] Pretraining Batch: [   1/  63] Loss: 2.29611
+[2026-06-17T13:32:45.677] Pretraining Batch: [  11/  63] Loss: 2.30283
+[2026-06-17T13:32:46.367] Pretraining Batch: [  21/  63] Loss: 2.24046
+[2026-06-17T13:32:47.211] Pretraining Batch: [  31/  63] Loss: 1.87841
+[2026-06-17T13:32:47.918] Pretraining Batch: [  41/  63] Loss: 1.72946
+[2026-06-17T13:32:48.613] Pretraining Batch: [  51/  63] Loss: 1.43818
+[2026-06-17T13:32:49.324] Pretraining Batch: [  61/  63] Loss: 1.36763
+[2026-06-17T13:32:49.525] Pretraining Batch: [   1/  63] Loss: 1.37750
+[2026-06-17T13:32:50.238] Pretraining Batch: [  11/  63] Loss: 1.25454
+[2026-06-17T13:32:50.933] Pretraining Batch: [  21/  63] Loss: 1.32241
+[2026-06-17T13:32:51.652] Pretraining Batch: [  31/  63] Loss: 1.29713
+[2026-06-17T13:32:52.564] Pretraining Batch: [  41/  63] Loss: 1.01843
+[2026-06-17T13:32:53.256] Pretraining Batch: [  51/  63] Loss: 1.20558
+[2026-06-17T13:32:55.550] Pretraining Batch: [  61/  63] Loss: 0.85204
+[2026-06-17T13:32:56.231] Pretraining complete. Accuracy: 59.60000%
+[2026-06-17T13:32:57.938] Epoch: [1/3] Batch: [   1/  63] Loss: 1.02554
+[2026-06-17T13:33:01.328] Epoch: [1/3] Batch: [  11/  63] Loss: 1.08263
+[2026-06-17T13:33:05.984] Epoch: [1/3] Batch: [  21/  63] Loss: 1.44054
+[2026-06-17T13:33:10.658] Epoch: [1/3] Batch: [  31/  63] Loss: 0.92832
+[2026-06-17T13:33:15.150] Epoch: [1/3] Batch: [  41/  63] Loss: 0.80793
+[2026-06-17T13:33:19.527] Epoch: [1/3] Batch: [  51/  63] Loss: 0.71718
+[2026-06-17T13:33:23.519] Epoch: [1/3] Batch: [  61/  63] Loss: 0.54554
+[2026-06-17T13:33:30.006] Epoch: [1/3] Accuracy: 65.20000%
+[2026-06-17T13:33:30.376] Epoch: [2/3] Batch: [   1/  63] Loss: 1.09558
+[2026-06-17T13:33:34.444] Epoch: [2/3] Batch: [  11/  63] Loss: 0.81647
+[2026-06-17T13:33:38.997] Epoch: [2/3] Batch: [  21/  63] Loss: 0.82958
+[2026-06-17T13:33:43.664] Epoch: [2/3] Batch: [  31/  63] Loss: 0.85695
+[2026-06-17T13:33:48.263] Epoch: [2/3] Batch: [  41/  63] Loss: 0.85606
+[2026-06-17T13:33:52.597] Epoch: [2/3] Batch: [  51/  63] Loss: 0.55439
+[2026-06-17T13:33:56.621] Epoch: [2/3] Batch: [  61/  63] Loss: 0.73265
+[2026-06-17T13:34:02.754] Epoch: [2/3] Accuracy: 71.60000%
+[2026-06-17T13:34:03.123] Epoch: [3/3] Batch: [   1/  63] Loss: 0.51700
+[2026-06-17T13:34:07.226] Epoch: [3/3] Batch: [  11/  63] Loss: 0.42467
+[2026-06-17T13:34:11.310] Epoch: [3/3] Batch: [  21/  63] Loss: 0.43234
+[2026-06-17T13:34:15.280] Epoch: [3/3] Batch: [  31/  63] Loss: 0.36928
+[2026-06-17T13:34:19.487] Epoch: [3/3] Batch: [  41/  63] Loss: 0.43065
+[2026-06-17T13:34:23.735] Epoch: [3/3] Batch: [  51/  63] Loss: 0.37395
+[2026-06-17T13:34:27.963] Epoch: [3/3] Batch: [  61/  63] Loss: 0.29171
+[2026-06-17T13:34:34.433] Epoch: [3/3] Accuracy: 76.00000%
+[2026-06-17T13:34:34.433] Training complete.</code></pre><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :deq)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr33"><span class="sgr1">┌ Warning: </span></span>`replicate` doesn&#39;t work for `TaskLocalRNG`. Returning the same `TaskLocalRNG`.
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ LuxCore ~/.julia/packages/LuxCore/kQC9S/src/LuxCore.jl:18</span>
+[2026-06-17T13:34:34.523] warming up forward pass
+[2026-06-17T13:34:34.652] warming up backward pass
+[2026-06-17T13:34:41.020] warmup complete
+[2026-06-17T13:34:44.785] Training Model: deq with Solver: GeneralizedFirstOrderAlgorithm
+[2026-06-17T13:34:44.785] Pretrain with unrolling to a depth of 5
+[2026-06-17T13:34:56.730] Pretraining Batch: [   1/  63] Loss: 2.31349
+[2026-06-17T13:34:57.264] Pretraining Batch: [  11/  63] Loss: 2.29549
+[2026-06-17T13:34:57.969] Pretraining Batch: [  21/  63] Loss: 2.20548
+[2026-06-17T13:34:58.617] Pretraining Batch: [  31/  63] Loss: 1.93624
+[2026-06-17T13:34:59.327] Pretraining Batch: [  41/  63] Loss: 1.47466
+[2026-06-17T13:34:59.959] Pretraining Batch: [  51/  63] Loss: 1.22546
+[2026-06-17T13:35:00.571] Pretraining Batch: [  61/  63] Loss: 1.21082
+[2026-06-17T13:35:00.760] Pretraining Batch: [   1/  63] Loss: 1.01469
+[2026-06-17T13:35:01.418] Pretraining Batch: [  11/  63] Loss: 0.92350
+[2026-06-17T13:35:02.041] Pretraining Batch: [  21/  63] Loss: 0.85240
+[2026-06-17T13:35:02.653] Pretraining Batch: [  31/  63] Loss: 1.20193
+[2026-06-17T13:35:03.264] Pretraining Batch: [  41/  63] Loss: 1.05870
+[2026-06-17T13:35:03.917] Pretraining Batch: [  51/  63] Loss: 1.25939
+[2026-06-17T13:35:04.538] Pretraining Batch: [  61/  63] Loss: 1.04443
+[2026-06-17T13:35:04.868] Pretraining complete. Accuracy: 67.00000%
+[2026-06-17T13:35:06.159] Epoch: [1/3] Batch: [   1/  63] Loss: 0.83860
+[2026-06-17T13:35:08.845] Epoch: [1/3] Batch: [  11/  63] Loss: 1.14011
+[2026-06-17T13:35:11.814] Epoch: [1/3] Batch: [  21/  63] Loss: 0.95657
+[2026-06-17T13:35:14.565] Epoch: [1/3] Batch: [  31/  63] Loss: 1.00037
+[2026-06-17T13:35:17.372] Epoch: [1/3] Batch: [  41/  63] Loss: 0.93815
+[2026-06-17T13:35:20.158] Epoch: [1/3] Batch: [  51/  63] Loss: 0.71449
+[2026-06-17T13:35:22.969] Epoch: [1/3] Batch: [  61/  63] Loss: 0.85909
+[2026-06-17T13:35:26.987] Epoch: [1/3] Accuracy: 71.80000%
+[2026-06-17T13:35:27.261] Epoch: [2/3] Batch: [   1/  63] Loss: 0.50660
+[2026-06-17T13:35:30.061] Epoch: [2/3] Batch: [  11/  63] Loss: 0.97964
+[2026-06-17T13:35:32.857] Epoch: [2/3] Batch: [  21/  63] Loss: 0.74586
+[2026-06-17T13:35:35.636] Epoch: [2/3] Batch: [  31/  63] Loss: 0.86425
+[2026-06-17T13:35:38.436] Epoch: [2/3] Batch: [  41/  63] Loss: 0.61624
+[2026-06-17T13:35:41.611] Epoch: [2/3] Batch: [  51/  63] Loss: 0.46563
+[2026-06-17T13:35:44.721] Epoch: [2/3] Batch: [  61/  63] Loss: 0.53010
+[2026-06-17T13:35:48.645] Epoch: [2/3] Accuracy: 78.40000%
+[2026-06-17T13:35:48.910] Epoch: [3/3] Batch: [   1/  63] Loss: 0.74029
+[2026-06-17T13:35:51.729] Epoch: [3/3] Batch: [  11/  63] Loss: 0.64572
+[2026-06-17T13:35:54.537] Epoch: [3/3] Batch: [  21/  63] Loss: 0.33424
+[2026-06-17T13:35:57.530] Epoch: [3/3] Batch: [  31/  63] Loss: 0.62937
+[2026-06-17T13:36:00.731] Epoch: [3/3] Batch: [  41/  63] Loss: 0.33290
+[2026-06-17T13:36:05.728] Epoch: [3/3] Batch: [  51/  63] Loss: 0.52002
+[2026-06-17T13:36:08.817] Epoch: [3/3] Batch: [  61/  63] Loss: 0.59967
+[2026-06-17T13:36:13.146] Epoch: [3/3] Accuracy: 80.60000%
+[2026-06-17T13:36:13.146] Training complete.</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../basic_mnist_deq/">« Training a Simple MNIST Classifier using Deep Equilibrium Models</a><a class="docs-footer-nextpage" href="../../api/">API References »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 17 June 2026 13:36">Wednesday 17 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
