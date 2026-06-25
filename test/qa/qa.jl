@@ -1,21 +1,32 @@
-using DeepEquilibriumNetworks, Test
+using SciMLTesting, DeepEquilibriumNetworks, Test
 
-@testset "Aqua" begin
-    using Aqua
-
-    Aqua.test_all(DeepEquilibriumNetworks; ambiguities = false)
-    Aqua.test_ambiguities(DeepEquilibriumNetworks; recursive = false)
-end
-
-@testset "ExplicitImports" begin
-    import SciMLSensitivity
-
-    using ExplicitImports
-
-    @test check_no_implicit_imports(DeepEquilibriumNetworks) === nothing
-    @test check_no_stale_explicit_imports(DeepEquilibriumNetworks) === nothing
-    @test check_all_qualified_accesses_via_owners(DeepEquilibriumNetworks) === nothing
-end
+run_qa(
+    DeepEquilibriumNetworks;
+    explicit_imports = true,
+    # `Aqua.test_all`'s default ambiguities check recurses into deps and is noisy; run
+    # it only against this package's own methods (the prior hand-rolled qa.jl disabled
+    # the recursive sweep and called `test_ambiguities(...; recursive = false)`).
+    aqua_kwargs = (; ambiguities = (; recursive = false)),
+    ei_kwargs = (;
+        # Names accessed as `Mod.name` that are not (yet) public in their owning
+        # package; tracked here until those packages mark them public on release.
+        all_qualified_accesses_are_public = (;
+            ignore = (
+                :DEStats, :NLStats,      # SciMLBase
+                :Fix1,                   # Base
+                :apply, :initialstates, :replicate, :setup, :update_state,  # LuxCore
+                :getproperty,            # Lux.LuxOps
+            ),
+        ),
+        # Names brought in via `using Mod: name` that are not (yet) public in Mod.
+        all_explicit_imports_are_public = (;
+            ignore = (
+                :AbstractNonlinearAlgorithm, :AbstractODEAlgorithm, :_unwrap_val,  # SciMLBase
+                :solve,                  # CommonSolve
+            ),
+        ),
+    ),
+)
 
 @testset "Doctests" begin
     using Documenter
