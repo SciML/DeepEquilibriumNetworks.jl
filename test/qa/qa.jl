@@ -8,22 +8,11 @@ run_qa(
     # the recursive sweep and called `test_ambiguities(...; recursive = false)`).
     aqua_kwargs = (; ambiguities = (; recursive = false)),
     ei_kwargs = (;
-        # Names accessed as `Mod.name` that are not (yet) public in their owning
-        # package; tracked here until those packages mark them public on release.
-        all_qualified_accesses_are_public = (;
-            ignore = (
-                :DEStats, :NLStats,      # SciMLBase
-                :Fix1,                   # Base
-                :apply, :initialstates, :replicate, :setup, :update_state,  # LuxCore
-                :getproperty,            # Lux.LuxOps
-            ),
-        ),
-        # Names brought in via `using Mod: name` that are not (yet) public in Mod.
+        # SciMLBase internals not yet marked public; tracked until SciMLBase
+        # exports/declares them public on a future release.
+        all_qualified_accesses_are_public = (; ignore = (:DEStats,)),  # SciMLBase
         all_explicit_imports_are_public = (;
-            ignore = (
-                :AbstractNonlinearAlgorithm, :AbstractODEAlgorithm, :_unwrap_val,  # SciMLBase
-                :solve,                  # CommonSolve
-            ),
+            ignore = (:AbstractNonlinearAlgorithm, :_unwrap_val),  # SciMLBase
         ),
     ),
 )
