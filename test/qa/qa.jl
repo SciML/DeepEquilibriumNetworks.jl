@@ -8,12 +8,9 @@ run_qa(
     # the recursive sweep and called `test_ambiguities(...; recursive = false)`).
     aqua_kwargs = (; ambiguities = (; recursive = false)),
     ei_kwargs = (;
-        # SciMLBase internals not yet marked public; tracked until SciMLBase
-        # exports/declares them public on a future release.
-        all_qualified_accesses_are_public = (; ignore = (:DEStats,)),  # SciMLBase
-        all_explicit_imports_are_public = (;
-            ignore = (:AbstractNonlinearAlgorithm, :_unwrap_val),  # SciMLBase
-        ),
+        # `_unwrap_val` is a SciMLBase internal not marked public; tracked until
+        # SciMLBase exports/declares it public on a future release.
+        all_explicit_imports_are_public = (; ignore = (:_unwrap_val,)),  # SciMLBase
     ),
 )
 
