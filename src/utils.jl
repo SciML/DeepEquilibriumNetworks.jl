@@ -1,3 +1,9 @@
+# Mirror of SciMLBase's internal `_unwrap_val` (a `_`-prefixed internal that will not be
+# made public). Reproduced locally so `Val`-wrapped depth/scale specs can be unwrapped
+# without depending on a non-public binding.
+_unwrap_val(::Val{B}) where {B} = B
+_unwrap_val(B) = B
+
 @generated function split_and_reshape(x::AbstractMatrix, ::Val{idxs}, ::Val{shapes}) where {
         idxs, shapes,
     }
