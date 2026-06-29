@@ -10,7 +10,7 @@ using FastClosures: @closure
 using Random: Random, AbstractRNG, randn!
 using SciMLBase: SciMLBase, AbstractNonlinearAlgorithm, AbstractODEAlgorithm,
     NonlinearSolution, ODESolution, ODEFunction, ODEProblem,
-    SteadyStateProblem, _unwrap_val
+    SteadyStateProblem
 using SciMLSensitivity: SteadyStateAdjoint, GaussAdjoint, ZygoteVJP
 using Static: StaticSymbol, StaticInt, known, static
 
