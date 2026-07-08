@@ -49,6 +49,8 @@ recommend:
 
 ## Standard Models
 
+`DEQs` is exported as an alias for the `DeepEquilibriumNetworks` module.
+
 ```@docs
 DeepEquilibriumNetwork
 SkipDeepEquilibriumNetwork

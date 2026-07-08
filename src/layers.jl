@@ -1,17 +1,16 @@
 """
-    DeepEquilibriumSolution(z_star, u₀, residual, jacobian_loss, nfe, solution)
+    DeepEquilibriumSolution(z_star, u0, residual, jacobian_loss, nfe, original)
 
-Stores the solution of a DeepEquilibriumNetwork and its variants.
+Stores the solution data produced by a [`DeepEquilibriumNetwork`](@ref) and its variants.
 
 ## Fields
 
-  - `z_star`: Steady-State or the value reached due to maxiters
-  - `u0`: Initial Condition
-  - `residual`: Difference of the ``z^*`` and ``f(z^*, x)``
-  - `jacobian_loss`: Jacobian Stabilization Loss (see individual networks to see how it
-    can be computed)
-  - `nfe`: Number of Function Evaluations
-  - `original`: Original Internal Solution
+  - `z_star`: Steady state, or the final iterate reached when the solver stops.
+  - `u0`: Initial condition used by the equilibrium solve.
+  - `residual`: Difference between ``z^*`` and ``f(z^*, x)``.
+  - `jacobian_loss`: Jacobian stabilization loss.
+  - `nfe`: Number of function evaluations.
+  - `original`: Original solver solution object.
 """
 struct DeepEquilibriumSolution  # This is intentionally left untyped to allow updating `st`
     z_star
@@ -72,6 +71,54 @@ function Base.show(io::IO, sol::DeepEquilibriumSolution)
 end
 
 # Core Model
+"""
+    DeepEquilibriumNetwork(model, solver; init = missing, jacobian_regularization = nothing,
+        problem_type::Type = SteadyStateProblem{false}, kwargs...)
+
+Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing](@cite).
+
+## Arguments
+
+  - `model`: Lux layer defining the equilibrium map.
+  - `solver`: Solver for the equilibrium problem. ODE solvers and nonlinear solvers are
+    both supported.
+
+## Keywords
+
+  - `init`: Initial condition layer for the equilibrium problem. If `nothing`, the initial
+    condition is set to `zero(x)`. If `missing`, it is set to `WrappedFunction(zero)`.
+    Otherwise, pass a Lux layer called as `init(x, ps, st)`.
+  - `jacobian_regularization`: Jacobian stabilization backend. Supported values are
+    `nothing`, `AutoForwardDiff`, `AutoFiniteDiff`, and `AutoZygote`.
+  - `problem_type`: Equilibrium problem type. Use `ODEProblem` to construct an ODE-based
+    network; defaults to `SteadyStateProblem`.
+  - `kwargs`: Additional keyword arguments passed to `SciMLBase.solve`.
+
+## Returns
+
+Returns a Lux layer. Calling the layer returns the model output and a state whose `solution`
+field contains a [`DeepEquilibriumSolution`](@ref).
+
+## Example
+
+```jldoctest
+julia> using DeepEquilibriumNetworks, Lux, SteadyStateDiffEq, Random
+
+julia> model = DeepEquilibriumNetwork(
+           Parallel(+, Dense(2, 2; use_bias=false), Dense(2, 2; use_bias=false)),
+           SSRootfind(); verbose=false);
+
+julia> rng = Xoshiro(0);
+
+julia> ps, st = Lux.setup(rng, model);
+
+julia> size(first(model(ones(Float32, 2, 1), ps, st)))
+(2, 1)
+```
+
+See also: [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref),
+[`MultiScaleSkipDeepEquilibriumNetwork`](@ref).
+"""
 @concrete struct DeepEquilibriumNetwork <: AbstractLuxContainerLayer{(:model, :init)}
     init
     model
@@ -161,51 +208,6 @@ function (deq::DEQ)(x, ps, st::NamedTuple, ::Val{false})
 end
 
 ## Constructors
-"""
-    DeepEquilibriumNetwork(model, solver; init = missing, jacobian_regularization=nothing,
-        problem_type::Type=SteadyStateProblem{false}, kwargs...)
-
-Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing](@cite).
-
-## Arguments
-
-  - `model`: Neural Network.
-  - `solver`: Solver for the rootfinding problem. ODE Solvers and Nonlinear Solvers are both
-    supported.
-
-## Keyword Arguments
-
-  - `init`: Initial Condition for the rootfinding problem. If `nothing`, the initial
-    condition is set to `zero(x)`. If `missing`, the initial condition is set to
-    `WrappedFunction(zero)`. In other cases the initial condition is set to
-    `init(x, ps, st)`.
-  - `jacobian_regularization`: Must be one of `nothing`, `AutoForwardDiff`, `AutoFiniteDiff`
-    or `AutoZygote`.
-  - `problem_type`: Provides a way to simulate a Vanilla Neural ODE by setting the
-    `problem_type` to `ODEProblem`. By default, the problem type is set to
-    `SteadyStateProblem`.
-  - `kwargs`: Additional Parameters that are directly passed to `SciMLBase.solve`.
-
-## Example
-
-```jldoctest
-julia> using DeepEquilibriumNetworks, Lux, SteadyStateDiffEq, Random
-
-julia> model = DeepEquilibriumNetwork(
-           Parallel(+, Dense(2, 2; use_bias=false), Dense(2, 2; use_bias=false)),
-           SSRootfind(); verbose=false);
-
-julia> rng = Xoshiro(0);
-
-julia> ps, st = Lux.setup(rng, model);
-
-julia> size(first(model(ones(Float32, 2, 1), ps, st)))
-(2, 1)
-```
-
-See also: [`SkipDeepEquilibriumNetwork`](@ref), [`MultiScaleDeepEquilibriumNetwork`](@ref),
-[`MultiScaleSkipDeepEquilibriumNetwork`](@ref).
-"""
 function DeepEquilibriumNetwork(
         model, solver; init = missing, jacobian_regularization = nothing,
         problem_type::Type = SteadyStateProblem{false}, kwargs...
@@ -226,8 +228,36 @@ end
 """
     SkipDeepEquilibriumNetwork(model, [init=nothing,] solver; kwargs...)
 
-Skip Deep Equilibrium Network as proposed in [pal2022mixing](@cite). Alias which creates
-a [`DeepEquilibriumNetwork`](@ref) with `init` kwarg set to passed value.
+Skip Deep Equilibrium Network as proposed in [pal2022mixing](@cite).
+
+This is a convenience constructor for [`DeepEquilibriumNetwork`](@ref) that forwards `init`
+through the `init` keyword argument. If `init` is omitted, the initial condition is
+`nothing`.
+
+## Arguments
+
+  - `model`: Lux layer defining the equilibrium map.
+  - `init`: Optional Lux layer used to construct the initial condition.
+  - `solver`: Solver for the equilibrium problem.
+
+## Returns
+
+Returns a [`DeepEquilibriumNetwork`](@ref).
+
+## Example
+
+```jldoctest
+julia> using DeepEquilibriumNetworks, Lux, SteadyStateDiffEq, Random
+
+julia> model = SkipDeepEquilibriumNetwork(
+           Parallel(+, Dense(2, 2; use_bias=false), Dense(2, 2; use_bias=false)),
+           SSRootfind(); verbose=false);
+
+julia> ps, st = Lux.setup(Xoshiro(0), model);
+
+julia> size(first(model(ones(Float32, 2, 1), ps, st)))
+(2, 1)
+```
 """
 function SkipDeepEquilibriumNetwork(model, init, solver; kwargs...)
     return DeepEquilibriumNetwork(model, solver; init, kwargs...)
@@ -312,6 +342,19 @@ Skip Multi Scale Deep Equilibrium Network as proposed in [pal2022mixing](@cite).
 creates a [`MultiScaleDeepEquilibriumNetwork`](@ref) with `init` kwarg set to passed value.
 
 If `init` is not passed, it creates a MultiScale Regularized Deep Equilibrium Network.
+
+## Arguments
+
+  - `main_layers`: Tuple of Lux layers, one per scale.
+  - `mapping_layers`: Matrix of Lux layers mapping between scales.
+  - `post_fuse_layer`: Optional tuple of Lux layers applied after scale fusion.
+  - `init`: Optional tuple of Lux layers used to construct the initial conditions.
+  - `solver`: Solver for the equilibrium problem.
+  - `scales`: Output shape for each scale.
+
+## Returns
+
+Returns a [`MultiScaleDeepEquilibriumNetwork`](@ref).
 """
 function MultiScaleSkipDeepEquilibriumNetwork(
         main_layers::Tuple, mapping_layers::Matrix,
@@ -335,8 +378,16 @@ end
 """
     MultiScaleNeuralODE(args...; kwargs...)
 
-Same arguments as [`MultiScaleDeepEquilibriumNetwork`](@ref) but sets `problem_type` to
+Construct a multi-scale neural ODE with the same arguments as
+[`MultiScaleDeepEquilibriumNetwork`](@ref).
+
+This forwards all positional and keyword arguments to
+[`MultiScaleDeepEquilibriumNetwork`](@ref), while setting `problem_type` to
 `ODEProblem{false}`.
+
+## Returns
+
+Returns a [`MultiScaleDeepEquilibriumNetwork`](@ref) configured with ODE dynamics.
 """
 function MultiScaleNeuralODE(args...; kwargs...)
     return MultiScaleDeepEquilibriumNetwork(args...; kwargs..., problem_type = ODEProblem{false})
