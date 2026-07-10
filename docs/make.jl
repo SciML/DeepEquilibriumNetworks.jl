@@ -7,6 +7,11 @@ bib = CitationBibliography(joinpath(@__DIR__, "ref.bib"); style = :authoryear)
 
 include("pages.jl")
 
+# Documenter canonicalizes module-valued alias docs to the target module during missing-docs
+# checks, so `DEQs` cannot be counted by a canonical `@docs` block. It is documented on the
+# API page instead.
+delete!(Docs.meta(DeepEquilibriumNetworks), Docs.Binding(DeepEquilibriumNetworks, :DEQs))
+
 makedocs(;
     sitename = "Deep Equilibrium Networks",
     authors = "Avik Pal et al.",
