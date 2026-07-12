@@ -29,6 +29,7 @@ CommonSolve = "0.2"
 ConcreteStructs = "0.2"
 # cuDNN 9.11 dropped Volta support, but the GPU runner pool includes V100s.
 CUDNN_jll = "=9.10.0"
+CUDA_Runtime_jll = "0.19"
 DiffEqBase = "6.176.0, 7.0"
 Documenter = "1"
 FastClosures = "0.3"
@@ -63,6 +64,7 @@ julia = "1.10"
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 CUDNN_jll = "62b44479-cb7b-5706-934f-f13b2eb2e645"
+CUDA_Runtime_jll = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Functors = "d9f16b24-f501-4c13-a1f2-28368ffc5196"
@@ -83,4 +85,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Aqua", "CUDNN_jll", "Documenter", "ForwardDiff", "Functors", "GPUArraysCore", "InteractiveUtils", "LuxCUDA", "LuxTestUtils", "MLDataDevices", "NLsolve", "NonlinearSolve", "OrdinaryDiffEq", "OrdinaryDiffEqAdamsBashforthMoulton", "SafeTestsets", "SciMLSensitivity", "SciMLTesting", "StableRNGs", "Test", "Zygote"]
+test = ["Aqua", "CUDNN_jll", "CUDA_Runtime_jll", "Documenter", "ForwardDiff", "Functors", "GPUArraysCore", "InteractiveUtils", "LuxCUDA", "LuxTestUtils", "MLDataDevices", "NLsolve", "NonlinearSolve", "OrdinaryDiffEq", "OrdinaryDiffEqAdamsBashforthMoulton", "SafeTestsets", "SciMLSensitivity", "SciMLTesting", "StableRNGs", "Test", "Zygote"]

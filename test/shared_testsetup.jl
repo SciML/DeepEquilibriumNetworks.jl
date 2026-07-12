@@ -20,14 +20,17 @@ function cuda_testing()
         MLDataDevices.functional(CUDADevice)
 end
 
+if BACKEND_GROUP == "all" || BACKEND_GROUP == "cuda"
+    @test Base.pkgversion(CUDNN_jll) < v"9.11"
+    @test cuda_testing()
+end
+
 const MODES = begin
     modes = []
     cpu_testing() && push!(modes, ("cpu", Array, CPUDevice(), false))
     cuda_testing() && push!(modes, ("cuda", CuArray, CUDADevice(), true))
     modes
 end
-
-cuda_testing() && @test Base.pkgversion(CUDNN_jll) < v"9.11"
 
 is_finite_gradient(x::AbstractArray) = all(isfinite, x)
 is_finite_gradient(::Nothing) = true
