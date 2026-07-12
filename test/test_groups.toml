@@ -5,6 +5,7 @@ versions = ["lts", "1"]
 versions = ["lts", "1"]
 
 [GPU]
-versions = ["1"]
+# CUDA.jl 5.8 is required by Volta-compatible cuDNN 9.10 and cannot target sm_70 on Julia 1.12.
+versions = ["1.10"]
 runner = ["self-hosted", "Linux", "X64", "gpu"]
 timeout = 240
