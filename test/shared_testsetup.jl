@@ -9,7 +9,7 @@ LuxTestUtils.jet_target_modules!(["DeepEquilibriumNetworks", "Lux", "LuxLib"])
 const BACKEND_GROUP = lowercase(get(ENV, "BACKEND_GROUP", get(ENV, "GROUP", "cpu")))
 
 if BACKEND_GROUP == "all" || BACKEND_GROUP == "cuda"
-    using LuxCUDA
+    using CUDNN_jll, LuxCUDA
 end
 
 GPUArraysCore.allowscalar(false)
@@ -26,6 +26,8 @@ const MODES = begin
     cuda_testing() && push!(modes, ("cuda", CuArray, CUDADevice(), true))
     modes
 end
+
+cuda_testing() && @test Base.pkgversion(CUDNN_jll) < v"9.11"
 
 is_finite_gradient(x::AbstractArray) = all(isfinite, x)
 is_finite_gradient(::Nothing) = true
