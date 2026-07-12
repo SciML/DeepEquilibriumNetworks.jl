@@ -6,5 +6,5 @@ versions = ["lts", "1"]
 
 [GPU]
 versions = ["1"]
-runner = ["self-hosted", "Linux", "X64", "gpu"]
+runner = ["self-hosted", "Linux", "X64", "gpu", "gpu-v100"]
 timeout = 240
