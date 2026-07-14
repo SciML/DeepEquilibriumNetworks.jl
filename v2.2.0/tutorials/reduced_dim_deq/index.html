@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Modelling Equilibrium Models with Reduced State Size · Deep Equilibrium Networks</title><meta name="title" content="Modelling Equilibrium Models with Reduced State Size · Deep Equilibrium Networks"/><meta property="og:title" content="Modelling Equilibrium Models with Reduced State Size · Deep Equilibrium Networks"/><meta property="twitter:title" content="Modelling Equilibrium Models with Reduced State Size · Deep Equilibrium Networks"/><meta name="description" content="Documentation for Deep Equilibrium Networks."/><meta property="og:description" content="Documentation for Deep Equilibrium Networks."/><meta property="twitter:description" content="Documentation for Deep Equilibrium Networks."/><meta property="og:url" content="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/tutorials/reduced_dim_deq/"/><meta property="twitter:url" content="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/tutorials/reduced_dim_deq/"/><link rel="canonical" href="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/tutorials/reduced_dim_deq/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="Deep Equilibrium Networks logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Deep Equilibrium Networks</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../basic_mnist_deq/">Training a Simple MNIST Classifier using Deep Equilibrium Models</a></li><li class="is-active"><a class="tocitem" href>Modelling Equilibrium Models with Reduced State Size</a></li></ul></li><li><a class="tocitem" href="../../api/">API References</a></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Modelling Equilibrium Models with Reduced State Size</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Modelling Equilibrium Models with Reduced State Size</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/SciML/DeepEquilibriumNetworks.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/SciML/DeepEquilibriumNetworks.jl/blob/main/docs/src/tutorials/reduced_dim_deq.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Modelling-Equilibrium-Models-with-Reduced-State-Size"><a class="docs-heading-anchor" href="#Modelling-Equilibrium-Models-with-Reduced-State-Size">Modelling Equilibrium Models with Reduced State Size</a><a id="Modelling-Equilibrium-Models-with-Reduced-State-Size-1"></a><a class="docs-heading-anchor-permalink" href="#Modelling-Equilibrium-Models-with-Reduced-State-Size" title="Permalink"></a></h1><p>Sometimes we want don&#39;t want to solve a root finding problem with the full state size. This will often be faster, since the size of the root finding problem is reduced. We will use the same MNIST example as before, but this time we will use a reduced state size.</p><pre><code class="language-julia hljs">using DeepEquilibriumNetworks, SciMLSensitivity, Lux, NonlinearSolve, OrdinaryDiffEq,
+      Statistics, Random, Optimisers, LuxCUDA, Zygote, LinearSolve, Dates, Printf
+using MLDatasets: MNIST
+using MLDataUtils: LabelEnc, convertlabel, stratifiedobs, batchview
+
+CUDA.allowscalar(false)
+ENV[&quot;DATADEPS_ALWAYS_ACCEPT&quot;] = true
+
+const cdev = cpu_device()
+const gdev = gpu_device()
+
+function onehot(labels_raw)
+    return convertlabel(LabelEnc.OneOfK, labels_raw, LabelEnc.NativeLabels(collect(0:9)))
+end
+
+function loadmnist(batchsize, split)
+    # Load MNIST
+    mnist = MNIST(; split)
+    imgs, labels_raw = mnist.features, mnist.targets
+    # Process images into (H,W,C,BS) batches
+    x_train = Float32.(reshape(imgs, size(imgs, 1), size(imgs, 2), 1, size(imgs, 3))) |&gt;
+              gdev
+    x_train = batchview(x_train, batchsize)
+    # Onehot and batch the labels
+    y_train = onehot(labels_raw) |&gt; gdev
+    y_train = batchview(y_train, batchsize)
+    return x_train, y_train
+end
+
+x_train, y_train = loadmnist(128, :train);
+x_test, y_test = loadmnist(128, :test);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(CUDA.CuArray{Float32, 4, CUDA.DeviceMemory}[[0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0]  …  [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0], [0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; … ;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0;;;; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0; … ; 0.0 0.0 … 0.0 0.0; 0.0 0.0 … 0.0 0.0]], CUDA.CuArray{Int64, 2, CUDA.DeviceMemory}[[0 0 … 1 0; 0 0 … 0 0; … ; 0 0 … 0 0; 0 0 … 0 0], [0 0 … 0 0; 0 0 … 0 0; … ; 1 0 … 0 0; 0 0 … 0 0], [0 0 … 0 0; 0 0 … 0 0; … ; 0 1 … 0 0; 0 0 … 0 0], [0 0 … 0 0; 0 1 … 0 0; … ; 0 0 … 0 0; 0 0 … 0 0], [0 0 … 0 0; 0 0 … 0 0; … ; 0 0 … 0 0; 0 0 … 0 1], [0 0 … 0 0; 1 0 … 0 1; … ; 0 1 … 0 0; 0 0 … 0 0], [0 0 … 0 1; 1 0 … 0 0; … ; 0 0 … 0 0; 0 0 … 0 0], [1 0 … 0 0; 0 0 … 0 0; … ; 0 0 … 0 0; 0 0 … 0 0], [0 0 … 0 0; 0 1 … 0 0; … ; 0 0 … 0 0; 0 0 … 0 0], [0 0 … 0 0; 0 0 … 0 0; … ; 0 0 … 0 0; 1 0 … 0 0]  …  [0 0 … 0 0; 0 0 … 0 0; … ; 0 0 … 0 0; 0 1 … 0 0], [0 0 … 0 0; 0 0 … 0 0; … ; 0 0 … 1 0; 0 0 … 0 0], [0 0 … 0 0; 0 0 … 0 0; … ; 0 0 … 0 0; 0 0 … 0 0], [0 0 … 0 0; 0 0 … 0 0; … ; 1 0 … 0 0; 0 1 … 1 0], [0 0 … 0 0; 0 0 … 0 0; … ; 0 0 … 0 0; 1 0 … 0 0], [0 0 … 0 0; 0 1 … 0 0; … ; 0 0 … 0 0; 0 0 … 0 0], [0 0 … 0 0; 0 0 … 0 1; … ; 0 0 … 0 0; 1 0 … 0 0], [0 1 … 0 0; 0 0 … 0 0; … ; 0 0 … 0 0; 0 0 … 0 0], [0 0 … 0 0; 0 0 … 0 0; … ; 0 0 … 1 0; 0 0 … 0 0], [0 0 … 0 1; 0 0 … 0 0; … ; 0 1 … 0 0; 1 0 … 0 0]])</code></pre><p>Now we will define the construct model function. Here we will use Dense Layers and downsample the features using the <code>init</code> kwarg.</p><pre><code class="language-julia hljs">function construct_model(solver; model_type::Symbol=:regdeq)
+    down = Chain(FlattenLayer(), Dense(784 =&gt; 512, gelu))
+
+    # The input layer of the DEQ
+    deq_model = Chain(Parallel(+, Dense(128 =&gt; 64, tanh),   # Reduced dim of `128`
+            Dense(512 =&gt; 64, tanh)),  # Original dim of `512`
+        Dense(64 =&gt; 64, tanh), Dense(64 =&gt; 128))       # Return the reduced dim of `128`
+
+    if model_type === :skipdeq
+        init = Dense(512 =&gt; 128, tanh)
+    elseif model_type === :regdeq
+        error(&quot;:regdeq is not supported for reduced dim models&quot;)
+    else
+        # This should preferably done via `ChainRulesCore.@ignore_derivatives`. But here
+        # we are only using Zygote so this is fine.
+        init = WrappedFunction{:direct_call}(x -&gt; Zygote.@ignore(fill!(
+            similar(x, 128, size(x, 2)), false)))
+    end
+
+    deq = DeepEquilibriumNetwork(
+        deq_model, solver; init, verbose=false, linsolve_kwargs=(; maxiters=10))
+
+    classifier = Chain(Dense(128 =&gt; 128, gelu), Dense(128, 10))
+
+    model = Chain(; down, deq, classifier)
+
+    # For NVIDIA GPUs this directly generates the parameters on the GPU
+    rng = Random.default_rng() |&gt; gdev
+    ps, st = Lux.setup(rng, model)
+
+    # Warmup the forward and backward passes
+    x = randn(rng, Float32, 28, 28, 1, 128)
+    y = onehot(rand(Random.default_rng(), 0:9, 128)) |&gt; gdev
+
+    model_ = StatefulLuxLayer(model, ps, st)
+    @printf &quot;[%s] warming up forward pass\n&quot; string(now())
+    logitcrossentropy(model_, x, ps, y)
+    @printf &quot;[%s] warming up backward pass\n&quot; string(now())
+    Zygote.gradient(logitcrossentropy, model_, x, ps, y)
+    @printf &quot;[%s] warmup complete\n&quot; string(now())
+
+    return model, ps, st
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">construct_model (generic function with 1 method)</code></pre><p>Define some helper functions to train the model.</p><pre><code class="language-julia hljs">logitcrossentropy(ŷ, y) = mean(-sum(y .* logsoftmax(ŷ; dims=1); dims=1))
+function logitcrossentropy(model, x, ps, y)
+    l1 = logitcrossentropy(model(x, ps), y)
+    # Add in some regularization
+    l2 = mean(abs2, model.st.deq.solution.z_star .- model.st.deq.solution.u0)
+    return l1 + 0.1f0 * l2
+end
+
+classify(x) = argmax.(eachcol(x))
+
+function accuracy(model, data, ps, st)
+    total_correct, total = 0, 0
+    st = Lux.testmode(st)
+    model = StatefulLuxLayer(model, ps, st)
+    for (x, y) in data
+        target_class = classify(cdev(y))
+        predicted_class = classify(cdev(model(x)))
+        total_correct += sum(target_class .== predicted_class)
+        total += length(target_class)
+    end
+    return total_correct / total
+end
+
+function train_model(
+        solver, model_type; data_train=zip(x_train, y_train), data_test=zip(x_test, y_test))
+    model, ps, st = construct_model(solver; model_type)
+    model_st = StatefulLuxLayer(model, nothing, st)
+
+    @printf &quot;[%s] Training Model: %s with Solver: %s\n&quot; string(now()) model_type nameof(typeof(solver))
+
+    opt_st = Optimisers.setup(Adam(0.001), ps)
+
+    acc = accuracy(model, data_test, ps, st) * 100
+    @printf &quot;[%s] Starting Accuracy: %.5f%%\n&quot; string(now()) acc
+
+    @printf &quot;[%s] Pretrain with unrolling to a depth of 5\n&quot; string(now())
+    st = Lux.update_state(st, :fixed_depth, Val(5))
+    model_st = StatefulLuxLayer(model, ps, st)
+
+    for (i, (x, y)) in enumerate(data_train)
+        res = Zygote.withgradient(logitcrossentropy, model_st, x, ps, y)
+        Optimisers.update!(opt_st, ps, res.grad[3])
+        i % 50 == 1 &amp;&amp;
+            @printf &quot;[%s] Pretraining Batch: [%4d/%4d] Loss: %.5f\n&quot; string(now()) i length(data_train) res.val
+    end
+
+    acc = accuracy(model, data_test, ps, model_st.st) * 100
+    @printf &quot;[%s] Pretraining complete. Accuracy: %.5f%%\n&quot; string(now()) acc
+
+    st = Lux.update_state(st, :fixed_depth, Val(0))
+    model_st = StatefulLuxLayer(model, ps, st)
+
+    for epoch in 1:3
+        for (i, (x, y)) in enumerate(data_train)
+            res = Zygote.withgradient(logitcrossentropy, model_st, x, ps, y)
+            Optimisers.update!(opt_st, ps, res.grad[3])
+            i % 50 == 1 &amp;&amp;
+                @printf &quot;[%s] Epoch: [%d/%d] Batch: [%4d/%4d] Loss: %.5f\n&quot; string(now()) epoch 3 i length(data_train) res.val
+        end
+
+        acc = accuracy(model, data_test, ps, model_st.st) * 100
+        @printf &quot;[%s] Epoch: [%d/%d] Accuracy: %.5f%%\n&quot; string(now()) epoch 3 acc
+    end
+
+    @printf &quot;[%s] Training complete.\n&quot; string(now())
+
+    return model, ps, st
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">train_model (generic function with 1 method)</code></pre><p>Now we can train our model. We can&#39;t use <code>:regdeq</code> here currently, but we will support this in the future.</p><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :skipdeq)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[2024-09-06T18:29:37.030] warming up forward pass
+[2024-09-06T18:29:45.823] warming up backward pass
+[2024-09-06T18:30:16.871] warmup complete
+[2024-09-06T18:30:16.888] Training Model: skipdeq with Solver: GeneralizedFirstOrderAlgorithm
+[2024-09-06T18:30:22.668] Starting Accuracy: 5.36859%
+[2024-09-06T18:30:22.668] Pretrain with unrolling to a depth of 5
+[2024-09-06T18:31:00.134] Pretraining Batch: [   1/ 468] Loss: 2.36598
+[2024-09-06T18:31:00.540] Pretraining Batch: [  51/ 468] Loss: 0.48675
+[2024-09-06T18:31:00.710] Pretraining Batch: [ 101/ 468] Loss: 0.28596
+[2024-09-06T18:31:00.941] Pretraining Batch: [ 151/ 468] Loss: 0.26624
+[2024-09-06T18:31:01.102] Pretraining Batch: [ 201/ 468] Loss: 0.27394
+[2024-09-06T18:31:01.263] Pretraining Batch: [ 251/ 468] Loss: 0.39664
+[2024-09-06T18:31:01.429] Pretraining Batch: [ 301/ 468] Loss: 0.25077
+[2024-09-06T18:31:01.597] Pretraining Batch: [ 351/ 468] Loss: 0.32308
+[2024-09-06T18:31:01.837] Pretraining Batch: [ 401/ 468] Loss: 0.39854
+[2024-09-06T18:31:01.998] Pretraining Batch: [ 451/ 468] Loss: 0.20611
+[2024-09-06T18:31:02.411] Pretraining complete. Accuracy: 95.74319%
+[2024-09-06T18:31:02.813] Epoch: [1/3] Batch: [   1/ 468] Loss: 0.29112
+[2024-09-06T18:31:05.899] Epoch: [1/3] Batch: [  51/ 468] Loss: 0.22649
+[2024-09-06T18:31:08.067] Epoch: [1/3] Batch: [ 101/ 468] Loss: 0.20551
+[2024-09-06T18:31:10.278] Epoch: [1/3] Batch: [ 151/ 468] Loss: 0.17383
+[2024-09-06T18:31:12.440] Epoch: [1/3] Batch: [ 201/ 468] Loss: 0.21338
+[2024-09-06T18:31:14.652] Epoch: [1/3] Batch: [ 251/ 468] Loss: 0.22720
+[2024-09-06T18:31:16.642] Epoch: [1/3] Batch: [ 301/ 468] Loss: 0.18557
+[2024-09-06T18:31:18.815] Epoch: [1/3] Batch: [ 351/ 468] Loss: 0.17820
+[2024-09-06T18:31:22.010] Epoch: [1/3] Batch: [ 401/ 468] Loss: 0.22219
+[2024-09-06T18:31:24.234] Epoch: [1/3] Batch: [ 451/ 468] Loss: 0.17099
+[2024-09-06T18:31:27.091] Epoch: [1/3] Accuracy: 96.46434%
+[2024-09-06T18:31:27.131] Epoch: [2/3] Batch: [   1/ 468] Loss: 0.18302
+[2024-09-06T18:31:29.288] Epoch: [2/3] Batch: [  51/ 468] Loss: 0.12216
+[2024-09-06T18:31:31.204] Epoch: [2/3] Batch: [ 101/ 468] Loss: 0.13405
+[2024-09-06T18:31:33.354] Epoch: [2/3] Batch: [ 151/ 468] Loss: 0.13444
+[2024-09-06T18:31:35.501] Epoch: [2/3] Batch: [ 201/ 468] Loss: 0.16746
+[2024-09-06T18:31:37.706] Epoch: [2/3] Batch: [ 251/ 468] Loss: 0.16847
+[2024-09-06T18:31:39.931] Epoch: [2/3] Batch: [ 301/ 468] Loss: 0.14646
+[2024-09-06T18:31:41.945] Epoch: [2/3] Batch: [ 351/ 468] Loss: 0.14435
+[2024-09-06T18:31:44.195] Epoch: [2/3] Batch: [ 401/ 468] Loss: 0.16337
+[2024-09-06T18:31:46.570] Epoch: [2/3] Batch: [ 451/ 468] Loss: 0.18176
+[2024-09-06T18:31:49.629] Epoch: [2/3] Accuracy: 95.90345%
+[2024-09-06T18:31:49.671] Epoch: [3/3] Batch: [   1/ 468] Loss: 0.15612
+[2024-09-06T18:31:51.939] Epoch: [3/3] Batch: [  51/ 468] Loss: 0.10284
+[2024-09-06T18:31:54.171] Epoch: [3/3] Batch: [ 101/ 468] Loss: 0.11733
+[2024-09-06T18:31:56.405] Epoch: [3/3] Batch: [ 151/ 468] Loss: 0.10565
+[2024-09-06T18:31:58.603] Epoch: [3/3] Batch: [ 201/ 468] Loss: 0.13656
+[2024-09-06T18:32:00.648] Epoch: [3/3] Batch: [ 251/ 468] Loss: 0.15481
+[2024-09-06T18:32:02.934] Epoch: [3/3] Batch: [ 301/ 468] Loss: 0.17520
+[2024-09-06T18:32:05.213] Epoch: [3/3] Batch: [ 351/ 468] Loss: 0.12546
+[2024-09-06T18:32:07.535] Epoch: [3/3] Batch: [ 401/ 468] Loss: 0.12561
+[2024-09-06T18:32:09.904] Epoch: [3/3] Batch: [ 451/ 468] Loss: 0.12132
+[2024-09-06T18:32:13.295] Epoch: [3/3] Accuracy: 97.33574%
+[2024-09-06T18:32:13.295] Training complete.</code></pre><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :deq)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[2024-09-06T18:32:13.418] warming up forward pass
+[2024-09-06T18:32:13.626] warming up backward pass
+[2024-09-06T18:32:23.598] warmup complete
+[2024-09-06T18:32:23.615] Training Model: deq with Solver: GeneralizedFirstOrderAlgorithm
+[2024-09-06T18:32:29.076] Starting Accuracy: 14.49319%
+[2024-09-06T18:32:29.076] Pretrain with unrolling to a depth of 5
+[2024-09-06T18:33:03.165] Pretraining Batch: [   1/ 468] Loss: 2.30035
+[2024-09-06T18:33:03.323] Pretraining Batch: [  51/ 468] Loss: 0.37653
+[2024-09-06T18:33:03.486] Pretraining Batch: [ 101/ 468] Loss: 0.25884
+[2024-09-06T18:33:03.650] Pretraining Batch: [ 151/ 468] Loss: 0.23723
+[2024-09-06T18:33:03.876] Pretraining Batch: [ 201/ 468] Loss: 0.28809
+[2024-09-06T18:33:04.029] Pretraining Batch: [ 251/ 468] Loss: 0.30600
+[2024-09-06T18:33:04.182] Pretraining Batch: [ 301/ 468] Loss: 0.19102
+[2024-09-06T18:33:04.335] Pretraining Batch: [ 351/ 468] Loss: 0.26726
+[2024-09-06T18:33:04.496] Pretraining Batch: [ 401/ 468] Loss: 0.34324
+[2024-09-06T18:33:04.735] Pretraining Batch: [ 451/ 468] Loss: 0.20689
+[2024-09-06T18:33:04.987] Pretraining complete. Accuracy: 96.35417%
+[2024-09-06T18:33:05.452] Epoch: [1/3] Batch: [   1/ 468] Loss: 0.21169
+[2024-09-06T18:33:08.784] Epoch: [1/3] Batch: [  51/ 468] Loss: 0.21150
+[2024-09-06T18:33:11.327] Epoch: [1/3] Batch: [ 101/ 468] Loss: 0.13248
+[2024-09-06T18:33:13.789] Epoch: [1/3] Batch: [ 151/ 468] Loss: 0.13912
+[2024-09-06T18:33:16.140] Epoch: [1/3] Batch: [ 201/ 468] Loss: 0.14600
+[2024-09-06T18:33:18.533] Epoch: [1/3] Batch: [ 251/ 468] Loss: 0.17233
+[2024-09-06T18:33:20.888] Epoch: [1/3] Batch: [ 301/ 468] Loss: 0.12280
+[2024-09-06T18:33:23.023] Epoch: [1/3] Batch: [ 351/ 468] Loss: 0.14327
+[2024-09-06T18:33:25.355] Epoch: [1/3] Batch: [ 401/ 468] Loss: 0.20039
+[2024-09-06T18:33:27.624] Epoch: [1/3] Batch: [ 451/ 468] Loss: 0.14218
+[2024-09-06T18:33:30.797] Epoch: [1/3] Accuracy: 96.20393%
+[2024-09-06T18:33:30.837] Epoch: [2/3] Batch: [   1/ 468] Loss: 0.13061
+[2024-09-06T18:33:33.099] Epoch: [2/3] Batch: [  51/ 468] Loss: 0.10397
+[2024-09-06T18:33:35.431] Epoch: [2/3] Batch: [ 101/ 468] Loss: 0.11745
+[2024-09-06T18:33:37.781] Epoch: [2/3] Batch: [ 151/ 468] Loss: 0.11460
+[2024-09-06T18:33:40.098] Epoch: [2/3] Batch: [ 201/ 468] Loss: 0.12635
+[2024-09-06T18:33:42.460] Epoch: [2/3] Batch: [ 251/ 468] Loss: 0.14031
+[2024-09-06T18:33:44.862] Epoch: [2/3] Batch: [ 301/ 468] Loss: 0.12155
+[2024-09-06T18:33:47.256] Epoch: [2/3] Batch: [ 351/ 468] Loss: 0.08974
+[2024-09-06T18:33:49.430] Epoch: [2/3] Batch: [ 401/ 468] Loss: 0.18200
+[2024-09-06T18:33:51.732] Epoch: [2/3] Batch: [ 451/ 468] Loss: 0.09770
+[2024-09-06T18:33:55.153] Epoch: [2/3] Accuracy: 97.44591%
+[2024-09-06T18:33:55.195] Epoch: [3/3] Batch: [   1/ 468] Loss: 0.11833
+[2024-09-06T18:33:57.485] Epoch: [3/3] Batch: [  51/ 468] Loss: 0.08003
+[2024-09-06T18:33:59.587] Epoch: [3/3] Batch: [ 101/ 468] Loss: 0.07578
+[2024-09-06T18:34:01.958] Epoch: [3/3] Batch: [ 151/ 468] Loss: 0.11016
+[2024-09-06T18:34:04.311] Epoch: [3/3] Batch: [ 201/ 468] Loss: 0.14559
+[2024-09-06T18:34:06.666] Epoch: [3/3] Batch: [ 251/ 468] Loss: 0.09678
+[2024-09-06T18:34:09.066] Epoch: [3/3] Batch: [ 301/ 468] Loss: 0.11660
+[2024-09-06T18:34:11.467] Epoch: [3/3] Batch: [ 351/ 468] Loss: 0.08588
+[2024-09-06T18:34:13.953] Epoch: [3/3] Batch: [ 401/ 468] Loss: 0.14386
+[2024-09-06T18:34:16.374] Epoch: [3/3] Batch: [ 451/ 468] Loss: 0.07763
+[2024-09-06T18:34:19.784] Epoch: [3/3] Accuracy: 97.52604%
+[2024-09-06T18:34:19.785] Training complete.</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../basic_mnist_deq/">« Training a Simple MNIST Classifier using Deep Equilibrium Models</a><a class="docs-footer-nextpage" href="../../api/">API References »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Friday 6 September 2024 18:34">Friday 6 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
