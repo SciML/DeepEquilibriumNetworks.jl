@@ -102,11 +102,9 @@ field contains a [`DeepEquilibriumSolution`](@ref).
 ## Example
 
 ```jldoctest
-julia> using DeepEquilibriumNetworks, Lux, SteadyStateDiffEq, Random
-
 julia> model = DeepEquilibriumNetwork(
            Parallel(+, Dense(2, 2; use_bias=false), Dense(2, 2; use_bias=false)),
-           SSRootfind(); verbose=false);
+           NewtonRaphson(); verbose=false);
 
 julia> rng = Xoshiro(0);
 
@@ -247,11 +245,9 @@ Returns a [`DeepEquilibriumNetwork`](@ref).
 ## Example
 
 ```jldoctest
-julia> using DeepEquilibriumNetworks, Lux, SteadyStateDiffEq, Random
-
 julia> model = SkipDeepEquilibriumNetwork(
            Parallel(+, Dense(2, 2; use_bias=false), Dense(2, 2; use_bias=false)),
-           SSRootfind(); verbose=false);
+           NewtonRaphson(); verbose=false);
 
 julia> ps, st = Lux.setup(Xoshiro(0), model);
 
