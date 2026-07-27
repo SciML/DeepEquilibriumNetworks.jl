@@ -25,8 +25,14 @@ const CRC = ChainRulesCore
 """
     DEQs
 
-Alias for the `DeepEquilibriumNetworks` module. Use it for qualified access, such as
-`DEQs.DeepEquilibriumNetwork`.
+Alias for the `DeepEquilibriumNetworks` module.
+
+## Example
+
+```jldoctest
+julia> DEQs === DeepEquilibriumNetworks
+true
+```
 """
 const DEQs = DeepEquilibriumNetworks
 

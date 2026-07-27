@@ -1,23 +1,21 @@
 using Documenter, DocumenterCitations, DeepEquilibriumNetworks
 
-cp("./docs/Manifest.toml", "./docs/src/assets/Manifest.toml"; force = true)
-cp("./docs/Project.toml", "./docs/src/assets/Project.toml"; force = true)
-
 bib = CitationBibliography(joinpath(@__DIR__, "ref.bib"); style = :authoryear)
 
 include("pages.jl")
 
-# Documenter canonicalizes module-valued alias docs to the target module during missing-docs
-# checks, so `DEQs` cannot be counted by a canonical `@docs` block. It is documented on the
-# API page instead.
-delete!(Docs.meta(DeepEquilibriumNetworks), Docs.Binding(DeepEquilibriumNetworks, :DEQs))
+DocMeta.setdocmeta!(
+    DeepEquilibriumNetworks, :DocTestSetup, quote
+        using DeepEquilibriumNetworks, Lux, NonlinearSolve, Random, SteadyStateDiffEq
+    end; recursive = true
+)
 
 makedocs(;
     sitename = "Deep Equilibrium Networks",
     authors = "Avik Pal et al.",
     modules = [DeepEquilibriumNetworks],
     clean = true,
-    doctest = false,  # Tested in CI
+    doctest = true,
     linkcheck = true,
     format = Documenter.HTML(;
         assets = ["assets/favicon.ico"],

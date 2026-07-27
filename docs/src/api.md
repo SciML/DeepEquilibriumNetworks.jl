@@ -47,25 +47,13 @@ recommend:
     `sensealg = SteadyStateAdjoint()` or
     `sensealg = SteadyStateAdjoint(; linsolve = LUFactorization())` for small models.
 
-## Standard Models
-
-`DEQs` is exported as an alias for the `DeepEquilibriumNetworks` module.
+## Public API
 
 ```@docs
-DeepEquilibriumNetwork
-SkipDeepEquilibriumNetwork
+DEQs
 ```
 
-## MultiScale Models
-
-```@docs
-MultiScaleDeepEquilibriumNetwork
-MultiScaleSkipDeepEquilibriumNetwork
-MultiScaleNeuralODE
-```
-
-## Solution
-
-```@docs
-DeepEquilibriumSolution
+```@autodocs
+Modules = [DeepEquilibriumNetworks]
+Private = false
 ```
