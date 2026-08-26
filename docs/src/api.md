@@ -49,10 +49,6 @@ recommend:
 
 ## Public API
 
-```@docs
-DEQs
-```
-
 ```@autodocs
 Modules = [DeepEquilibriumNetworks]
 Private = false
