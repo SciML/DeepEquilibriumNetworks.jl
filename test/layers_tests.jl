@@ -12,10 +12,15 @@ function loss_function(model, x, ps, st)
     return l1 + l2 + l3
 end
 
-const SOLVERS = (
-    VCAB3(), Tsit5(), NewtonRaphson(; autodiff = AutoForwardDiff(; chunksize = 12)),
-    SimpleLimitedMemoryBroyden(),
-)
+function solvers(ongpu)
+    autodiff = ongpu ? AutoFiniteDiff() : AutoForwardDiff(; chunksize = 12)
+    return VCAB3(), Tsit5(), NewtonRaphson(; autodiff), SimpleLimitedMemoryBroyden()
+end
+
+@testset "Solver autodiff configuration" begin
+    @test solvers(false)[3].autodiff isa AutoForwardDiff
+    @test solvers(true)[3].autodiff isa AutoFiniteDiff
+end
 
 @testset "DEQ" begin
     rng = StableRNG(0)
@@ -35,7 +40,7 @@ const SOLVERS = (
             _jacobian_regularizations
 
         @testset "Solver: $(nameof(typeof(solver))) | Model Type: $(mtype) | Jac. Reg: $(jacobian_regularization)" for solver in
-                SOLVERS,
+                solvers(ongpu),
                 mtype in model_type, jacobian_regularization in jacobian_regularizations
 
             @testset "x_size: $(x_size)" for (base_model, init_model, x_size) in
@@ -116,7 +121,7 @@ end
     jacobian_regularizations = (nothing,)
 
     @testset "$mode" for (mode, aType, dev, ongpu) in MODES
-        @testset "Solver: $(nameof(typeof(solver)))" for solver in SOLVERS,
+        @testset "Solver: $(nameof(typeof(solver)))" for solver in solvers(ongpu),
                 mtype in model_type, jacobian_regularization in jacobian_regularizations
 
             @testset "x_size: $(x_size)" for (
