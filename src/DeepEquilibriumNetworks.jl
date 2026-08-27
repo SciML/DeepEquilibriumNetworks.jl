@@ -7,6 +7,7 @@ using ConcreteStructs: @concrete
 using DiffEqBase: DiffEqBase
 using NonlinearSolveBase: AbsNormTerminationMode
 using FastClosures: @closure
+using GPUArraysCore: AbstractGPUArray
 using Random: Random, AbstractRNG, randn!
 using SciMLBase: SciMLBase, AbstractNonlinearAlgorithm, AbstractODEAlgorithm,
     NonlinearSolution, ODESolution, ODEFunction, ODEProblem,

@@ -1,6 +1,14 @@
 include("shared_testsetup.jl")
 
 using SciMLBase
+using GPUArraysCore: AbstractGPUArray
+using SciMLSensitivity: SteadyStateAdjoint
+
+struct MockGPUVector{T} <: AbstractGPUArray{T, 1}
+    data::Vector{T}
+end
+Base.size(x::MockGPUVector) = size(x.data)
+Base.getindex(x::MockGPUVector, i::Int) = x.data[i]
 
 @testset "split_and_reshape" begin
     for (mode, aType, dev, ongpu) in MODES
@@ -31,6 +39,13 @@ end
 @testset "get unrolled_mode" begin
     @test DEQs.get_unrolled_depth(Val(10)) == 10
     @test DEQs.get_unrolled_depth((; fixed_depth = Val(10))) == 10
+end
+
+@testset "steady-state sensitivity defaults" begin
+    cpu_prob = SteadyStateProblem((u, p, t) -> u, zeros(2))
+    gpu_prob = SteadyStateProblem((u, p, t) -> u, MockGPUVector(zeros(2)))
+    @test DEQs.default_sensealg(cpu_prob) isa SteadyStateAdjoint{0, true}
+    @test DEQs.default_sensealg(gpu_prob) isa SteadyStateAdjoint{0, false}
 end
 
 @testset "deep equilibrium solution" begin
