@@ -1,3 +1,16 @@
+"""
+    DeepEquilibriumNetworks
+    DEQs
+
+The `DeepEquilibriumNetworks` module. `DEQs` is an alias for the module.
+
+## Example
+
+```jldoctest
+julia> DEQs === DeepEquilibriumNetworks
+true
+```
+"""
 module DeepEquilibriumNetworks
 
 using ADTypes: AutoFiniteDiff, AutoForwardDiff, AutoZygote
@@ -23,18 +36,6 @@ using SteadyStateDiffEq: DynamicSS, SSRootfind
 
 # Useful Constants
 const CRC = ChainRulesCore
-"""
-    DEQs
-
-Alias for the `DeepEquilibriumNetworks` module.
-
-## Example
-
-```jldoctest
-julia> DEQs === DeepEquilibriumNetworks
-true
-```
-"""
 const DEQs = DeepEquilibriumNetworks
 
 include("layers.jl")
