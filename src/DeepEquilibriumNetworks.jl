@@ -20,12 +20,13 @@ using ConcreteStructs: @concrete
 using DiffEqBase: DiffEqBase
 using NonlinearSolveBase: AbsNormTerminationMode
 using FastClosures: @closure
-using GPUArraysCore: AbstractGPUArray
 using Random: Random, AbstractRNG, randn!
 using SciMLBase: SciMLBase, AbstractNonlinearAlgorithm, AbstractODEAlgorithm,
     NonlinearSolution, ODESolution, ODEFunction, ODEProblem,
     SteadyStateProblem
-using SciMLSensitivity: SteadyStateAdjoint, GaussAdjoint, ZygoteVJP
+# Load SciMLSensitivity so `solve` adjoint rrules are registered. The sense
+# algorithm itself is SciMLSensitivity's automatic choice (`sensealg = nothing`).
+import SciMLSensitivity
 using Static: StaticSymbol, StaticInt, known, static
 
 using Lux: Lux, LuxOps, BranchLayer, Chain, NoOpLayer, Parallel, RepeatedLayer,

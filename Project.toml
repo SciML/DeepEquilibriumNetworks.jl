@@ -10,7 +10,6 @@ CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
 ConcreteStructs = "2569d6c7-a4a2-43d3-a901-331e8e4be471"
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
 FastClosures = "9aa1b823-49e4-5ca5-8b0f-3971ec8bab6a"
-GPUArraysCore = "46192b85-c4d5-4398-a991-12ede77f4527"
 Lux = "b2108857-7c20-44ae-9111-449ecde12c47"
 LuxCore = "bb33d45b-7691-41d6-9220-0943567d0623"
 NNlib = "872c559c-99b0-510c-b3b7-b6c96a88d5cd"
@@ -63,6 +62,7 @@ Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Functors = "d9f16b24-f501-4c13-a1f2-28368ffc5196"
+GPUArraysCore = "46192b85-c4d5-4398-a991-12ede77f4527"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 LuxCUDA = "d0bbae9a-e099-4d5b-a835-1c6931763bda"
@@ -78,4 +78,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Aqua", "Documenter", "ForwardDiff", "Functors", "InteractiveUtils", "LuxCUDA", "LuxTestUtils", "MLDataDevices", "NonlinearSolve", "OrdinaryDiffEq", "OrdinaryDiffEqAdamsBashforthMoulton", "SafeTestsets", "SciMLSensitivity", "SciMLTesting", "StableRNGs", "Test", "Zygote"]
+test = ["Aqua", "Documenter", "ForwardDiff", "Functors", "GPUArraysCore", "InteractiveUtils", "LuxCUDA", "LuxTestUtils", "MLDataDevices", "NonlinearSolve", "OrdinaryDiffEq", "OrdinaryDiffEqAdamsBashforthMoulton", "SafeTestsets", "SciMLSensitivity", "SciMLTesting", "StableRNGs", "Test", "Zygote"]

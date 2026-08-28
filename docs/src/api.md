@@ -38,14 +38,19 @@ recommend:
 
 ### Sensitivity Analysis
 
- 1. For `MultiScaleNeuralODE`, we default to `GaussAdjoint(; autojacvec = ZygoteVJP())`. A
-    faster alternative would be `BacksolveAdjoint(; autojacvec = ZygoteVJP())` but there are
-    stability concerns for using that. Follow the recommendation given in [SciMLSensitivity.jl](https://docs.sciml.ai/SciMLSensitivity/stable/manual/differential_equation_sensitivities/#Choosing-a-Sensitivity-Algorithm) documentation.
- 2. For Steady State Problems, we default to
-    `SteadyStateAdjoint(; linsolve = SimpleGMRES(; blocksize, linsolve_kwargs = (; maxiters=10, abstol=1e-3, reltol=1e-3)))`.
-    This default will perform poorly on small models. It is recommended to pass
-    `sensealg = SteadyStateAdjoint()` or
-    `sensealg = SteadyStateAdjoint(; linsolve = LUFactorization())` for small models.
+This package does not override SciMLSensitivity.jl's automatic `sensealg` choice.
+`solve` is called with `sensealg = nothing` unless a `sensealg` is passed through the
+layer constructor kwargs.
+
+ 1. For the out-of-place `SteadyStateProblem`s constructed here, SciMLSensitivity selects
+    `SteadyStateAdjoint(autodiff = false, autojacvec = ZygoteVJP())`. Pass
+    `sensealg = SteadyStateAdjoint(; linsolve = LUFactorization())` for small models if
+    the automatic linear solver is a poor fit.
+ 2. For `MultiScaleNeuralODE` (functor parameters), SciMLSensitivity selects
+    `GaussAdjoint(; autojacvec = ZygoteVJP())`. A faster alternative is
+    `BacksolveAdjoint(; autojacvec = ZygoteVJP())`, with the usual stability caveats.
+    See the [SciMLSensitivity.jl](https://docs.sciml.ai/SciMLSensitivity/stable/manual/differential_equation_sensitivities/#Choosing-a-Sensitivity-Algorithm)
+    documentation.
 
 ## Public API
 

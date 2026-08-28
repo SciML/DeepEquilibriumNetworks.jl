@@ -89,17 +89,6 @@ zeros_init(::Nothing, x::AbstractArray) = zero(x)
 
 CRC.@non_differentiable zeros_init(::Any, ::Any)
 
-## Don't rely on SciMLSensitivity's choice
-function default_sensealg(prob::SteadyStateProblem)
-    # Ideally we should use GMRES here, but it is not very robust
-    return SteadyStateAdjoint(;
-        linsolve = nothing, linsolve_kwargs = (; maxiters = 10, abstol = 1.0e-3, reltol = 1.0e-3),
-        autodiff = !(prob.u0 isa AbstractGPUArray),
-        autojacvec = ZygoteVJP()
-    )
-end
-default_sensealg(::ODEProblem) = GaussAdjoint(; autojacvec = ZygoteVJP())
-
 function randn_like(rng::AbstractRNG, x::AbstractArray)
     y = similar(x)::typeof(x)
     randn!(rng, y)
