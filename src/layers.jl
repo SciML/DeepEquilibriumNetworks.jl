@@ -92,7 +92,8 @@ Deep Equilibrium Network as proposed in [baideep2019](@cite) and [pal2022mixing]
     `nothing`, `AutoForwardDiff`, `AutoFiniteDiff`, and `AutoZygote`.
   - `problem_type`: Equilibrium problem type. Use `ODEProblem` to construct an ODE-based
     network; defaults to `SteadyStateProblem`.
-  - `kwargs`: Additional keyword arguments passed to `SciMLBase.solve`.
+  - `kwargs`: Additional keyword arguments passed to `SciMLBase.solve`. Omitting
+    `sensealg` uses SciMLSensitivity.jl's automatic adjoint choice.
 
 ## Returns
 
@@ -184,7 +185,7 @@ function (deq::DEQ)(x, ps, st::NamedTuple, ::Val{false})
     alg = normalize_alg(deq)
     termination_condition = AbsNormTerminationMode(Base.Fix1(maximum, abs))
     sol = solve(
-        prob, alg; sensealg = default_sensealg(prob), abstol = 1.0e-3,
+        prob, alg; sensealg = nothing, abstol = 1.0e-3,
         reltol = 1.0e-3, termination_condition, maxiters = 32, deq.kwargs...
     )
     z_star = get_steady_state(sol)
