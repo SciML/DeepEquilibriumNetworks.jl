@@ -1,6 +1,7 @@
 include("shared_testsetup.jl")
 
 using SciMLBase
+using ChainRulesCore: ChainRulesCore as CRC
 
 @testset "split_and_reshape" begin
     for (mode, aType, dev, ongpu) in MODES
@@ -19,6 +20,15 @@ using SciMLBase
 
         @jet DEQs.split_and_reshape(x, split_idxs, shapes)
     end
+end
+
+@testset "flatten_vcat rrule with thunked cotangent" begin
+    x = (ones(Float32, 4, 3), fill(0.5f0, 2, 3))
+    y, pb = CRC.rrule(DEQs.flatten_vcat, x)
+    ∂y = CRC.@thunk(2 .* y)
+    _, ∂x = pb(∂y)
+    @test ∂x[1] == fill(2.0f0, 4, 3)
+    @test ∂x[2] == fill(1.0f0, 2, 3)
 end
 
 @testset "unrolled_mode check" begin
