@@ -34,7 +34,8 @@ flatten_vcat(x) = mapreduce(flatten, vcat, x)
 function CRC.rrule(::typeof(flatten_vcat), x)
     y = flatten_vcat(x)
     project_x = CRC.ProjectTo(x)
-    ∇flatten_vcat = @closure ∂y -> begin
+    ∇flatten_vcat = @closure ∂y_ -> begin
+        ∂y = CRC.unthunk(∂y_)
         ∂y isa CRC.NoTangent && return (CRC.NoTangent(), CRC.NoTangent())
         return CRC.NoTangent(), project_x(split_and_reshape(∂y, x))
     end
