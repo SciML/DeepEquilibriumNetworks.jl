@@ -22,15 +22,14 @@ const cdev = cpu_device()
 const gdev = gpu_device()
 ```
 
-We can now construct our dataloader. We are using only limited part of the data for
-demonstration.
+We can now construct our dataloader. The examples use 250 images to keep both solver
+runs practical on a CPU.
 
 ```@example basic_mnist_deq
-function loadmnist(batchsize, train_split)
-    N = 2500
+function loadmnist(batchsize, train_split; nimages)
     dataset = MNIST(; split=:train)
-    imgs = dataset.features[:, :, 1:N]
-    labels_raw = dataset.targets[1:N]
+    imgs = dataset.features[:, :, 1:nimages]
+    labels_raw = dataset.targets[1:nimages]
 
     # Process images into (H,W,C,BS) batches
     x_data = Float32.(reshape(imgs, size(imgs, 1), size(imgs, 2), 1, size(imgs, 3)))
@@ -120,10 +119,10 @@ function accuracy(model, ps, st, dataloader)
     return total_correct / total
 end
 
-function train_model(solver, model_type)
+function train_model(solver, model_type; nimages=2500)
     model, ps, st = construct_model(solver; model_type)
 
-    train_dataloader, test_dataloader = loadmnist(32, 0.8) |> gdev
+    train_dataloader, test_dataloader = loadmnist(32, 0.8; nimages) |> gdev
 
     tstate = Training.TrainState(model, ps, st, Adam(0.0005))
 
@@ -172,7 +171,7 @@ and end up using solvers like `Broyden`, but we can simply slap in any of the fa
 from NonlinearSolve.jl. Here we will use Newton-Krylov Method:
 
 ```@example basic_mnist_deq
-train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq);
+train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq; nimages=250);
 nothing # hide
 ```
 
@@ -180,7 +179,7 @@ We can also train a continuous DEQ by passing in an ODE solver. Here we will use
 which tend to be quite fast for continuous Neural Network problems.
 
 ```@example basic_mnist_deq
-train_model(VCAB3(), :deq);
+train_model(VCAB3(), :deq; nimages=250);
 nothing # hide
 ```
 
