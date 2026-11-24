@@ -22,8 +22,12 @@ const cdev = cpu_device()
 const gdev = gpu_device()
 ```
 
-We can now construct our dataloader. The examples use 250 images to keep both solver
-runs practical on a CPU.
+We can now construct our dataloader. The two rendered runs at the end of this tutorial
+pass `nimages=250` so both solver examples fit the CPU documentation build budget;
+`train_model` defaults to 2500 images for a longer run. That subset bounds build time,
+not accuracy: with 250 images the final accuracies are low and seed-dependent (roughly
+20-35%, versus about 70% with the default), so treat them as a demonstration of the
+mechanics rather than a tuned result.
 
 ```@example basic_mnist_deq
 function loadmnist(batchsize, train_split; nimages)
