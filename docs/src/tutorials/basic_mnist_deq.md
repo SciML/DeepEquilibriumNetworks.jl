@@ -24,10 +24,12 @@ const gdev = gpu_device()
 
 We can now construct our dataloader. The two rendered runs at the end of this tutorial
 pass `nimages=250` so both solver examples fit the CPU documentation build budget;
-`train_model` defaults to 2500 images for a longer run. That subset bounds build time,
-not accuracy: with 250 images the final accuracies are low and seed-dependent (roughly
-20-35%, versus about 70% with the default), so treat them as a demonstration of the
-mechanics rather than a tuned result.
+`train_model` defaults to 2500 images for a longer run. With 250 images (200 train,
+50 test) the final accuracies are low and vary widely between runs, so treat them as a
+demonstration of the mechanics. At 2500 images the Newton-Krylov example reached 71-85%
+across 5 seeds, while the `VCAB3` example is unreliable on this task, with accuracy
+collapses and very long runs (see
+[issue #259](https://github.com/SciML/DeepEquilibriumNetworks.jl/issues/259)).
 
 ```@example basic_mnist_deq
 function loadmnist(batchsize, train_split; nimages)
@@ -181,6 +183,8 @@ nothing # hide
 
 We can also train a continuous DEQ by passing in an ODE solver. Here we will use `VCAB3()`
 which tend to be quite fast for continuous Neural Network problems.
+Its `Interrupted. Larger maxiters is needed` warnings are a known behavior in this example,
+tracked in [issue #259](https://github.com/SciML/DeepEquilibriumNetworks.jl/issues/259).
 
 ```@example basic_mnist_deq
 train_model(VCAB3(), :deq; nimages=250);
