@@ -22,15 +22,20 @@ const cdev = cpu_device()
 const gdev = gpu_device()
 ```
 
-We can now construct our dataloader. We are using only limited part of the data for
-demonstration.
+We can now construct our dataloader. The two rendered runs at the end of this tutorial
+pass `nimages=250` so both solver examples fit the CPU documentation build budget;
+`train_model` defaults to 2500 images for a longer run. With 250 images (200 train,
+50 test) the final accuracies are low and vary widely between runs, so treat them as a
+demonstration of the mechanics. At 2500 images the Newton-Krylov example reached 71-85%
+across 5 seeds, while the `VCAB3` example is unreliable on this task, with accuracy
+collapses and very long runs (see
+[issue #259](https://github.com/SciML/DeepEquilibriumNetworks.jl/issues/259)).
 
 ```@example basic_mnist_deq
-function loadmnist(batchsize, train_split)
-    N = 2500
+function loadmnist(batchsize, train_split; nimages)
     dataset = MNIST(; split=:train)
-    imgs = dataset.features[:, :, 1:N]
-    labels_raw = dataset.targets[1:N]
+    imgs = dataset.features[:, :, 1:nimages]
+    labels_raw = dataset.targets[1:nimages]
 
     # Process images into (H,W,C,BS) batches
     x_data = Float32.(reshape(imgs, size(imgs, 1), size(imgs, 2), 1, size(imgs, 3)))
@@ -120,10 +125,10 @@ function accuracy(model, ps, st, dataloader)
     return total_correct / total
 end
 
-function train_model(solver, model_type)
+function train_model(solver, model_type; nimages=2500)
     model, ps, st = construct_model(solver; model_type)
 
-    train_dataloader, test_dataloader = loadmnist(32, 0.8) |> gdev
+    train_dataloader, test_dataloader = loadmnist(32, 0.8; nimages) |> gdev
 
     tstate = Training.TrainState(model, ps, st, Adam(0.0005))
 
@@ -172,15 +177,17 @@ and end up using solvers like `Broyden`, but we can simply slap in any of the fa
 from NonlinearSolve.jl. Here we will use Newton-Krylov Method:
 
 ```@example basic_mnist_deq
-train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq);
+train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq; nimages=250);
 nothing # hide
 ```
 
 We can also train a continuous DEQ by passing in an ODE solver. Here we will use `VCAB3()`
 which tend to be quite fast for continuous Neural Network problems.
+Its `Interrupted. Larger maxiters is needed` warnings are a known behavior in this example,
+tracked in [issue #259](https://github.com/SciML/DeepEquilibriumNetworks.jl/issues/259).
 
 ```@example basic_mnist_deq
-train_model(VCAB3(), :deq);
+train_model(VCAB3(), :deq; nimages=250);
 nothing # hide
 ```
 
