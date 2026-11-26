@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Modelling Equilibrium Models with Reduced State Size · Deep Equilibrium Networks</title><meta name="title" content="Modelling Equilibrium Models with Reduced State Size · Deep Equilibrium Networks"/><meta property="og:title" content="Modelling Equilibrium Models with Reduced State Size · Deep Equilibrium Networks"/><meta property="twitter:title" content="Modelling Equilibrium Models with Reduced State Size · Deep Equilibrium Networks"/><meta name="description" content="Documentation for Deep Equilibrium Networks."/><meta property="og:description" content="Documentation for Deep Equilibrium Networks."/><meta property="twitter:description" content="Documentation for Deep Equilibrium Networks."/><meta property="og:url" content="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/tutorials/reduced_dim_deq/"/><meta property="twitter:url" content="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/tutorials/reduced_dim_deq/"/><link rel="canonical" href="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/tutorials/reduced_dim_deq/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/documentercitations/citations-hover.css" rel="stylesheet" type="text/css"/><link href="../../assets/documentercitations/citations.css" rel="stylesheet" type="text/css"/><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/><script src="../../assets/documentercitations/citations-data.js"></script><script src="../../assets/documentercitations/citations-hover.js"></script><script src="../../assets/documentercitations/citations-backlinks.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="Deep Equilibrium Networks logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Deep Equilibrium Networks</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../basic_mnist_deq/">Training a Simple MNIST Classifier using Deep Equilibrium Models</a></li><li class="is-active"><a class="tocitem" href>Modelling Equilibrium Models with Reduced State Size</a></li></ul></li><li><a class="tocitem" href="../../api/">API References</a></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Modelling Equilibrium Models with Reduced State Size</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Modelling Equilibrium Models with Reduced State Size</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/SciML/DeepEquilibriumNetworks.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/SciML/DeepEquilibriumNetworks.jl/blob/main/docs/src/tutorials/reduced_dim_deq.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Modelling-Equilibrium-Models-with-Reduced-State-Size"><a class="docs-heading-anchor" href="#Modelling-Equilibrium-Models-with-Reduced-State-Size">Modelling Equilibrium Models with Reduced State Size</a><a id="Modelling-Equilibrium-Models-with-Reduced-State-Size-1"></a><a class="docs-heading-anchor-permalink" href="#Modelling-Equilibrium-Models-with-Reduced-State-Size" title="Permalink"></a></h1><p>Sometimes we want don&#39;t want to solve a root finding problem with the full state size. This will often be faster, since the size of the root finding problem is reduced. We will use the same MNIST example as before, but this time we will use a reduced state size.</p><pre><code class="language-julia hljs">using DeepEquilibriumNetworks, SciMLSensitivity, Lux, NonlinearSolve, OrdinaryDiffEq,
+      Random, Optimisers, Zygote, LinearSolve, Dates, Printf, Setfield, OneHotArrays
+using MLDatasets: MNIST
+using MLUtils: DataLoader, splitobs
+using LuxCUDA # For NVIDIA GPU support
+
+CUDA.allowscalar(false)
+ENV[&quot;DATADEPS_ALWAYS_ACCEPT&quot;] = true
+
+const cdev = cpu_device()
+const gdev = gpu_device()
+
+function loadmnist(batchsize, train_split)
+    N = 2500
+    dataset = MNIST(; split=:train)
+    imgs = dataset.features[:, :, 1:N]
+    labels_raw = dataset.targets[1:N]
+
+    # Process images into (H,W,C,BS) batches
+    x_data = Float32.(reshape(imgs, size(imgs, 1), size(imgs, 2), 1, size(imgs, 3)))
+    y_data = onehotbatch(labels_raw, 0:9)
+    (x_train, y_train), (x_test, y_test) = splitobs((x_data, y_data); at=train_split)
+
+    return (
+        # Use DataLoader to automatically minibatch and shuffle the data
+        DataLoader(collect.((x_train, y_train)); batchsize, shuffle=true),
+        # Don&#39;t shuffle the test data
+        DataLoader(collect.((x_test, y_test)); batchsize, shuffle=false))
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">loadmnist (generic function with 1 method)</code></pre><p>Now we will define the construct model function. Here we will use Dense Layers and downsample the features using the <code>init</code> kwarg.</p><pre><code class="language-julia hljs">function construct_model(solver; model_type::Symbol=:regdeq)
+    down = Chain(FlattenLayer(), Dense(784 =&gt; 512, gelu))
+
+    # The input layer of the DEQ
+    deq_model = Chain(
+        Parallel(+,
+            Dense(128 =&gt; 64, tanh; use_bias=false, init_weight=truncated_normal(;
+                std=0.01)),   # Reduced dim of `128`
+            Dense(512 =&gt; 64, tanh; use_bias=false, init_weight=truncated_normal(;
+                std=0.01))),  # Original dim of `512`
+        Dense(64 =&gt; 64, tanh; use_bias=false, init_weight=truncated_normal(; std=0.01)),
+        Dense(64 =&gt; 128; use_bias=false, init_weight=truncated_normal(; std=0.01)))       # Return the reduced dim of `128`
+
+    if model_type === :skipdeq
+        init = Dense(512 =&gt; 128, tanh; use_bias=false, init_weight=truncated_normal(;
+            std=0.01))
+    elseif model_type === :regdeq
+        error(&quot;:regdeq is not supported for reduced dim models&quot;)
+    else
+        # This should preferably done via `ChainRulesCore.@ignore_derivatives`. But here
+        # we are only using Zygote so this is fine.
+        init = WrappedFunction(x -&gt; Zygote.@ignore(fill!(similar(x, 128, size(x, 2)), false)))
+    end
+
+    deq = DeepEquilibriumNetwork(deq_model, solver; init, verbose=false,
+        linsolve_kwargs=(; maxiters=10), maxiters=10)
+
+    classifier = Chain(Dense(128 =&gt; 128, gelu), Dense(128, 10))
+
+    model = Chain(; down, deq, classifier)
+
+    # For NVIDIA GPUs this directly generates the parameters on the GPU
+    rng = Random.default_rng() |&gt; gdev
+    ps, st = Lux.setup(rng, model)
+
+    # Warmup the forward and backward passes
+    x = randn(rng, Float32, 28, 28, 1, 2)
+    y = onehotbatch(rand(Random.default_rng(), 0:9, 2), 0:9) |&gt; gdev
+
+    @printf &quot;[%s] warming up forward pass\n&quot; string(now())
+    loss_function(model, ps, st, (x, y))
+    @printf &quot;[%s] warming up backward pass\n&quot; string(now())
+    Zygote.gradient(first ∘ loss_function, model, ps, st, (x, y))
+    @printf &quot;[%s] warmup complete\n&quot; string(now())
+
+    return model, ps, st
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">construct_model (generic function with 1 method)</code></pre><p>Define some helper functions to train the model.</p><pre><code class="language-julia hljs">const logit_cross_entropy = CrossEntropyLoss(; logits=Val(true))
+const mse_loss = MSELoss()
+
+function loss_function(model, ps, st, (x, y))
+    ŷ, st = model(x, ps, st)
+    l1 = logit_cross_entropy(ŷ, y)
+    l2 = mse_loss(st.deq.solution.z_star, st.deq.solution.u0) # Add in some regularization
+    return l1 + eltype(l2)(0.01) * l2, st, (;)
+end
+
+function accuracy(model, ps, st, dataloader)
+    total_correct, total = 0, 0
+    st = Lux.testmode(st)
+    for (x, y) in dataloader
+        target_class = onecold(y)
+        predicted_class = onecold(first(model(x, ps, st)))
+        total_correct += sum(target_class .== predicted_class)
+        total += length(target_class)
+    end
+    return total_correct / total
+end
+
+function train_model(solver, model_type)
+    model, ps, st = construct_model(solver; model_type)
+
+    train_dataloader, test_dataloader = loadmnist(32, 0.8) |&gt; gdev
+
+    tstate = Training.TrainState(model, ps, st, Adam(0.0005))
+
+    @printf &quot;[%s] Training Model: %s with Solver: %s\n&quot; string(now()) model_type nameof(typeof(solver))
+
+    @printf &quot;[%s] Pretrain with unrolling to a depth of 5\n&quot; string(now())
+    @set! tstate.states = Lux.update_state(tstate.states, :fixed_depth, Val(5))
+
+    for _ in 1:2, (i, (x, y)) in enumerate(train_dataloader)
+
+        _, loss,
+        _, tstate = Training.single_train_step!(AutoZygote(), loss_function, (x, y), tstate)
+        if i % 10 == 1
+            @printf &quot;[%s] Pretraining Batch: [%4d/%4d] Loss: %.5f\n&quot; string(now()) i length(train_dataloader) loss
+        end
+    end
+
+    acc = accuracy(model, tstate.parameters, tstate.states, test_dataloader) * 100
+    @printf &quot;[%s] Pretraining complete. Accuracy: %.5f%%\n&quot; string(now()) acc
+
+    @set! tstate.states = Lux.update_state(tstate.states, :fixed_depth, Val(0))
+
+    for epoch in 1:3
+        for (i, (x, y)) in enumerate(train_dataloader)
+            _, loss,
+            _,
+            tstate = Training.single_train_step!(AutoZygote(), loss_function, (x, y), tstate)
+            if i % 10 == 1
+                @printf &quot;[%s] Epoch: [%d/%d] Batch: [%4d/%4d] Loss: %.5f\n&quot; string(now()) epoch 3 i length(train_dataloader) loss
+            end
+        end
+
+        acc = accuracy(model, tstate.parameters, tstate.states, test_dataloader) * 100
+        @printf &quot;[%s] Epoch: [%d/%d] Accuracy: %.5f%%\n&quot; string(now()) epoch 3 acc
+    end
+
+    @printf &quot;[%s] Training complete.\n&quot; string(now())
+
+    return model, ps, tstate.states
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">train_model (generic function with 1 method)</code></pre><p>Now we can train our model. We can&#39;t use <code>:regdeq</code> here currently, but we will support this in the future.</p><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :skipdeq)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr33"><span class="sgr1">┌ Warning: </span></span>`replicate` doesn&#39;t work for `TaskLocalRNG`. Returning the same `TaskLocalRNG`.
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ LuxCore ~/.julia/packages/LuxCore/kQC9S/src/LuxCore.jl:18</span>
+[2026-10-18T02:35:12.220] warming up forward pass
+[2026-10-18T02:36:25.871] warming up backward pass
+[2026-10-18T02:36:53.813] warmup complete
+[2026-10-18T02:36:57.949] Training Model: skipdeq with Solver: GeneralizedFirstOrderAlgorithm
+[2026-10-18T02:36:57.949] Pretrain with unrolling to a depth of 5
+[2026-10-18T02:37:05.760] Pretraining Batch: [   1/  63] Loss: 2.30789
+[2026-10-18T02:37:06.310] Pretraining Batch: [  11/  63] Loss: 2.27440
+[2026-10-18T02:37:06.800] Pretraining Batch: [  21/  63] Loss: 2.13481
+[2026-10-18T02:37:07.653] Pretraining Batch: [  31/  63] Loss: 2.00097
+[2026-10-18T02:37:08.040] Pretraining Batch: [  41/  63] Loss: 1.67922
+[2026-10-18T02:37:08.430] Pretraining Batch: [  51/  63] Loss: 1.49791
+[2026-10-18T02:37:08.812] Pretraining Batch: [  61/  63] Loss: 1.17635
+[2026-10-18T02:37:08.924] Pretraining Batch: [   1/  63] Loss: 1.21755
+[2026-10-18T02:37:09.312] Pretraining Batch: [  11/  63] Loss: 1.13357
+[2026-10-18T02:37:09.700] Pretraining Batch: [  21/  63] Loss: 1.01889
+[2026-10-18T02:37:10.081] Pretraining Batch: [  31/  63] Loss: 1.12836
+[2026-10-18T02:37:10.468] Pretraining Batch: [  41/  63] Loss: 1.02618
+[2026-10-18T02:37:10.852] Pretraining Batch: [  51/  63] Loss: 0.93600
+[2026-10-18T02:37:11.236] Pretraining Batch: [  61/  63] Loss: 0.83405
+[2026-10-18T02:37:11.700] Pretraining complete. Accuracy: 59.00000%
+[2026-10-18T02:37:12.744] Epoch: [1/3] Batch: [   1/  63] Loss: 1.26108
+[2026-10-18T02:37:15.443] Epoch: [1/3] Batch: [  11/  63] Loss: 0.82607
+[2026-10-18T02:37:18.596] Epoch: [1/3] Batch: [  21/  63] Loss: 1.19233
+[2026-10-18T02:37:22.325] Epoch: [1/3] Batch: [  31/  63] Loss: 0.84550
+[2026-10-18T02:37:26.061] Epoch: [1/3] Batch: [  41/  63] Loss: 0.58355
+[2026-10-18T02:37:29.701] Epoch: [1/3] Batch: [  51/  63] Loss: 0.68388
+[2026-10-18T02:37:33.131] Epoch: [1/3] Batch: [  61/  63] Loss: 1.13450
+[2026-10-18T02:37:38.350] Epoch: [1/3] Accuracy: 73.20000%
+[2026-10-18T02:37:38.652] Epoch: [2/3] Batch: [   1/  63] Loss: 0.59391
+[2026-10-18T02:37:42.150] Epoch: [2/3] Batch: [  11/  63] Loss: 0.66959
+[2026-10-18T02:37:45.606] Epoch: [2/3] Batch: [  21/  63] Loss: 0.88063
+[2026-10-18T02:37:49.300] Epoch: [2/3] Batch: [  31/  63] Loss: 0.77377
+[2026-10-18T02:37:53.019] Epoch: [2/3] Batch: [  41/  63] Loss: 0.79592
+[2026-10-18T02:37:56.668] Epoch: [2/3] Batch: [  51/  63] Loss: 0.67250
+[2026-10-18T02:38:00.199] Epoch: [2/3] Batch: [  61/  63] Loss: 0.52746
+[2026-10-18T02:38:05.386] Epoch: [2/3] Accuracy: 76.60000%
+[2026-10-18T02:38:05.728] Epoch: [3/3] Batch: [   1/  63] Loss: 0.82243
+[2026-10-18T02:38:09.304] Epoch: [3/3] Batch: [  11/  63] Loss: 1.01090
+[2026-10-18T02:38:12.834] Epoch: [3/3] Batch: [  21/  63] Loss: 0.49601
+[2026-10-18T02:38:16.763] Epoch: [3/3] Batch: [  31/  63] Loss: 0.41765
+[2026-10-18T02:38:20.350] Epoch: [3/3] Batch: [  41/  63] Loss: 0.54098
+[2026-10-18T02:38:23.804] Epoch: [3/3] Batch: [  51/  63] Loss: 0.73165
+[2026-10-18T02:38:27.341] Epoch: [3/3] Batch: [  61/  63] Loss: 0.74480
+[2026-10-18T02:38:32.887] Epoch: [3/3] Accuracy: 79.80000%
+[2026-10-18T02:38:32.887] Training complete.</code></pre><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :deq)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr33"><span class="sgr1">┌ Warning: </span></span>`replicate` doesn&#39;t work for `TaskLocalRNG`. Returning the same `TaskLocalRNG`.
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ LuxCore ~/.julia/packages/LuxCore/kQC9S/src/LuxCore.jl:18</span>
+[2026-10-18T02:38:32.954] warming up forward pass
+[2026-10-18T02:38:33.076] warming up backward pass
+[2026-10-18T02:38:37.066] warmup complete
+[2026-10-18T02:38:41.096] Training Model: deq with Solver: GeneralizedFirstOrderAlgorithm
+[2026-10-18T02:38:41.097] Pretrain with unrolling to a depth of 5
+[2026-10-18T02:38:46.164] Pretraining Batch: [   1/  63] Loss: 2.31406
+[2026-10-18T02:38:46.472] Pretraining Batch: [  11/  63] Loss: 2.29624
+[2026-10-18T02:38:46.848] Pretraining Batch: [  21/  63] Loss: 2.23475
+[2026-10-18T02:38:47.178] Pretraining Batch: [  31/  63] Loss: 1.87939
+[2026-10-18T02:38:47.491] Pretraining Batch: [  41/  63] Loss: 1.79702
+[2026-10-18T02:38:47.805] Pretraining Batch: [  51/  63] Loss: 1.74227
+[2026-10-18T02:38:48.116] Pretraining Batch: [  61/  63] Loss: 1.38074
+[2026-10-18T02:38:48.207] Pretraining Batch: [   1/  63] Loss: 1.38137
+[2026-10-18T02:38:48.523] Pretraining Batch: [  11/  63] Loss: 1.52187
+[2026-10-18T02:38:48.830] Pretraining Batch: [  21/  63] Loss: 1.48214
+[2026-10-18T02:38:49.142] Pretraining Batch: [  31/  63] Loss: 1.27966
+[2026-10-18T02:38:49.454] Pretraining Batch: [  41/  63] Loss: 1.11059
+[2026-10-18T02:38:49.762] Pretraining Batch: [  51/  63] Loss: 0.98953
+[2026-10-18T02:38:50.073] Pretraining Batch: [  61/  63] Loss: 0.93753
+[2026-10-18T02:38:50.284] Pretraining complete. Accuracy: 70.80000%
+[2026-10-18T02:38:50.898] Epoch: [1/3] Batch: [   1/  63] Loss: 1.06688
+[2026-10-18T02:38:53.110] Epoch: [1/3] Batch: [  11/  63] Loss: 0.75517
+[2026-10-18T02:38:55.444] Epoch: [1/3] Batch: [  21/  63] Loss: 0.83209
+[2026-10-18T02:38:58.139] Epoch: [1/3] Batch: [  31/  63] Loss: 0.64836
+[2026-10-18T02:39:00.397] Epoch: [1/3] Batch: [  41/  63] Loss: 1.16600
+[2026-10-18T02:39:02.786] Epoch: [1/3] Batch: [  51/  63] Loss: 0.73190
+[2026-10-18T02:39:05.235] Epoch: [1/3] Batch: [  61/  63] Loss: 0.77509
+[2026-10-18T02:39:08.679] Epoch: [1/3] Accuracy: 77.40000%
+[2026-10-18T02:39:08.943] Epoch: [2/3] Batch: [   1/  63] Loss: 0.60306
+[2026-10-18T02:39:11.216] Epoch: [2/3] Batch: [  11/  63] Loss: 0.54423
+[2026-10-18T02:39:13.610] Epoch: [2/3] Batch: [  21/  63] Loss: 0.79896
+[2026-10-18T02:39:16.161] Epoch: [2/3] Batch: [  31/  63] Loss: 0.30399
+[2026-10-18T02:39:18.786] Epoch: [2/3] Batch: [  41/  63] Loss: 0.48096
+[2026-10-18T02:39:21.410] Epoch: [2/3] Batch: [  51/  63] Loss: 0.39566
+[2026-10-18T02:39:24.048] Epoch: [2/3] Batch: [  61/  63] Loss: 0.81389
+[2026-10-18T02:39:28.021] Epoch: [2/3] Accuracy: 79.60000%
+[2026-10-18T02:39:28.293] Epoch: [3/3] Batch: [   1/  63] Loss: 0.54495
+[2026-10-18T02:39:30.960] Epoch: [3/3] Batch: [  11/  63] Loss: 0.42099
+[2026-10-18T02:39:33.558] Epoch: [3/3] Batch: [  21/  63] Loss: 0.30391
+[2026-10-18T02:39:36.168] Epoch: [3/3] Batch: [  31/  63] Loss: 0.27747
+[2026-10-18T02:39:38.799] Epoch: [3/3] Batch: [  41/  63] Loss: 0.54108
+[2026-10-18T02:39:41.442] Epoch: [3/3] Batch: [  51/  63] Loss: 0.47893
+[2026-10-18T02:39:44.069] Epoch: [3/3] Batch: [  61/  63] Loss: 0.24021
+[2026-10-18T02:39:48.037] Epoch: [3/3] Accuracy: 86.60000%
+[2026-10-18T02:39:48.037] Training complete.</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../basic_mnist_deq/">« Training a Simple MNIST Classifier using Deep Equilibrium Models</a><a class="docs-footer-nextpage" href="../../api/">API References »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Sunday 18 October 2026 02:40">Sunday 18 October 2026</span>. Using Julia version 1.13.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

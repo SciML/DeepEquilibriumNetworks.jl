@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Training a Simple MNIST Classifier using Deep Equilibrium Models · Deep Equilibrium Networks</title><meta name="title" content="Training a Simple MNIST Classifier using Deep Equilibrium Models · Deep Equilibrium Networks"/><meta property="og:title" content="Training a Simple MNIST Classifier using Deep Equilibrium Models · Deep Equilibrium Networks"/><meta property="twitter:title" content="Training a Simple MNIST Classifier using Deep Equilibrium Models · Deep Equilibrium Networks"/><meta name="description" content="Documentation for Deep Equilibrium Networks."/><meta property="og:description" content="Documentation for Deep Equilibrium Networks."/><meta property="twitter:description" content="Documentation for Deep Equilibrium Networks."/><meta property="og:url" content="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/tutorials/basic_mnist_deq/"/><meta property="twitter:url" content="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/tutorials/basic_mnist_deq/"/><link rel="canonical" href="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/tutorials/basic_mnist_deq/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/documentercitations/citations-hover.css" rel="stylesheet" type="text/css"/><link href="../../assets/documentercitations/citations.css" rel="stylesheet" type="text/css"/><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/><script src="../../assets/documentercitations/citations-data.js"></script><script src="../../assets/documentercitations/citations-hover.js"></script><script src="../../assets/documentercitations/citations-backlinks.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="Deep Equilibrium Networks logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Deep Equilibrium Networks</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li class="is-active"><a class="tocitem" href>Training a Simple MNIST Classifier using Deep Equilibrium Models</a></li><li><a class="tocitem" href="../reduced_dim_deq/">Modelling Equilibrium Models with Reduced State Size</a></li></ul></li><li><a class="tocitem" href="../../api/">API References</a></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Training a Simple MNIST Classifier using Deep Equilibrium Models</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Training a Simple MNIST Classifier using Deep Equilibrium Models</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/SciML/DeepEquilibriumNetworks.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/SciML/DeepEquilibriumNetworks.jl/blob/main/docs/src/tutorials/basic_mnist_deq.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Training-a-Simple-MNIST-Classifier-using-Deep-Equilibrium-Models"><a class="docs-heading-anchor" href="#Training-a-Simple-MNIST-Classifier-using-Deep-Equilibrium-Models">Training a Simple MNIST Classifier using Deep Equilibrium Models</a><a id="Training-a-Simple-MNIST-Classifier-using-Deep-Equilibrium-Models-1"></a><a class="docs-heading-anchor-permalink" href="#Training-a-Simple-MNIST-Classifier-using-Deep-Equilibrium-Models" title="Permalink"></a></h1><p>We will train a simple Deep Equilibrium Model on MNIST. First we load a few packages.</p><pre><code class="language-julia hljs">using DeepEquilibriumNetworks, SciMLSensitivity, Lux, NonlinearSolve, OrdinaryDiffEq,
+      Random, Optimisers, Zygote, LinearSolve, Dates, Printf, Setfield, OneHotArrays
+using OrdinaryDiffEqAdamsBashforthMoulton: VCAB3
+using MLDatasets: MNIST
+using MLUtils: DataLoader, splitobs
+using LuxCUDA # For NVIDIA GPU support
+
+CUDA.allowscalar(false)
+ENV[&quot;DATADEPS_ALWAYS_ACCEPT&quot;] = true</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><p>Setup device functions from Lux. See <a href="https://lux.csail.mit.edu/dev/manual/gpu_management">GPU Management</a> for more details.</p><pre><code class="language-julia hljs">const cdev = cpu_device()
+const gdev = gpu_device()</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(::MLDataDevices.CPUDevice{Missing}) (generic function with 1 method)</code></pre><p>We can now construct our dataloader. We are using only limited part of the data for demonstration.</p><pre><code class="language-julia hljs">function loadmnist(batchsize, train_split)
+    N = 2500
+    dataset = MNIST(; split=:train)
+    imgs = dataset.features[:, :, 1:N]
+    labels_raw = dataset.targets[1:N]
+
+    # Process images into (H,W,C,BS) batches
+    x_data = Float32.(reshape(imgs, size(imgs, 1), size(imgs, 2), 1, size(imgs, 3)))
+    y_data = onehotbatch(labels_raw, 0:9)
+    (x_train, y_train), (x_test, y_test) = splitobs((x_data, y_data); at=train_split)
+
+    return (
+        # Use DataLoader to automatically minibatch and shuffle the data
+        DataLoader(collect.((x_train, y_train)); batchsize, shuffle=true),
+        # Don&#39;t shuffle the test data
+        DataLoader(collect.((x_test, y_test)); batchsize, shuffle=false))
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">loadmnist (generic function with 1 method)</code></pre><p>Construct the Lux Neural Network containing a DEQ layer.</p><pre><code class="language-julia hljs">function construct_model(solver; model_type::Symbol=:deq)
+    down = Chain(
+        Conv((3, 3), 1 =&gt; 64, gelu; stride=1), GroupNorm(64, 64), Conv((4, 4), 64 =&gt; 64; stride=2, pad=1))
+
+    # The input layer of the DEQ
+    deq_model = Chain(
+        Parallel(+,
+            Conv((3, 3), 64 =&gt; 64, tanh; stride=1, pad=SamePad(),
+                init_weight=truncated_normal(; std=0.01), use_bias=false),
+            Conv((3, 3), 64 =&gt; 64, tanh; stride=1, pad=SamePad(),
+                init_weight=truncated_normal(; std=0.01), use_bias=false)),
+        Conv((3, 3), 64 =&gt; 64, tanh; stride=1, pad=SamePad(),
+            init_weight=truncated_normal(; std=0.01), use_bias=false))
+
+    if model_type === :skipdeq
+        init = Conv((3, 3), 64 =&gt; 64, gelu; stride=1, pad=SamePad())
+    elseif model_type === :regdeq
+        init = nothing
+    else
+        init = missing
+    end
+
+    deq = DeepEquilibriumNetwork(deq_model, solver; init, verbose=false,
+        linsolve_kwargs=(; maxiters=10), maxiters=10)
+
+    classifier = Chain(GroupNorm(64, 64, relu), GlobalMeanPool(), FlattenLayer(), Dense(64, 10))
+
+    model = Chain(; down, deq, classifier)
+
+    # For NVIDIA GPUs this directly generates the parameters on the GPU
+    rng = Random.default_rng() |&gt; gdev
+    ps, st = Lux.setup(rng, model)
+
+    # Warmup the forward and backward passes
+    x = randn(rng, Float32, 28, 28, 1, 2)
+    y = onehotbatch(rand(Random.default_rng(), 0:9, 2), 0:9) |&gt; gdev
+
+    @printf &quot;[%s] warming up forward pass\n&quot; string(now())
+    loss_function(model, ps, st, (x, y))
+    @printf &quot;[%s] warming up backward pass\n&quot; string(now())
+    Zygote.gradient(first ∘ loss_function, model, ps, st, (x, y))
+    @printf &quot;[%s] warmup complete\n&quot; string(now())
+
+    return model, ps, st
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">construct_model (generic function with 1 method)</code></pre><p>Define some helper functions to train the model.</p><pre><code class="language-julia hljs">const logit_cross_entropy = CrossEntropyLoss(; logits=Val(true))
+const mse_loss = MSELoss()
+
+function loss_function(model, ps, st, (x, y))
+    ŷ, st = model(x, ps, st)
+    l1 = logit_cross_entropy(ŷ, y)
+    l2 = mse_loss(st.deq.solution.z_star, st.deq.solution.u0) # Add in some regularization
+    return l1 + eltype(l2)(0.01) * l2, st, (;)
+end
+
+function accuracy(model, ps, st, dataloader)
+    total_correct, total = 0, 0
+    st = Lux.testmode(st)
+    for (x, y) in dataloader
+        target_class = onecold(y)
+        predicted_class = onecold(first(model(x, ps, st)))
+        total_correct += sum(target_class .== predicted_class)
+        total += length(target_class)
+    end
+    return total_correct / total
+end
+
+function train_model(solver, model_type)
+    model, ps, st = construct_model(solver; model_type)
+
+    train_dataloader, test_dataloader = loadmnist(32, 0.8) |&gt; gdev
+
+    tstate = Training.TrainState(model, ps, st, Adam(0.0005))
+
+    @printf &quot;[%s] Training Model: %s with Solver: %s\n&quot; string(now()) model_type nameof(typeof(solver))
+
+    @printf &quot;[%s] Pretrain with unrolling to a depth of 5\n&quot; string(now())
+    @set! tstate.states = Lux.update_state(tstate.states, :fixed_depth, Val(5))
+
+    for _ in 1:2, (i, (x, y)) in enumerate(train_dataloader)
+
+        _, loss,
+        _, tstate = Training.single_train_step!(AutoZygote(), loss_function, (x, y), tstate)
+        if i % 10 == 1
+            @printf &quot;[%s] Pretraining Batch: [%4d/%4d] Loss: %.5f\n&quot; string(now()) i length(train_dataloader) loss
+        end
+    end
+
+    acc = accuracy(model, tstate.parameters, tstate.states, test_dataloader) * 100
+    @printf &quot;[%s] Pretraining complete. Accuracy: %.5f%%\n&quot; string(now()) acc
+
+    @set! tstate.states = Lux.update_state(tstate.states, :fixed_depth, Val(0))
+
+    for epoch in 1:3
+        for (i, (x, y)) in enumerate(train_dataloader)
+            _, loss,
+            _,
+            tstate = Training.single_train_step!(AutoZygote(), loss_function, (x, y), tstate)
+            if i % 10 == 1
+                @printf &quot;[%s] Epoch: [%d/%d] Batch: [%4d/%4d] Loss: %.5f\n&quot; string(now()) epoch 3 i length(train_dataloader) loss
+            end
+        end
+
+        acc = accuracy(model, tstate.parameters, tstate.states, test_dataloader) * 100
+        @printf &quot;[%s] Epoch: [%d/%d] Accuracy: %.5f%%\n&quot; string(now()) epoch 3 acc
+    end
+
+    @printf &quot;[%s] Training complete.\n&quot; string(now())
+
+    return model, ps, tstate.states
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">train_model (generic function with 1 method)</code></pre><p>Now we can train our model. First we will train a Discrete DEQ, which effectively means pass in a root finding algorithm. Typically most packages lack good nonlinear solvers, and end up using solvers like <code>Broyden</code>, but we can simply slap in any of the fancy solvers from NonlinearSolve.jl. Here we will use Newton-Krylov Method:</p><pre><code class="language-julia hljs">train_model(NewtonRaphson(; linsolve=KrylovJL_GMRES()), :regdeq);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr33"><span class="sgr1">┌ Warning: </span></span>`replicate` doesn&#39;t work for `TaskLocalRNG`. Returning the same `TaskLocalRNG`.
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ LuxCore ~/.julia/packages/LuxCore/kQC9S/src/LuxCore.jl:18</span>
+[2026-08-28T09:26:58.756] warming up forward pass
+[2026-08-28T09:28:47.094] warming up backward pass
+[2026-08-28T09:29:51.516] warmup complete
+[2026-08-28T09:30:10.212] Training Model: regdeq with Solver: GeneralizedFirstOrderAlgorithm
+[2026-08-28T09:30:10.324] Pretrain with unrolling to a depth of 5
+[2026-08-28T09:30:45.369] Pretraining Batch: [   1/  63] Loss: 2.42211
+[2026-08-28T09:31:49.632] Pretraining Batch: [  11/  63] Loss: 2.24524
+[2026-08-28T09:32:55.167] Pretraining Batch: [  21/  63] Loss: 2.26201
+[2026-08-28T09:33:57.911] Pretraining Batch: [  31/  63] Loss: 2.22895
+[2026-08-28T09:35:00.950] Pretraining Batch: [  41/  63] Loss: 2.24823
+[2026-08-28T09:36:04.098] Pretraining Batch: [  51/  63] Loss: 2.18623
+[2026-08-28T09:37:07.176] Pretraining Batch: [  61/  63] Loss: 2.16347
+[2026-08-28T09:37:23.147] Pretraining Batch: [   1/  63] Loss: 2.16879
+[2026-08-28T09:38:28.776] Pretraining Batch: [  11/  63] Loss: 2.17702
+[2026-08-28T09:39:36.159] Pretraining Batch: [  21/  63] Loss: 2.12754
+[2026-08-28T09:40:41.257] Pretraining Batch: [  31/  63] Loss: 2.13285
+[2026-08-28T09:41:47.412] Pretraining Batch: [  41/  63] Loss: 2.14363
+[2026-08-28T09:42:52.815] Pretraining Batch: [  51/  63] Loss: 2.15886
+[2026-08-28T09:43:55.414] Pretraining Batch: [  61/  63] Loss: 2.08223
+[2026-08-28T09:45:04.068] Pretraining complete. Accuracy: 68.40000%
+[2026-08-28T09:45:21.196] Epoch: [1/3] Batch: [   1/  63] Loss: 2.12098
+[2026-08-28T09:47:35.778] Epoch: [1/3] Batch: [  11/  63] Loss: 2.11916
+[2026-08-28T09:49:52.135] Epoch: [1/3] Batch: [  21/  63] Loss: 2.06600
+[2026-08-28T09:52:05.045] Epoch: [1/3] Batch: [  31/  63] Loss: 2.08842
+[2026-08-28T09:54:17.192] Epoch: [1/3] Batch: [  41/  63] Loss: 2.07925
+[2026-08-28T09:56:28.956] Epoch: [1/3] Batch: [  51/  63] Loss: 2.04427
+[2026-08-28T09:58:39.932] Epoch: [1/3] Batch: [  61/  63] Loss: 2.06851
+[2026-08-28T10:00:53.218] Epoch: [1/3] Accuracy: 57.00000%
+[2026-08-28T10:01:05.855] Epoch: [2/3] Batch: [   1/  63] Loss: 2.05135
+[2026-08-28T10:03:33.449] Epoch: [2/3] Batch: [  11/  63] Loss: 2.02439
+[2026-08-28T10:06:19.745] Epoch: [2/3] Batch: [  21/  63] Loss: 2.05830
+[2026-08-28T10:09:26.838] Epoch: [2/3] Batch: [  31/  63] Loss: 2.04394
+[2026-08-28T10:12:31.172] Epoch: [2/3] Batch: [  41/  63] Loss: 2.05025
+[2026-08-28T10:15:51.892] Epoch: [2/3] Batch: [  51/  63] Loss: 1.99386
+[2026-08-28T10:19:26.685] Epoch: [2/3] Batch: [  61/  63] Loss: 2.05500
+[2026-08-28T10:23:20.465] Epoch: [2/3] Accuracy: 72.00000%
+[2026-08-28T10:23:40.314] Epoch: [3/3] Batch: [   1/  63] Loss: 1.98599
+[2026-08-28T10:27:22.034] Epoch: [3/3] Batch: [  11/  63] Loss: 2.01676
+[2026-08-28T10:31:23.026] Epoch: [3/3] Batch: [  21/  63] Loss: 1.92939
+[2026-08-28T10:35:26.642] Epoch: [3/3] Batch: [  31/  63] Loss: 1.99691
+[2026-08-28T10:39:24.790] Epoch: [3/3] Batch: [  41/  63] Loss: 1.93629
+[2026-08-28T10:43:16.760] Epoch: [3/3] Batch: [  51/  63] Loss: 1.94287
+[2026-08-28T10:47:35.312] Epoch: [3/3] Batch: [  61/  63] Loss: 1.96632
+[2026-08-28T10:52:19.069] Epoch: [3/3] Accuracy: 73.80000%
+[2026-08-28T10:52:19.069] Training complete.</code></pre><p>We can also train a continuous DEQ by passing in an ODE solver. Here we will use <code>VCAB3()</code> which tend to be quite fast for continuous Neural Network problems.</p><pre><code class="language-julia hljs">train_model(VCAB3(), :deq);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr33"><span class="sgr1">┌ Warning: </span></span>`replicate` doesn&#39;t work for `TaskLocalRNG`. Returning the same `TaskLocalRNG`.
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ LuxCore ~/.julia/packages/LuxCore/kQC9S/src/LuxCore.jl:18</span>
+[2026-08-28T10:52:19.427] warming up forward pass
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T10:52:25.132] warming up backward pass
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T10:52:37.780] warmup complete
+[2026-08-28T10:52:41.877] Training Model: deq with Solver: VCAB3
+[2026-08-28T10:52:41.877] Pretrain with unrolling to a depth of 5
+[2026-08-28T10:52:57.114] Pretraining Batch: [   1/  63] Loss: 2.58222
+[2026-08-28T10:53:45.568] Pretraining Batch: [  11/  63] Loss: 2.33179
+[2026-08-28T10:54:34.017] Pretraining Batch: [  21/  63] Loss: 2.25715
+[2026-08-28T10:55:22.387] Pretraining Batch: [  31/  63] Loss: 2.21116
+[2026-08-28T10:56:10.258] Pretraining Batch: [  41/  63] Loss: 2.14193
+[2026-08-28T10:56:58.328] Pretraining Batch: [  51/  63] Loss: 2.20757
+[2026-08-28T10:57:47.383] Pretraining Batch: [  61/  63] Loss: 2.18356
+[2026-08-28T10:57:59.186] Pretraining Batch: [   1/  63] Loss: 2.19042
+[2026-08-28T10:58:49.222] Pretraining Batch: [  11/  63] Loss: 2.12361
+[2026-08-28T10:59:37.069] Pretraining Batch: [  21/  63] Loss: 2.17202
+[2026-08-28T11:00:26.271] Pretraining Batch: [  31/  63] Loss: 2.10671
+[2026-08-28T11:01:15.529] Pretraining Batch: [  41/  63] Loss: 2.09228
+[2026-08-28T11:02:04.563] Pretraining Batch: [  51/  63] Loss: 2.12152
+[2026-08-28T11:02:53.833] Pretraining Batch: [  61/  63] Loss: 2.09124
+[2026-08-28T11:03:49.019] Pretraining complete. Accuracy: 51.80000%
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:04:04.839] Epoch: [1/3] Batch: [   1/  63] Loss: 2.10402
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:06:44.883] Epoch: [1/3] Batch: [  11/  63] Loss: 2.09180
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:09:27.872] Epoch: [1/3] Batch: [  21/  63] Loss: 2.08328
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:12:08.749] Epoch: [1/3] Batch: [  31/  63] Loss: 2.06470
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:14:47.887] Epoch: [1/3] Batch: [  41/  63] Loss: 2.05922
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:17:23.688] Epoch: [1/3] Batch: [  51/  63] Loss: 2.08002
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:20:11.479] Epoch: [1/3] Batch: [  61/  63] Loss: 2.01076
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:23:04.935] Epoch: [1/3] Accuracy: 70.20000%
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:23:21.238] Epoch: [2/3] Batch: [   1/  63] Loss: 2.10700
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:26:09.901] Epoch: [2/3] Batch: [  11/  63] Loss: 2.07608
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:29:03.118] Epoch: [2/3] Batch: [  21/  63] Loss: 2.04369
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:32:07.842] Epoch: [2/3] Batch: [  31/  63] Loss: 2.03044
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:35:38.271] Epoch: [2/3] Batch: [  41/  63] Loss: 2.06136
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:39:09.142] Epoch: [2/3] Batch: [  51/  63] Loss: 2.04835
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:45:32.432] Epoch: [2/3] Batch: [  61/  63] Loss: 2.04651
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:50:19.188] Epoch: [2/3] Accuracy: 58.20000%
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:51:14.802] Epoch: [3/3] Batch: [   1/  63] Loss: 2.12507
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:55:44.276] Epoch: [3/3] Batch: [  11/  63] Loss: 2.04197
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T11:59:23.033] Epoch: [3/3] Batch: [  21/  63] Loss: 2.04949
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T12:03:05.602] Epoch: [3/3] Batch: [  31/  63] Loss: 2.01205
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T12:06:54.568] Epoch: [3/3] Batch: [  41/  63] Loss: 1.94107
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T12:10:34.561] Epoch: [3/3] Batch: [  51/  63] Loss: 1.91759
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T12:14:17.244] Epoch: [3/3] Batch: [  61/  63] Loss: 1.95566
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+<span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Verbosity toggle: max_iters
+<span class="sgr33"><span class="sgr1">│ </span></span> Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+<span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ DiffEqBase ~/.julia/packages/DiffEqBase/iMnPY/src/check_error.jl:20</span>
+[2026-08-28T12:17:24.330] Epoch: [3/3] Accuracy: 71.00000%
+[2026-08-28T12:17:24.330] Training complete.</code></pre><p>This code is setup to allow playing around with different DEQ models. Try modifying the <code>model_type</code> argument to <code>train_model</code> to <code>:skipdeq</code> or <code>:deq</code> to see how the model behaves. You can also try different solvers from NonlinearSolve.jl and OrdinaryDiffEq.jl! Even 3rd party solvers from Sundials.jl will work, just remember to use CPU for those.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../reduced_dim_deq/">Modelling Equilibrium Models with Reduced State Size »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Friday 28 August 2026 12:24">Friday 28 August 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

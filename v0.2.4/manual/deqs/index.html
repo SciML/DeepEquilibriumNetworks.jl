@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>DEQ Layers · Fast Deep Equilibrium Networks</title><script data-outdated-warner src="../../assets/warner.js"></script><link rel="canonical" href="https://docs.sciml.ai/DeepEquilibriumNetworks/stable/manual/deqs/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="Fast Deep Equilibrium Networks logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Fast Deep Equilibrium Networks</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../solvers/">Dynamical Systems</a></li><li><a class="tocitem" href="../nlsolve/">Non Linear Solvers</a></li><li class="is-active"><a class="tocitem" href>DEQ Layers</a><ul class="internal"><li><a class="tocitem" href="#Standard-Models"><span>Standard Models</span></a></li><li><a class="tocitem" href="#MultiScale-Models"><span>MultiScale Models</span></a></li></ul></li><li><a class="tocitem" href="../misc/">Miscellaneous</a></li></ul></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Manual</a></li><li class="is-active"><a href>DEQ Layers</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>DEQ Layers</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/SciML/DeepEquilibriumNetworks.jl/blob/main/docs/src/manual/deqs.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Deep-Equilibrium-Models"><a class="docs-heading-anchor" href="#Deep-Equilibrium-Models">Deep Equilibrium Models</a><a id="Deep-Equilibrium-Models-1"></a><a class="docs-heading-anchor-permalink" href="#Deep-Equilibrium-Models" title="Permalink"></a></h1><h2 id="Standard-Models"><a class="docs-heading-anchor" href="#Standard-Models">Standard Models</a><a id="Standard-Models-1"></a><a class="docs-heading-anchor-permalink" href="#Standard-Models" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="DeepEquilibriumNetworks.DeepEquilibriumNetwork" href="#DeepEquilibriumNetworks.DeepEquilibriumNetwork"><code>DeepEquilibriumNetworks.DeepEquilibriumNetwork</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">DeepEquilibriumNetwork(model, solver; jacobian_regularization::Bool=false,
+                       sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10), kwargs...)</code></pre><p>Deep Equilibrium Network as proposed in <a href="../../references/#baideep2019">Shaojie Bai, J. Zico Kolter, Vladlen Koltun (2019)</a>.</p><p><strong>Arguments</strong></p><ul><li><code>model</code>:<code>Lux</code> Neural Network.</li><li><code>solver</code>: Solver for the optimization problem (See: <a href="../solvers/#DeepEquilibriumNetworks.ContinuousDEQSolver"><code>ContinuousDEQSolver</code></a> &amp; <a href="../solvers/#DeepEquilibriumNetworks.DiscreteDEQSolver"><code>DiscreteDEQSolver</code></a>).</li><li><code>jacobian_regularization</code>: If true, Jacobian Loss is computed and stored in the <a href="../misc/#DeepEquilibriumNetworks.DeepEquilibriumSolution"><code>DeepEquilibriumSolution</code></a>.</li><li><code>sensealg</code>: See <a href="../misc/#DeepEquilibriumNetworks.DeepEquilibriumAdjoint"><code>DeepEquilibriumAdjoint</code></a>.</li><li><code>kwargs</code>: Additional Parameters that are directly passed to <code>SciMLBase.solve</code>.</li></ul><p><strong>Example</strong></p><pre><code class="language- hljs">import DeepEquilibriumNetworks as DEQs
+import Lux
+import Random
+import OrdinaryDiffEq
+
+model = DEQs.DeepEquilibriumNetwork(Lux.Parallel(+, Lux.Dense(2, 2; bias=false),
+                                                 Lux.Dense(2, 2; bias=false)),
+                                    DEQs.ContinuousDEQSolver(OrdinaryDiffEq.VCABM3();
+                                                             abstol=0.01f0, reltol=0.01f0))
+
+rng = Random.default_rng()
+ps, st = Lux.setup(rng, model)
+
+model(rand(rng, Float32, 2, 1), ps, st)</code></pre><p>See also: <a href="#DeepEquilibriumNetworks.SkipDeepEquilibriumNetwork"><code>SkipDeepEquilibriumNetwork</code></a>, <a href="#DeepEquilibriumNetworks.MultiScaleDeepEquilibriumNetwork"><code>MultiScaleDeepEquilibriumNetwork</code></a>, <a href="#DeepEquilibriumNetworks.MultiScaleSkipDeepEquilibriumNetwork"><code>MultiScaleSkipDeepEquilibriumNetwork</code></a>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/SciML/DeepEquilibriumNetworks.jl/blob/6f5a6b7596c13befbad2c0071d6050ffe6370a66/src/layers/deq.jl#L5-L42">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="DeepEquilibriumNetworks.SkipDeepEquilibriumNetwork" href="#DeepEquilibriumNetworks.SkipDeepEquilibriumNetwork"><code>DeepEquilibriumNetworks.SkipDeepEquilibriumNetwork</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">SkipDeepEquilibriumNetwork(model, shortcut, solver; jacobian_regularization::Bool=false,
+                           sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10), kwargs...)</code></pre><p>Skip Deep Equilibrium Network as proposed in <a href="../../references/#pal2022mixing">Avik Pal, Alan Edelman, Christopher Rackauckas (2022)</a></p><p><strong>Arguments</strong></p><ul><li><code>model</code>: Neural Network.</li><li><code>shortcut</code>: Shortcut for the network (pass <code>nothing</code> for SkipDEQV2).</li><li><code>solver</code>: Solver for the optimization problem (See: <a href="../solvers/#DeepEquilibriumNetworks.ContinuousDEQSolver"><code>ContinuousDEQSolver</code></a> &amp; <a href="../solvers/#DeepEquilibriumNetworks.DiscreteDEQSolver"><code>DiscreteDEQSolver</code></a>).</li><li><code>jacobian_regularization</code>: If true, Jacobian Loss is computed and stored in the <a href="../misc/#DeepEquilibriumNetworks.DeepEquilibriumSolution"><code>DeepEquilibriumSolution</code></a>.</li><li><code>sensealg</code>: See <a href="../misc/#DeepEquilibriumNetworks.DeepEquilibriumAdjoint"><code>DeepEquilibriumAdjoint</code></a>.</li><li><code>kwargs</code>: Additional Parameters that are directly passed to <code>SciMLBase.solve</code>.</li></ul><p><strong>Example</strong></p><pre><code class="language- hljs">import DeepEquilibriumNetworks as DEQs
+import Lux
+import Random
+import OrdinaryDiffEq
+
+## SkipDEQ
+model = DEQs.SkipDeepEquilibriumNetwork(Lux.Parallel(+, Lux.Dense(2, 2; bias=false),
+                                                     Lux.Dense(2, 2; bias=false)),
+                                        Lux.Dense(2, 2),
+                                        DEQs.ContinuousDEQSolver(OrdinaryDiffEq.VCABM3();
+                                                                 abstol=0.01f0,
+                                                                 reltol=0.01f0))
+
+rng = Random.default_rng()
+ps, st = Lux.setup(rng, model)
+
+model(rand(rng, Float32, 2, 1), ps, st)
+
+## SkipDEQV2
+model = DEQs.SkipDeepEquilibriumNetwork(Lux.Parallel(+, Lux.Dense(2, 2; bias=false),
+                                                     Lux.Dense(2, 2; bias=false)), nothing,
+                                        DEQs.ContinuousDEQSolver(OrdinaryDiffEq.VCABM3();
+                                                                 abstol=0.01f0,
+                                                                 reltol=0.01f0))
+
+rng = Random.default_rng()
+ps, st = Lux.setup(rng, model)
+
+model(rand(rng, Float32, 2, 1), ps, st)</code></pre><p>See also: <a href="#DeepEquilibriumNetworks.DeepEquilibriumNetwork"><code>DeepEquilibriumNetwork</code></a>, <a href="#DeepEquilibriumNetworks.MultiScaleDeepEquilibriumNetwork"><code>MultiScaleDeepEquilibriumNetwork</code></a>, <a href="#DeepEquilibriumNetworks.MultiScaleSkipDeepEquilibriumNetwork"><code>MultiScaleSkipDeepEquilibriumNetwork</code></a></p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/SciML/DeepEquilibriumNetworks.jl/blob/6f5a6b7596c13befbad2c0071d6050ffe6370a66/src/layers/deq.jl#L110-L163">source</a></section></article><h2 id="MultiScale-Models"><a class="docs-heading-anchor" href="#MultiScale-Models">MultiScale Models</a><a id="MultiScale-Models-1"></a><a class="docs-heading-anchor-permalink" href="#MultiScale-Models" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="DeepEquilibriumNetworks.MultiScaleDeepEquilibriumNetwork" href="#DeepEquilibriumNetworks.MultiScaleDeepEquilibriumNetwork"><code>DeepEquilibriumNetworks.MultiScaleDeepEquilibriumNetwork</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">MultiScaleDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
+                                 post_fuse_layer::Union{Nothing,Tuple}, solver, scales;
+                                 sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
+                                 kwargs...)</code></pre><p>Multiscale Deep Equilibrium Network as proposed in <a href="../../references/#baimultiscale2020">Shaojie Bai, Vladlen Koltun, J. Zico Kolter (2020)</a></p><p><strong>Arguments</strong></p><ul><li><code>main_layers</code>: Tuple of Neural Networks. The first network needs to take a tuple of 2 arrays, the other ones only take 1 input.</li><li><code>mapping_layers</code>: Matrix of Neural Networks. The <span>$(i, j)^{th}$</span> network takes the output of <span>$i^{th}$</span> <code>main_layer</code> and passes it to the <span>$j^{th}$</span> <code>main_layer</code>.</li><li><code>post_fuse_layer</code>: Tuple of Neural Networks. Each of the scales are passed through this layer.</li><li><code>solver</code>: Solver for the optimization problem (See: <a href="../solvers/#DeepEquilibriumNetworks.ContinuousDEQSolver"><code>ContinuousDEQSolver</code></a> &amp; <a href="../solvers/#DeepEquilibriumNetworks.DiscreteDEQSolver"><code>DiscreteDEQSolver</code></a>).</li><li><code>scales</code>: Output scales.</li><li><code>sensealg</code>: See <a href="../misc/#DeepEquilibriumNetworks.DeepEquilibriumAdjoint"><code>DeepEquilibriumAdjoint</code></a>.</li><li><code>kwargs</code>: Additional Parameters that are directly passed to <code>SciMLBase.solve</code>.</li></ul><p><strong>Example</strong></p><pre><code class="language- hljs">import DeepEquilibriumNetworks as DEQs
+import Lux
+import OrdinaryDiffEq
+import Random
+
+main_layers = (Lux.Parallel(+, Lux.Dense(4, 4, tanh), Lux.Dense(4, 4, tanh)),
+               Lux.Dense(3, 3, tanh), Lux.Dense(2, 2, tanh), Lux.Dense(1, 1, tanh))
+
+mapping_layers = [Lux.NoOpLayer() Lux.Dense(4, 3, tanh) Lux.Dense(4, 2, tanh) Lux.Dense(4, 1, tanh);
+                  Lux.Dense(3, 4, tanh) Lux.NoOpLayer() Lux.Dense(3, 2, tanh) Lux.Dense(3, 1, tanh);
+                  Lux.Dense(2, 4, tanh) Lux.Dense(2, 3, tanh) Lux.NoOpLayer() Lux.Dense(2, 1, tanh);
+                  Lux.Dense(1, 4, tanh) Lux.Dense(1, 3, tanh) Lux.Dense(1, 2, tanh) Lux.NoOpLayer()]
+
+solver = DEQs.ContinuousDEQSolver(OrdinaryDiffEq.VCABM3(); abstol=0.01f0, reltol=0.01f0)
+
+model = DEQs.MultiScaleDeepEquilibriumNetwork(main_layers, mapping_layers, nothing, solver,
+                                              ((4,), (3,), (2,), (1,)))
+
+rng = Random.default_rng()
+ps, st = Lux.setup(rng, model)
+x = rand(rng, Float32, 4, 1)
+
+model(x, ps, st)</code></pre><p>See also: <a href="#DeepEquilibriumNetworks.DeepEquilibriumNetwork"><code>DeepEquilibriumNetwork</code></a>, <a href="#DeepEquilibriumNetworks.SkipDeepEquilibriumNetwork"><code>SkipDeepEquilibriumNetwork</code></a>, <a href="#DeepEquilibriumNetworks.MultiScaleSkipDeepEquilibriumNetwork"><code>MultiScaleSkipDeepEquilibriumNetwork</code></a></p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/SciML/DeepEquilibriumNetworks.jl/blob/6f5a6b7596c13befbad2c0071d6050ffe6370a66/src/layers/mdeq.jl#L19-L70">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="DeepEquilibriumNetworks.MultiScaleSkipDeepEquilibriumNetwork" href="#DeepEquilibriumNetworks.MultiScaleSkipDeepEquilibriumNetwork"><code>DeepEquilibriumNetworks.MultiScaleSkipDeepEquilibriumNetwork</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">MultiScaleSkipDeepEquilibriumNetwork(main_layers::Tuple, mapping_layers::Matrix,
+                                     post_fuse_layer::Union{Nothing,Tuple},
+                                     shortcut_layers::Union{Nothing,Tuple}, solver,
+                                     scales;
+                                     sensealg=DeepEquilibriumAdjoint(0.1f0, 0.1f0, 10),
+                                     kwargs...)</code></pre><p>Multiscale Deep Equilibrium Network as proposed in <a href="../../references/#baimultiscale2020">Shaojie Bai, Vladlen Koltun, J. Zico Kolter (2020)</a> combined with Skip Deep Equilibrium Network as proposed in <a href="../../references/#pal2022mixing">Avik Pal, Alan Edelman, Christopher Rackauckas (2022)</a>.</p><p><strong>Arguments</strong></p><ul><li><code>main_layers</code>: Tuple of Neural Networks. The first network needs to take a tuple of 2 arrays, the other ones only take 1 input.</li><li><code>mapping_layers</code>: Matrix of Neural Networks. The <span>$(i, j)^{th}$</span> network takes the output of <span>$i^{th}$</span> <code>main_layer</code> and passes it to the <span>$j^{th}$</span> <code>main_layer</code>.</li><li><code>post_fuse_layer</code>: Tuple of Neural Networks. Each of the scales are passed through this layer.</li><li><code>shortcut_layers</code>: Shortcut for the network (pass <code>nothing</code> for SkipDEQV2).</li><li><code>solver</code>: Solver for the optimization problem (See: <a href="../solvers/#DeepEquilibriumNetworks.ContinuousDEQSolver"><code>ContinuousDEQSolver</code></a> &amp; <a href="../solvers/#DeepEquilibriumNetworks.DiscreteDEQSolver"><code>DiscreteDEQSolver</code></a>).</li><li><code>scales</code>: Output scales.</li><li><code>sensealg</code>: See <a href="../misc/#DeepEquilibriumNetworks.DeepEquilibriumAdjoint"><code>DeepEquilibriumAdjoint</code></a>.</li><li><code>kwargs</code>: Additional Parameters that are directly passed to <code>SciMLBase.solve</code>.</li></ul><p><strong>Example</strong></p><pre><code class="language- hljs">import DeepEquilibriumNetworks as DEQs
+import Lux
+import OrdinaryDiffEq
+import Random
+
+# MSkipDEQ
+main_layers = (Lux.Parallel(+, Lux.Dense(4, 4, tanh), Lux.Dense(4, 4, tanh)),
+               Lux.Dense(3, 3, tanh), Lux.Dense(2, 2, tanh), Lux.Dense(1, 1, tanh))
+
+mapping_layers = [Lux.NoOpLayer() Lux.Dense(4, 3, tanh) Lux.Dense(4, 2, tanh) Lux.Dense(4, 1, tanh);
+                  Lux.Dense(3, 4, tanh) Lux.NoOpLayer() Lux.Dense(3, 2, tanh) Lux.Dense(3, 1, tanh);
+                  Lux.Dense(2, 4, tanh) Lux.Dense(2, 3, tanh) Lux.NoOpLayer() Lux.Dense(2, 1, tanh);
+                  Lux.Dense(1, 4, tanh) Lux.Dense(1, 3, tanh) Lux.Dense(1, 2, tanh) Lux.NoOpLayer()]
+
+solver = DEQs.ContinuousDEQSolver(OrdinaryDiffEq.VCABM3(); abstol=0.01f0, reltol=0.01f0)
+
+shortcut_layers = (Lux.Dense(4, 4, tanh), Lux.Dense(4, 3, tanh), Lux.Dense(4, 2, tanh),
+                   Lux.Dense(4, 1, tanh))
+
+model = DEQs.MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, nothing,
+                                                  shortcut_layers, solver,
+                                                  ((4,), (3,), (2,), (1,)))
+
+rng = Random.default_rng()
+ps, st = Lux.setup(rng, model)
+x = rand(rng, Float32, 4, 2)
+
+model(x, ps, st)
+
+# MSkipDEQV2
+model = DEQs.MultiScaleSkipDeepEquilibriumNetwork(main_layers, mapping_layers, nothing,
+                                                  nothing, solver, ((4,), (3,), (2,), (1,)))
+
+rng = Random.default_rng()
+ps, st = Lux.setup(rng, model)
+x = rand(rng, Float32, 4, 2)
+
+model(x, ps, st)</code></pre><p>See also: <a href="#DeepEquilibriumNetworks.DeepEquilibriumNetwork"><code>DeepEquilibriumNetwork</code></a>, <a href="#DeepEquilibriumNetworks.SkipDeepEquilibriumNetwork"><code>SkipDeepEquilibriumNetwork</code></a>, <a href="#DeepEquilibriumNetworks.MultiScaleDeepEquilibriumNetwork"><code>MultiScaleDeepEquilibriumNetwork</code></a></p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/SciML/DeepEquilibriumNetworks.jl/blob/6f5a6b7596c13befbad2c0071d6050ffe6370a66/src/layers/mdeq.jl#L169-L240">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../nlsolve/">« Non Linear Solvers</a><a class="docs-footer-nextpage" href="../misc/">Miscellaneous »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Tuesday 10 January 2023 08:31">Tuesday 10 January 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
